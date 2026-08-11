@@ -11,6 +11,7 @@ import { StatCard } from "@/shared/ui/stat-card";
 import { Badge } from "@/shared/ui/badge";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { CongestionList } from "@/widgets/congestion-map/congestion-list";
+import { NotificationAdminPanel } from "@/features/notification/ui/notification-admin-panel";
 
 const PRIORITY_STYLE = {
   높음: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
@@ -126,6 +127,9 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      <NotificationAdminPanel />
     </div>
   );
 }
+
