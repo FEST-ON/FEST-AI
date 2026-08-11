@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Bell, CalendarClock, Check, Info, Megaphone } from "lucide-react";
-import { useReservationStore } from "@/features/reservation/model/store";
+import { useNotificationStore } from "@/features/notification/model/store";
 import { Button } from "@/shared/ui/button";
 import {
   Sheet,
@@ -14,34 +14,14 @@ import {
   SheetTrigger,
 } from "@/shared/ui/sheet";
 
-const NOTICES = [
-  {
-    id: "notice-schedule",
-    title: "메인스테이지 공연 시간이 변경됐어요",
-    description: "우천으로 인해 그린 콘서트 시작 시간이 19:00으로 변경됐어요.",
-    time: "방금 전",
-    important: true,
-  },
-  {
-    id: "notice-safety",
-    title: "우천 시 안전 이용 안내",
-    description: "미끄럼 사고 예방을 위해 강변 산책로 일부 구간을 통제하고 있어요.",
-    time: "15분 전",
-    important: false,
-  },
-];
-
 export function NotificationSheet() {
-  const tickets = useReservationStore((state) => state.tickets);
+  const notices = useNotificationStore((state) => state.notices);
+  const reservationCalls = useNotificationStore((state) => state.reservationCalls);
   const [readIds, setReadIds] = useState<string[]>([]);
 
-  const calledTickets = useMemo(
-    () => tickets.filter((ticket) => ticket.status === "호출됨"),
-    [tickets],
-  );
   const notificationIds = [
-    ...calledTickets.map((ticket) => `reservation-${ticket.id}`),
-    ...NOTICES.map((notice) => notice.id),
+    ...reservationCalls.map((call) => call.id),
+    ...notices.map((notice) => notice.id),
   ];
   const unreadCount = notificationIds.filter((id) => !readIds.includes(id)).length;
 
@@ -94,16 +74,15 @@ export function NotificationSheet() {
               </Link>
             </div>
 
-            {calledTickets.length > 0 ? (
+            {reservationCalls.length > 0 ? (
               <div className="space-y-2">
-                {calledTickets.map((ticket) => {
-                  const id = `reservation-${ticket.id}`;
-                  const isUnread = !readIds.includes(id);
+                {reservationCalls.map((call) => {
+                  const isUnread = !readIds.includes(call.id);
                   return (
                     <Link
-                      key={ticket.id}
+                      key={call.id}
                       href="/visitor/reservation"
-                      onClick={() => setReadIds((current) => [...new Set([...current, id])])}
+                      onClick={() => setReadIds((current) => [...new Set([...current, call.id])])}
                       className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3 transition hover:bg-primary/10"
                     >
                       <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -111,15 +90,13 @@ export function NotificationSheet() {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-                          {ticket.number}번, 입장할 차례예요
+                          {call.ticketNumber}번, 입장할 차례예요
                           {isUnread && <span className="size-1.5 rounded-full bg-primary" />}
                         </span>
                         <span className="mt-1 block text-xs text-muted-foreground">
-                          {ticket.program} 입구에서 번호표를 보여주세요.
+                          {call.program} · {call.location}에서 번호표를 보여주세요.
                         </span>
-                        <span className="mt-1.5 block text-[11px] font-medium text-primary">
-                          지금 호출됨
-                        </span>
+                        <span className="mt-1.5 block text-[11px] font-medium text-primary">{call.createdAt}</span>
                       </span>
                     </Link>
                   );
@@ -136,7 +113,7 @@ export function NotificationSheet() {
           <section className="pt-5">
             <h3 className="mb-2 text-sm font-bold text-foreground">공지사항</h3>
             <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-              {NOTICES.map((notice) => {
+              {notices.map((notice) => {
                 const isUnread = !readIds.includes(notice.id);
                 return (
                   <button
@@ -147,7 +124,7 @@ export function NotificationSheet() {
                   >
                     <span
                       className={`mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full ${
-                        notice.important
+                        notice.level === "중요"
                           ? "bg-destructive/10 text-destructive"
                           : "bg-secondary text-secondary-foreground"
                       }`}
@@ -162,9 +139,7 @@ export function NotificationSheet() {
                       <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                         {notice.description}
                       </span>
-                      <span className="mt-1 block text-[11px] text-muted-foreground">
-                        {notice.time}
-                      </span>
+                      <span className="mt-1 block text-[11px] text-muted-foreground">{notice.createdAt}</span>
                     </span>
                   </button>
                 );
@@ -176,3 +151,4 @@ export function NotificationSheet() {
     </Sheet>
   );
 }
+
