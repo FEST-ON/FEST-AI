@@ -86,7 +86,7 @@ export function PersoAiGuide() {
     <section className="relative isolate flex h-full min-h-0 flex-col overflow-hidden bg-slate-950 text-white">
       <Image
         src="/images/perso-ai-guide.png"
-        alt="Perso AI 축제 안내 디지털 휴먼 예시"
+        alt="Alan AI 축제 안내 디지털 휴먼 예시"
         fill
         priority
         sizes="(max-width: 448px) 100vw, 448px"
@@ -133,7 +133,7 @@ export function PersoAiGuide() {
           {latestAssistantMessage && (
             <div className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/72">
               <span className="mb-1 flex items-center gap-1 text-[10px] font-bold text-primary">
-                <Sparkles className="size-3" /> PERSO 안내
+                <Sparkles className="size-3" /> Alan AI
               </span>
               {latestAssistantMessage.content}
               {latestAssistantMessage.sources && latestAssistantMessage.sources.length > 0 && (
@@ -213,7 +213,7 @@ export function PersoAiGuide() {
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   disabled={isTyping}
-                  aria-label="Perso AI에게 텍스트로 질문하기"
+                  aria-label="Alan AI에게 텍스트로 질문하기"
                   placeholder="질문을 입력하세요"
                   className="min-w-0 flex-1 bg-transparent px-2 text-[12px] font-medium text-foreground outline-none placeholder:text-muted-foreground/75"
                 />
@@ -273,4 +273,3 @@ export function PersoAiGuide() {
     </section>
   );
 }
-

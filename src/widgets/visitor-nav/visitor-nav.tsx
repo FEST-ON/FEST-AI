@@ -4,20 +4,33 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Sparkles, MapPin, Ticket, Stamp } from "lucide-react";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useVisitorMenuSettingsStore } from "@/features/visitor-menu-settings/model/store";
+import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/store";
 import { cn } from "@/shared/lib/utils";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  kiosk: boolean;
+  menuKey?: VisitorMenuKey;
+}[] = [
   { href: "/visitor", label: "홈", icon: Home, kiosk: true },
   { href: "/visitor/ai-guide", label: "AI안내", icon: Sparkles, kiosk: true },
   { href: "/visitor/map", label: "지도", icon: MapPin, kiosk: true },
-  { href: "/visitor/reservation", label: "예약", icon: Ticket, kiosk: false },
-  { href: "/visitor/stamp-tour", label: "스탬프", icon: Stamp, kiosk: false },
-] as const;
+  { href: "/visitor/reservation", label: "예약", icon: Ticket, kiosk: false, menuKey: "reservation" },
+  { href: "/visitor/stamp-tour", label: "스탬프", icon: Stamp, kiosk: false, menuKey: "stampTour" },
+];
 
 export function VisitorNav() {
   const pathname = usePathname();
   const visitorMode = useAccessibilityStore((state) => state.visitorMode);
-  const navItems = visitorMode === "kiosk" ? NAV_ITEMS.filter((item) => item.kiosk) : NAV_ITEMS;
+  const menuSettings = useVisitorMenuSettingsStore();
+  const navItems = NAV_ITEMS.filter(
+    (item) =>
+      (visitorMode === "qr" || item.kiosk) &&
+      (!item.menuKey || menuSettings[item.menuKey]),
+  );
 
   return (
     <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">

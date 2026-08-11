@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useVisitorMenuSettingsStore } from "@/features/visitor-menu-settings/model/store";
 import { Logo } from "@/shared/ui/logo";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 
 export function VisitorTopbar() {
   const visitorMode = useAccessibilityStore((state) => state.visitorMode);
+  const surveyEnabled = useVisitorMenuSettingsStore((state) => state.survey);
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
@@ -19,7 +21,7 @@ export function VisitorTopbar() {
         </div>
         <div className="flex items-center gap-2">
           <AccessibilitySheet />
-          {visitorMode === "qr" && (
+          {visitorMode === "qr" && surveyEnabled && (
             <Link
               href="/visitor/survey"
               className="relative inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-accent"

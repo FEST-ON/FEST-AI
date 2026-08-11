@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchOperationResources } from "@/entities/program";
 import type { OperationCategory } from "@/entities/program";
+import { useVisitorMenuSettingsStore } from "@/features/visitor-menu-settings/model/store";
+import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/store";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { Switch } from "@/shared/ui/switch";
 import {
   Table,
   TableBody,
@@ -18,6 +21,12 @@ import {
 
 const CATEGORIES: (OperationCategory | "전체")[] = ["전체", "프로그램", "참여업체", "부스", "인력", "자원봉사자"];
 
+const VISITOR_MENU_ITEMS: { key: VisitorMenuKey; label: string; description: string }[] = [
+  { key: "reservation", label: "예약·대기", description: "방문객 앱의 예약·모바일 대기표 메뉴 노출 여부" },
+  { key: "stampTour", label: "스탬프투어", description: "방문객 앱의 스탬프투어 메뉴 노출 여부" },
+  { key: "survey", label: "만족도조사", description: "방문객 앱의 만족도조사 메뉴 노출 여부" },
+];
+
 const STATUS_STYLE = {
   준비중: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   운영중: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
@@ -28,6 +37,7 @@ const STATUS_STYLE = {
 export default function ProgramsPage() {
   const { data: resources, isLoading } = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("전체");
+  const menuSettings = useVisitorMenuSettingsStore();
 
   const filtered = useMemo(() => {
     if (!resources) return [];
@@ -45,6 +55,27 @@ export default function ProgramsPage() {
       <p className="text-sm text-muted-foreground">
         프로그램, 참여업체, 부스, 인력, 자원봉사자 정보를 하나의 화면에서 통합 관리해요.
       </p>
+
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <p className="text-sm font-bold text-foreground">방문객 메뉴 관리</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          끄면 방문객 앱의 홈 화면·하단 메뉴에서 숨겨져요. 페이지 주소로는 계속 접근할 수 있어요.
+        </p>
+        <div className="mt-3 divide-y divide-border">
+          {VISITOR_MENU_ITEMS.map(({ key, label, description }) => (
+            <div key={key} className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+              <div>
+                <p className="text-sm font-medium text-foreground">{label}</p>
+                <p className="text-xs text-muted-foreground">{description}</p>
+              </div>
+              <Switch
+                checked={menuSettings[key]}
+                onCheckedChange={() => menuSettings.toggleMenu(key)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
 
       <Tabs value={category} onValueChange={(v) => setCategory(v as typeof category)}>
         <TabsList className="flex-wrap">
