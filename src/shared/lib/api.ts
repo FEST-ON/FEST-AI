@@ -16,8 +16,11 @@ const VISITOR_TOKEN = "festai-visitor-token";
 const FESTIVAL_ID = "festai-admin-festival-id";
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
     super(message);
+    this.status = status;
   }
 }
 
@@ -79,25 +82,50 @@ export async function loginAdmin(email: string, password: string) {
   });
   localStorage.setItem(ADMIN_ACCESS, result.accessToken);
   localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
+  localStorage.removeItem(FESTIVAL_ID);
   return result.user;
 }
 
-export function logoutAdmin() {
+function clearAdminSession() {
   localStorage.removeItem(ADMIN_ACCESS);
   localStorage.removeItem(ADMIN_REFRESH);
   localStorage.removeItem(FESTIVAL_ID);
 }
 
-async function refreshAdminToken() {
+export async function logoutAdmin() {
   const refreshToken = localStorage.getItem(ADMIN_REFRESH);
-  if (!refreshToken) throw new ApiError("로그인이 필요합니다.", 401);
-  const result = await api<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
-    method: "POST",
-    body: JSON.stringify({ refreshToken }),
+  try {
+    if (refreshToken) {
+      await api<void>("/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken }),
+      });
+    }
+  } finally {
+    clearAdminSession();
+  }
+}
+
+let adminRefresh: Promise<string> | undefined;
+
+async function refreshAdminToken() {
+  adminRefresh ??= (async () => {
+    const refreshToken = localStorage.getItem(ADMIN_REFRESH);
+    if (!refreshToken) throw new ApiError("로그인이 필요합니다.", 401);
+    const result = await api<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refreshToken }),
+    });
+    localStorage.setItem(ADMIN_ACCESS, result.accessToken);
+    localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
+    return result.accessToken;
+  })().catch((error) => {
+    clearAdminSession();
+    throw error;
+  }).finally(() => {
+    adminRefresh = undefined;
   });
-  localStorage.setItem(ADMIN_ACCESS, result.accessToken);
-  localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
-  return result.accessToken;
+  return adminRefresh;
 }
 
 export async function adminApi<T>(path: string, init?: RequestInit): Promise<T> {
@@ -107,7 +135,8 @@ export async function adminApi<T>(path: string, init?: RequestInit): Promise<T> 
     return await api<T>(path, init, token);
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 401) throw error;
-    token = await refreshAdminToken();
+    const latestToken = localStorage.getItem(ADMIN_ACCESS);
+    token = latestToken && latestToken !== token ? latestToken : await refreshAdminToken();
     return api<T>(path, init, token);
   }
 }

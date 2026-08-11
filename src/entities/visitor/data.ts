@@ -1,6 +1,7 @@
 import { delay } from "@/shared/lib/async";
 import { FESTIVAL_CODE, publicApi, visitorApi } from "@/shared/lib/api";
-import type { RecommendedCourse, SurveyQuestion, WaitTicket } from "./model";
+import { surveyQuestionType } from "./model";
+import type { RecommendedCourse, SurveyAnswer, SurveyQuestion, WaitTicket } from "./model";
 
 export const sampleCourse: RecommendedCourse = {
   id: "course-family-3h",
@@ -23,8 +24,8 @@ export const waitTickets: WaitTicket[] = [
 
 export const surveyQuestions: SurveyQuestion[] = [
   { id: "q1", surveyId: "demo", question: "오늘 축제는 전반적으로 만족스러우셨나요?", type: "rating", required: true },
-  { id: "q2", surveyId: "demo", question: "가장 만족한 프로그램은 무엇인가요?", type: "choice", options: ["공연", "체험", "푸드", "전시"], required: true },
-  { id: "q3", surveyId: "demo", question: "친환경(다회용기·분리배출) 캠페인에 참여하셨나요?", type: "choice", options: ["참여함", "참여 안 함", "다음엔 참여할게요"], required: true },
+  { id: "q2", surveyId: "demo", question: "가장 만족한 프로그램은 무엇인가요?", type: "single_choice", options: ["공연", "체험", "푸드", "전시"], required: true },
+  { id: "q3", surveyId: "demo", question: "친환경(다회용기·분리배출) 캠페인에 참여하셨나요?", type: "single_choice", options: ["참여함", "참여 안 함", "다음엔 참여할게요"], required: true },
 ];
 
 export async function fetchRecommendedCourse() {
@@ -44,13 +45,13 @@ export async function fetchSurveyQuestions() {
     id: question.id,
     surveyId: survey.id,
     question: question.prompt,
-    type: question.type.toLowerCase() as SurveyQuestion["type"],
+    type: surveyQuestionType(question.type),
     options: question.options,
     required: question.required,
   }));
 }
 
-export async function submitSurvey(questions: SurveyQuestion[], answers: Record<string, string | number>) {
+export async function submitSurvey(questions: SurveyQuestion[], answers: Record<string, SurveyAnswer>) {
   const surveyId = questions[0]?.surveyId;
   if (!surveyId) throw new Error("참여 가능한 설문이 없습니다.");
   return visitorApi(`/visitor/surveys/${surveyId}/responses`, {

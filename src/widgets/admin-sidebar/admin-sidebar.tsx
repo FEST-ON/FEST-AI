@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { LayoutDashboard, Users2, Ticket, Sparkles, Leaf, LogOut } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
@@ -19,6 +20,17 @@ const NAV_ITEMS = [
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  async function logout() {
+    try {
+      await logoutAdmin();
+    } finally {
+      queryClient.clear();
+      router.push("/");
+      router.refresh();
+    }
+  }
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
@@ -56,7 +68,7 @@ export function AdminSidebar() {
           <p className="truncate text-[11px] text-sidebar-foreground/60">영등포구청 축제운영과</p>
         </div>
         <button
-          onClick={() => { logoutAdmin(); router.push("/"); router.refresh(); }}
+          onClick={() => void logout()}
           className="text-sidebar-foreground/50 hover:text-sidebar-foreground"
           aria-label="로그아웃"
         >

@@ -192,7 +192,7 @@ export async function fetchEsgMetrics() {
     } satisfies EsgMetric];
   });
 }
-export async function fetchEsgReport() {
+export async function generateEsgReport() {
   const festivalId = await adminFestivalId();
   const festival = await adminApi<{ starts_at: string; ends_at: string }>(`/admin/festivals/${festivalId}`);
   const created = await adminApi<{ reportId: string }>(`/admin/festivals/${festivalId}/esg/reports`, {

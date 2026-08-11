@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Star, CheckCircle2 } from "lucide-react";
-import { fetchSurveyQuestions, submitSurvey } from "@/entities/visitor";
+import { fetchSurveyQuestions, hasSurveyAnswer, submitSurvey } from "@/entities/visitor";
+import type { SurveyAnswer } from "@/entities/visitor";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
 export default function SurveyPage() {
   const { data: questions, isLoading } = useQuery({ queryKey: ["survey-questions"], queryFn: fetchSurveyQuestions });
-  const [answers, setAnswers] = useState<Record<string, string | number>>({});
+  const [answers, setAnswers] = useState<Record<string, SurveyAnswer>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -75,13 +76,14 @@ export default function SurveyPage() {
                     </button>
                   ))}
                 </div>
-              ) : q.type === "choice" ? (
+              ) : q.type === "single_choice" ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {q.options?.map((opt) => (
                     <button
                       key={opt}
                       type="button"
                       onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
+                      aria-pressed={answers[q.id] === opt}
                       className={cn(
                         "rounded-full border px-3 py-1.5 text-xs font-semibold",
                         answers[q.id] === opt
@@ -92,6 +94,38 @@ export default function SurveyPage() {
                       {opt}
                     </button>
                   ))}
+                </div>
+              ) : q.type === "multiple_choice" ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {q.options?.map((opt) => {
+                    const answer = answers[q.id];
+                    const selected = Array.isArray(answer) && answer.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setAnswers((current) => {
+                          const currentAnswer = current[q.id];
+                          const values = Array.isArray(currentAnswer) ? currentAnswer : [];
+                          return {
+                            ...current,
+                            [q.id]: values.includes(opt)
+                              ? values.filter((value) => value !== opt)
+                              : [...values, opt],
+                          };
+                        })}
+                        aria-pressed={selected}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-xs font-semibold",
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-foreground",
+                        )}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <textarea
@@ -107,7 +141,7 @@ export default function SurveyPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={submitting || questions.some((question) => question.required && !answers[question.id])}
+            disabled={submitting || questions.some((question) => question.required && !hasSurveyAnswer(answers[question.id]))}
           >
             {submitting ? "제출 중..." : "제출하기"}
           </Button>

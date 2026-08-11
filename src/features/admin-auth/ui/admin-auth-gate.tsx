@@ -10,8 +10,8 @@ import { Skeleton } from "@/shared/ui/skeleton";
 export function AdminAuthGate({ children }: { children: React.ReactNode }) {
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [email, setEmail] = useState("manager@example.com");
-  const [password, setPassword] = useState("ChangeMe123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,8 +46,8 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
           <h1 className="text-lg font-bold">운영자 로그인</h1>
           <p className="text-xs text-muted-foreground">백엔드 데모 계정으로 로그인하세요.</p>
         </div>
-        <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} aria-label="이메일" required />
-        <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} aria-label="비밀번호" required />
+        <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} aria-label="이메일" placeholder="이메일" autoComplete="username" required />
+        <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} aria-label="비밀번호" placeholder="비밀번호" autoComplete="current-password" required />
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" className="w-full" disabled={submitting}>
           {submitting ? "로그인 중..." : "로그인"}
