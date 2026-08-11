@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { Menu, LayoutDashboard, Users2, Ticket, Sparkles, Leaf } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { Button } from "@/shared/ui/button";
-import { BackButton } from "@/shared/ui/back-button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/shared/ui/sheet";
 import { cn } from "@/shared/lib/utils";
 
@@ -33,7 +32,6 @@ export function AdminTopbar() {
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3.5 backdrop-blur lg:px-6">
       <div className="flex items-center gap-3">
-        <BackButton className="hidden lg:inline-flex" />
         <Sheet>
           <SheetTrigger render={<Button variant="outline" size="icon" className="lg:hidden" />}>
             <Menu className="size-4" />
@@ -71,3 +69,4 @@ export function AdminTopbar() {
     </header>
   );
 }
+
