@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Leaf, Users, Scale, Sparkles, FileCheck2, CheckCircle2, CircleDashed } from "lucide-react";
-import { fetchEsgMetrics, fetchEsgReport } from "@/entities/esg";
+import { fetchEsgMetrics, generateEsgReport } from "@/entities/esg";
 import type { EsgPillar } from "@/entities/esg";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -20,11 +19,8 @@ const PILLARS: EsgPillar[] = ["환경", "사회", "거버넌스"];
 
 export default function EsgPage() {
   const { data: metrics, isLoading } = useQuery({ queryKey: ["esg-metrics"], queryFn: fetchEsgMetrics });
-  const [reportRequested, setReportRequested] = useState(false);
-  const { data: report, isFetching: reportLoading } = useQuery({
-    queryKey: ["esg-report"],
-    queryFn: fetchEsgReport,
-    enabled: reportRequested,
+  const { data: report, error: reportError, isPending: reportLoading, mutate: generateReport } = useMutation({
+    mutationFn: generateEsgReport,
   });
 
   return (
@@ -98,7 +94,7 @@ export default function EsgPage() {
               <p className="text-xs text-muted-foreground">승인된 지표 데이터를 기반으로 AI가 초안을 작성해요</p>
             </div>
           </div>
-          <Button size="sm" className="gap-1.5" onClick={() => setReportRequested(true)} disabled={reportLoading}>
+          <Button size="sm" className="gap-1.5" onClick={() => generateReport()} disabled={reportLoading}>
             <Sparkles className="size-3.5" />
             {reportLoading ? "초안 생성 중..." : "AI 초안 생성"}
           </Button>
@@ -110,6 +106,8 @@ export default function EsgPage() {
             <Skeleton className="h-20 w-full rounded-xl" />
           </div>
         )}
+
+        {reportError && <p className="mt-4 text-sm text-destructive">{reportError.message}</p>}
 
         {!reportLoading && report && (
           <div className="mt-4 space-y-3">

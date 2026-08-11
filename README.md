@@ -1,8 +1,8 @@
 # FESTAI
 
-**AI · ESG 기반 지역축제 DX(디지털 전환) 웹앱 — PPT용 유저플로우 데모**
+**AI · ESG 기반 지역축제 DX(디지털 전환) 웹앱**
 
-FESTAI는 지역축제 운영을 "신뢰(Trust)"라는 키워드로 재설계한 플랫폼입니다. 방문객에게는 AI 기반 자연어 안내와 QR 모바일 웹을, 축제 담당 주무관에게는 통합 운영관리·ESG 성과관리 대시보드를 제공합니다. 이 저장소는 **PPT 유저플로우 제작을 위한 데모 버전**으로, 실제 백엔드/AI API 연동 없이 목(mock) 데이터와 클라이언트 상태로 전체 화면 흐름을 시연합니다.
+FESTAI는 지역축제 운영을 "신뢰(Trust)"라는 키워드로 재설계한 플랫폼입니다. 방문객에게는 AI 기반 자연어 안내와 QR 모바일 웹을, 축제 담당 주무관에게는 통합 운영관리·ESG 성과관리 대시보드를 제공합니다. 공개 축제·프로그램·시설·설문·AI 안내와 운영자 인증·프로그램·티켓·ESG 데이터는 FastAPI 백엔드에 연결됩니다.
 
 ## 기술 스택
 
@@ -11,10 +11,10 @@ FESTAI는 지역축제 운영을 "신뢰(Trust)"라는 키워드로 재설계한
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS v4 |
-| Server State | TanStack Query (mock async fetcher 기반) |
+| Server State | TanStack Query (FastAPI 연동) |
 | Client State | Zustand (`persist` 미들웨어로 일부 상태 로컬 저장) |
 | UI Kit | shadcn/ui (base-ui 기반) |
-| AI (예정 연동) | Perso AI, 앨런(Alan) — 현재는 규칙 기반 mock 응답으로 대체 |
+| AI | 백엔드 승인 콘텐츠 기반 검색 응답 |
 | Deployment | Vercel |
 
 ## 폴더 구조 (FSD 기반)
@@ -49,7 +49,17 @@ src/
 npm install
 ```
 
-### 2) 개발 서버 실행
+### 2) 백엔드 연결
+
+기본 연결 주소는 `http://127.0.0.1:8000`, 축제 코드는 `EST34-2026`입니다. 다른 환경에서는 프론트엔드 루트의 `.env.local`에 설정합니다.
+
+```bash
+cp .env.example .env.local
+```
+
+`BACKEND_URL`에는 `/api/v1`을 제외한 백엔드 원점을 입력합니다. 로컬 백엔드를 사용할 때는 마이그레이션·시드·서버를 먼저 실행해야 합니다. 운영자 화면은 백엔드 데모 계정으로 로그인합니다.
+
+### 3) 개발 서버 실행
 
 ```bash
 npm run dev
@@ -60,25 +70,25 @@ npm run dev
 - 방문객 플로우: `/visitor`
 - 운영자 플로우: `/admin`
 
-### 3) 프로덕션 빌드 확인
+### 4) 프로덕션 빌드 확인
 
 ```bash
 npm run build
 npm run start
 ```
 
-### 4) 린트
+### 5) 린트
 
 ```bash
 npm run lint
 ```
 
-## 데모 데이터 & 상태 관리 안내
+## 데이터 & 상태 관리 안내
 
-- 모든 도메인 데이터(축제 정보, 일정, 시설, 혼잡도, 티켓, ESG 지표 등)는 `src/entities/*/data.ts`에 하드코딩된 mock 데이터이며, `delay()`로 실제 API 호출처럼 지연을 흉내내어 TanStack Query와 연동했습니다.
-- AI 채팅 응답(`src/features/ai-guide/lib/generate-reply.ts`)은 키워드 매칭 기반의 규칙형 mock이며, 실제 연동 시 **Perso AI**(자연어 생성) 및 **앨런(Alan)**으로 교체될 지점입니다.
+- 백엔드 1단계 범위인 공개 정보, 설문, AI, 운영자 프로그램·티켓·ESG는 실제 API를 사용합니다.
+- 백엔드에 아직 없는 예약·대기·혼잡·교통·쿠폰·스탬프 기능은 기존 데모 데이터를 유지합니다.
 - 접근성 설정(`features/accessibility`)과 스탬프 투어 진행 상황(`features/stamp-tour`)은 Zustand `persist`로 브라우저 `localStorage`에 저장되어 새로고침 후에도 유지됩니다.
-- 민원/공지/사고 티켓 상태 변경, 대기표 발급 등은 세션 내 Zustand 상태로만 관리되며 새로고침 시 초기값으로 리셋됩니다(데모 목적).
+- 운영자 티켓 조회와 상태 변경은 백엔드에 저장됩니다. 방문객 민원 작성과 대기표 발급은 아직 브라우저 상태만 사용합니다.
 
 ## Vercel 배포
 
@@ -86,4 +96,13 @@ npm run lint
 npx vercel
 ```
 
-또는 GitHub 저장소를 Vercel에 연결하면 자동 배포됩니다. 별도 환경변수 없이 바로 빌드 가능합니다(외부 API 연동 전 데모 상태 기준).
+또는 GitHub 저장소를 Vercel에 연결하면 자동 배포됩니다.
+
+Vercel 프로젝트에는 다음 환경변수를 설정해야 합니다.
+
+```bash
+BACKEND_URL=https://backend-production-8532.up.railway.app
+NEXT_PUBLIC_FESTIVAL_CODE=EST34-2026
+```
+
+환경변수를 변경한 뒤에는 새로 배포해야 합니다.

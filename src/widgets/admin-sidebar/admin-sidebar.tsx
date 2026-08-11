@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { LayoutDashboard, Users2, Ticket, Sparkles, Leaf, LogOut } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
+import { logoutAdmin } from "@/shared/lib/api";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "운영 대시보드", icon: LayoutDashboard },
@@ -13,6 +16,28 @@ const NAV_ITEMS = [
   { href: "/admin/ai-insights", label: "AI 민원 인사이트", icon: Sparkles },
   { href: "/admin/esg", label: "ESG 성과관리", icon: Leaf },
 ] as const;
+
+export function AdminLogoutButton({ showLabel = false, className }: { showLabel?: boolean; className?: string }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  async function logout() {
+    try {
+      await logoutAdmin();
+    } finally {
+      queryClient.clear();
+      router.push("/");
+      router.refresh();
+    }
+  }
+
+  return (
+    <button onClick={() => void logout()} className={className} aria-label="로그아웃">
+      <LogOut className="size-4" />
+      {showLabel && <span>로그아웃</span>}
+    </button>
+  );
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -52,9 +77,7 @@ export function AdminSidebar() {
           <p className="truncate text-xs font-semibold text-sidebar-foreground">김민준 주무관</p>
           <p className="truncate text-[11px] text-sidebar-foreground/60">영등포구청 축제운영과</p>
         </div>
-        <Link href="/" className="text-sidebar-foreground/50 hover:text-sidebar-foreground" aria-label="로그아웃">
-          <LogOut className="size-4" />
-        </Link>
+        <AdminLogoutButton className="text-sidebar-foreground/50 hover:text-sidebar-foreground" />
       </div>
     </aside>
   );
