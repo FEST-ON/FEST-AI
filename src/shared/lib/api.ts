@@ -80,6 +80,7 @@ export async function loginAdmin(email: string, password: string) {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+  adminSessionGeneration += 1;
   localStorage.setItem(ADMIN_ACCESS, result.accessToken);
   localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
   localStorage.removeItem(FESTIVAL_ID);
@@ -94,6 +95,7 @@ function clearAdminSession() {
 
 export async function logoutAdmin() {
   const refreshToken = localStorage.getItem(ADMIN_REFRESH);
+  adminSessionGeneration += 1;
   try {
     if (refreshToken) {
       await api<void>("/auth/logout", {
@@ -107,25 +109,30 @@ export async function logoutAdmin() {
 }
 
 let adminRefresh: Promise<string> | undefined;
+let adminSessionGeneration = 0;
 
 async function refreshAdminToken() {
-  adminRefresh ??= (async () => {
+  if (adminRefresh) return adminRefresh;
+  const generation = adminSessionGeneration;
+  const refresh = (async () => {
     const refreshToken = localStorage.getItem(ADMIN_REFRESH);
     if (!refreshToken) throw new ApiError("로그인이 필요합니다.", 401);
     const result = await api<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
       method: "POST",
       body: JSON.stringify({ refreshToken }),
     });
+    if (generation !== adminSessionGeneration) throw new ApiError("로그인이 필요합니다.", 401);
     localStorage.setItem(ADMIN_ACCESS, result.accessToken);
     localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
     return result.accessToken;
   })().catch((error) => {
-    clearAdminSession();
+    if (generation === adminSessionGeneration) clearAdminSession();
     throw error;
   }).finally(() => {
-    adminRefresh = undefined;
+    if (adminRefresh === refresh) adminRefresh = undefined;
   });
-  return adminRefresh;
+  adminRefresh = refresh;
+  return refresh;
 }
 
 export async function adminApi<T>(path: string, init?: RequestInit): Promise<T> {

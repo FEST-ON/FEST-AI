@@ -13,6 +13,7 @@ async function importTypeScript(path) {
 
 const { adminApi, logoutAdmin } = await importTypeScript("../src/shared/lib/api.ts");
 const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/entities/visitor/model.ts");
+const { classifyTicket, nextTicketStatus } = await importTypeScript("../src/entities/ticket/model.ts");
 
 class MemoryStorage {
   #values = new Map();
@@ -74,10 +75,50 @@ test("로그아웃은 서버 refresh token을 폐기하고 로컬 세션을 지�
   assert.equal(localStorage.length, 0);
 });
 
+test("로그아웃 후 늦게 끝난 token refresh는 세션을 복구하지 않는다", async () => {
+  localStorage.setItem("festai-admin-access", "expired-access");
+  localStorage.setItem("festai-admin-refresh", "rt_current");
+  let finishRefresh;
+  let notifyRefreshStarted;
+  const refreshStarted = new Promise((resolve) => { notifyRefreshStarted = resolve; });
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/refresh")) {
+      notifyRefreshStarted();
+      return new Promise((resolve) => { finishRefresh = resolve; });
+    }
+    if (url.endsWith("/auth/logout")) return new Response(null, { status: 204 });
+    return Response.json({ error: { message: "만료됨" } }, { status: 401 });
+  };
+
+  const request = adminApi("/private");
+  await refreshStarted;
+  await logoutAdmin();
+  finishRefresh(Response.json({ data: { accessToken: "late-access", refreshToken: "rt_late" } }));
+
+  await assert.rejects(request);
+  assert.equal(localStorage.length, 0);
+});
+
 test("백엔드 설문 타입과 답변 유무를 명시적으로 처리한다", () => {
   assert.equal(surveyQuestionType("SINGLE_CHOICE"), "single_choice");
   assert.equal(surveyQuestionType("MULTIPLE_CHOICE"), "multiple_choice");
   assert.equal(hasSurveyAnswer([]), false);
   assert.equal(hasSurveyAnswer(["공연"]), true);
   assert.throws(() => surveyQuestionType("UNKNOWN"));
+});
+
+test("백엔드 티켓 텍스트를 운영 카테고리로 자동 분류한다", () => {
+  assert.equal(classifyTicket("체험존 미끄럼 사고", "안전 표지 설치", "사고"), "안전·사고");
+  assert.equal(classifyTicket("다회용기 반납 위치", "안내가 필요합니다", "민원"), "ESG운영");
+  assert.equal(classifyTicket("셔틀버스 지연", "교통 문의", "민원"), "교통");
+});
+
+test("운영 티켓은 배정부터 완료까지 순서대로 전이한다", () => {
+  assert.equal(nextTicketStatus("OPEN"), "ASSIGNED");
+  assert.equal(nextTicketStatus("ASSIGNED"), "IN_PROGRESS");
+  assert.equal(nextTicketStatus("IN_PROGRESS"), "RESOLVED");
+  assert.equal(nextTicketStatus("RESOLVED"), "CLOSED");
+  assert.equal(nextTicketStatus("CLOSED"), undefined);
 });

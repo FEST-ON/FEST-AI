@@ -17,8 +17,7 @@ const NAV_ITEMS = [
   { href: "/admin/esg", label: "ESG 성과관리", icon: Leaf },
 ] as const;
 
-export function AdminSidebar() {
-  const pathname = usePathname();
+export function AdminLogoutButton({ showLabel = false, className }: { showLabel?: boolean; className?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -31,6 +30,17 @@ export function AdminSidebar() {
       router.refresh();
     }
   }
+
+  return (
+    <button onClick={() => void logout()} className={className} aria-label="로그아웃">
+      <LogOut className="size-4" />
+      {showLabel && <span>로그아웃</span>}
+    </button>
+  );
+}
+
+export function AdminSidebar() {
+  const pathname = usePathname();
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
@@ -67,13 +77,7 @@ export function AdminSidebar() {
           <p className="truncate text-xs font-semibold text-sidebar-foreground">김민준 주무관</p>
           <p className="truncate text-[11px] text-sidebar-foreground/60">영등포구청 축제운영과</p>
         </div>
-        <button
-          onClick={() => void logout()}
-          className="text-sidebar-foreground/50 hover:text-sidebar-foreground"
-          aria-label="로그아웃"
-        >
-          <LogOut className="size-4" />
-        </button>
+        <AdminLogoutButton className="text-sidebar-foreground/50 hover:text-sidebar-foreground" />
       </div>
     </aside>
   );

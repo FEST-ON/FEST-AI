@@ -7,6 +7,7 @@ import { Logo } from "@/shared/ui/logo";
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/shared/ui/sheet";
 import { cn } from "@/shared/lib/utils";
+import { AdminLogoutButton } from "./admin-sidebar";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "운영 대시보드", icon: LayoutDashboard },
@@ -58,6 +59,10 @@ export function AdminTopbar() {
                   </Link>
                 );
               })}
+              <AdminLogoutButton
+                showLabel
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70"
+              />
             </nav>
           </SheetContent>
         </Sheet>

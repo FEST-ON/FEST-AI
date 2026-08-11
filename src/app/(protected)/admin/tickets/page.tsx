@@ -25,7 +25,7 @@ export default function TicketsPage() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: transitionTicket,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tickets"] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["tickets"] }),
   });
   const [type, setType] = useState<(typeof TYPES)[number]>("전체");
 
@@ -90,15 +90,15 @@ export default function TicketsPage() {
                   <button
                     className="w-28 shrink-0 rounded-lg border border-border px-3 py-2 text-xs disabled:opacity-50"
                     onClick={() => mutation.mutate(t)}
-                    disabled={mutation.isPending || t.apiStatus === "OPEN" || t.apiStatus === "CLOSED"}
-                    title={t.apiStatus === "OPEN" ? "담당자 배정이 필요합니다." : undefined}
+                    disabled={mutation.isPending || t.apiStatus === "CLOSED"}
                   >
-                    {t.status}
+                    {t.apiStatus === "OPEN" ? "내게 배정" : t.status}
                   </button>
                 </div>
               </div>
             );
           })}
+          {mutation.error && <p className="text-sm text-destructive">{mutation.error.message}</p>}
         </div>
       )}
     </div>

@@ -11,8 +11,26 @@ export interface Ticket {
   assignee: string;
   status: TicketStatus;
   apiStatus: TicketApiStatus;
+  version?: number;
   priority: TicketPriority;
   category: string;
   createdAt: string;
   aiTag?: string;
+}
+
+export function classifyTicket(title: string, description: string, type: TicketType) {
+  const text = `${title} ${description}`;
+  if (/(사고|안전|낙상|미끄|응급)/.test(text) || type === "사고") return "안전·사고";
+  if (/(주차|교통|셔틀|버스)/.test(text)) return "교통";
+  if (/(다회용기|분리배출|친환경|ESG)/i.test(text)) return "ESG운영";
+  if (/(그늘|화장실|수유|편의|대기)/.test(text)) return "편의시설";
+  if (/(일정|공연|프로그램)/.test(text)) return "일정";
+  return "기타";
+}
+
+export function nextTicketStatus(status: TicketApiStatus) {
+  const next: Partial<Record<TicketApiStatus, TicketApiStatus>> = {
+    OPEN: "ASSIGNED", ASSIGNED: "IN_PROGRESS", IN_PROGRESS: "RESOLVED", RESOLVED: "CLOSED",
+  };
+  return next[status];
 }
