@@ -85,14 +85,14 @@ export function ComplaintSheet({
       <SheetTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             className={cn("rounded-full", triggerClassName)}
             aria-label="민원 제출"
           />
         }
       >
-        <MessageSquareWarning className="size-4" />
+        <MessageSquareWarning className="size-3.5" />
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-w-md rounded-t-3xl">
         {submitted ? (

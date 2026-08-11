@@ -58,7 +58,7 @@ export function AccessibilitySheet({
       <SheetTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             className={cn("rounded-full", triggerClassName)}
             aria-label="접근성 설정"

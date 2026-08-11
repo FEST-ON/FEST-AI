@@ -38,7 +38,7 @@ export function NotificationSheet() {
       <SheetTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             className="relative rounded-full"
             aria-label={`알림 ${unreadCount}개`}
@@ -47,7 +47,7 @@ export function NotificationSheet() {
       >
         <Bell className="size-4" />
         {unreadCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-destructive ring-2 ring-card" />
+          <span className="absolute right-2 top-2 size-1 rounded-full bg-destructive" />
         )}
       </SheetTrigger>
 
