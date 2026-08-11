@@ -36,9 +36,11 @@ export interface WaitTicket {
 
 export interface SurveyQuestion {
   id: string;
+  surveyId: string;
   question: string;
-  type: "rating" | "choice";
+  type: "rating" | "choice" | "text";
   options?: string[];
+  required: boolean;
 }
 
 export type AccessibilityLanguage = "한국어" | "English" | "中文" | "日本語";

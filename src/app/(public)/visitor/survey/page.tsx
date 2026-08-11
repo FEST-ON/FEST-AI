@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Star, CheckCircle2 } from "lucide-react";
-import { fetchSurveyQuestions } from "@/entities/visitor";
+import { fetchSurveyQuestions, submitSurvey } from "@/entities/visitor";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
@@ -12,6 +12,8 @@ export default function SurveyPage() {
   const { data: questions, isLoading } = useQuery({ queryKey: ["survey-questions"], queryFn: fetchSurveyQuestions });
   const [answers, setAnswers] = useState<Record<string, string | number>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   if (submitted) {
     return (
@@ -38,9 +40,18 @@ export default function SurveyPage() {
       ) : (
         <form
           className="mt-4 space-y-5"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            setSubmitted(true);
+            setSubmitting(true);
+            setError("");
+            try {
+              await submitSurvey(questions, answers);
+              setSubmitted(true);
+            } catch (caught) {
+              setError(caught instanceof Error ? caught.message : "설문 제출에 실패했습니다.");
+            } finally {
+              setSubmitting(false);
+            }
           }}
         >
           {questions.map((q) => (
@@ -64,7 +75,7 @@ export default function SurveyPage() {
                     </button>
                   ))}
                 </div>
-              ) : (
+              ) : q.type === "choice" ? (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {q.options?.map((opt) => (
                     <button
@@ -82,11 +93,23 @@ export default function SurveyPage() {
                     </button>
                   ))}
                 </div>
+              ) : (
+                <textarea
+                  value={String(answers[q.id] ?? "")}
+                  onChange={(event) => setAnswers((current) => ({ ...current, [q.id]: event.target.value }))}
+                  className="mt-3 min-h-24 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus:border-primary"
+                  placeholder="의견을 입력해 주세요"
+                />
               )}
             </div>
           ))}
-          <Button type="submit" className="w-full" disabled={Object.keys(answers).length < questions.length}>
-            제출하기
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitting || questions.some((question) => question.required && !answers[question.id])}
+          >
+            {submitting ? "제출 중..." : "제출하기"}
           </Button>
         </form>
       )}

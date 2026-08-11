@@ -28,24 +28,27 @@ export function ChatPanel() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  function handleAsk(text: string) {
+  async function handleAsk(text: string) {
     if (isTyping) return;
     addMessage(buildMessage("user", text));
     setTyping(true);
-    setTimeout(() => {
-      const { content, sources } = generateReply(text);
+    try {
+      const { content, sources } = await generateReply(text);
       addMessage(buildMessage("assistant", content, sources));
+    } catch (error) {
+      addMessage(buildMessage("assistant", error instanceof Error ? error.message : "답변을 불러오지 못했습니다."));
+    } finally {
       setTyping(false);
-    }, 700);
+    }
   }
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex items-center gap-1.5 px-4 pb-2">
         <Badge variant="secondary" className="gap-1 text-[10px]">
-          <Sparkles className="size-3 text-primary" /> Powered by Perso AI
+          <Sparkles className="size-3 text-primary" /> 승인 콘텐츠 기반 AI
         </Badge>
-        <Badge variant="outline" className="text-[10px] text-muted-foreground">앨런(Alan) 연동 예정</Badge>
+        <Badge variant="outline" className="text-[10px] text-muted-foreground">백엔드 실시간 연동</Badge>
         {voiceGuide && (
           <Badge variant="outline" className="gap-1 text-[10px] text-muted-foreground">
             <Volume2 className="size-3" /> 음성안내 ON

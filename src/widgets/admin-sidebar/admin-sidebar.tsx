@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { LayoutDashboard, Users2, Ticket, Sparkles, Leaf, LogOut } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
+import { logoutAdmin } from "@/shared/lib/api";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "운영 대시보드", icon: LayoutDashboard },
@@ -16,6 +18,7 @@ const NAV_ITEMS = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
@@ -52,9 +55,13 @@ export function AdminSidebar() {
           <p className="truncate text-xs font-semibold text-sidebar-foreground">김민준 주무관</p>
           <p className="truncate text-[11px] text-sidebar-foreground/60">영등포구청 축제운영과</p>
         </div>
-        <Link href="/" className="text-sidebar-foreground/50 hover:text-sidebar-foreground" aria-label="로그아웃">
+        <button
+          onClick={() => { logoutAdmin(); router.push("/"); router.refresh(); }}
+          className="text-sidebar-foreground/50 hover:text-sidebar-foreground"
+          aria-label="로그아웃"
+        >
           <LogOut className="size-4" />
-        </Link>
+        </button>
       </div>
     </aside>
   );
