@@ -128,3 +128,8 @@
     @apply font-sans;
   }
 }
+
+html[data-large-text="true"] {
+  font-size: 112.5%;
+}
+
