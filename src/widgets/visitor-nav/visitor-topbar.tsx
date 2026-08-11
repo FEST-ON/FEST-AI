@@ -4,8 +4,9 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useVisitorMenuSettingsStore } from "@/features/visitor-menu-settings/model/store";
-import { Logo } from "@/shared/ui/logo";
+import { ComplaintSheet } from "@/features/complaint/ui/complaint-sheet";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
+import { Logo } from "@/shared/ui/logo";
 
 export function VisitorTopbar() {
   const visitorMode = useAccessibilityStore((state) => state.visitorMode);
@@ -14,13 +15,14 @@ export function VisitorTopbar() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Link href="/visitor">
-            <Logo />
-          </Link>
-        </div>
+        <Link href="/visitor">
+          <Logo />
+        </Link>
+
         <div className="flex items-center gap-2">
           <AccessibilitySheet />
+          <ComplaintSheet />
+
           {visitorMode === "qr" && surveyEnabled && (
             <Link
               href="/visitor/survey"
