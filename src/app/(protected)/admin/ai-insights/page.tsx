@@ -36,15 +36,13 @@ export default function AiInsightsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 rounded-2xl border border-blue-200/60 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/20 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Sparkles className="size-4.5" />
-          </span>
-          <div>
-            <p className="text-sm font-bold text-foreground">AI 민원·후기 분류</p>
-            <p className="text-xs text-muted-foreground">Perso AI 기반 자연어 분류 · 앨런(Alan) 연동 예정</p>
-          </div>
+      <div className="flex flex-col gap-3 rounded-2xl border border-primary/15 bg-primary/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <Sparkles className="size-4 text-primary" />
+            AI 민원·후기 분류
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Perso AI 기반 자연어 분류 · 앨런(Alan) 연동 예정</p>
         </div>
         <Button size="sm" className="gap-1.5" onClick={rerun} disabled={analyzing}>
           <RefreshCw className={cn("size-3.5", analyzing && "animate-spin")} />

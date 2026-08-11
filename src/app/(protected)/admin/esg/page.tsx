@@ -88,14 +88,12 @@ export default function EsgPage() {
       })}
 
       <section className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <FileCheck2 className="size-4.5" />
-            </span>
+        <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-baseline gap-2">
+            <FileCheck2 className="size-4 shrink-0 text-primary" />
             <div>
               <p className="text-sm font-bold text-foreground">ESG 보고서 초안 자동 생성</p>
-              <p className="text-xs text-muted-foreground">승인된 지표 데이터를 기반으로 AI가 초안을 작성해요</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">승인된 지표 데이터를 기반으로 AI가 초안을 작성해요</p>
             </div>
           </div>
           <Button size="sm" className="gap-1.5" onClick={() => setReportRequested(true)} disabled={reportLoading}>

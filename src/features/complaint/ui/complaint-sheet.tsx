@@ -25,14 +25,23 @@ import {
   SheetFooter,
 } from "@/shared/ui/sheet";
 
-const CATEGORIES = ["편의시설", "안전", "교통", "ESG운영", "일정", "기타"] as const;
+const CATEGORIES = [
+  "편의시설",
+  "안전",
+  "교통",
+  "ESG운영",
+  "일정",
+  "기타",
+] as const;
 
 function formatCreatedAt(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function ComplaintSheet({ triggerClassName }: { triggerClassName?: string } = {}) {
+export function ComplaintSheet({
+  triggerClassName,
+}: { triggerClassName?: string } = {}) {
   const addTicket = useTicketBoardStore((s) => s.addTicket);
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -76,7 +85,7 @@ export function ComplaintSheet({ triggerClassName }: { triggerClassName?: string
       <SheetTrigger
         render={
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
             className={cn("rounded-full", triggerClassName)}
             aria-label="민원 제출"
@@ -90,9 +99,12 @@ export function ComplaintSheet({ triggerClassName }: { triggerClassName?: string
           <div className="flex flex-col items-center gap-3 px-4 py-8 text-center">
             <CheckCircle2 className="size-10 text-emerald-500" />
             <div>
-              <p className="text-sm font-bold text-foreground">민원이 접수되었어요</p>
+              <p className="text-sm font-bold text-foreground">
+                민원이 접수되었어요
+              </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                담당자 배정 후 순차적으로 처리돼요. 접수 상태는 운영팀이 확인해요.
+                담당자 배정 후 순차적으로 처리돼요. 접수 상태는 운영팀이
+                확인해요.
               </p>
             </div>
             <Button size="sm" onClick={() => setOpen(false)}>
@@ -109,7 +121,10 @@ export function ComplaintSheet({ triggerClassName }: { triggerClassName?: string
             </SheetHeader>
             <div className="space-y-4 px-4">
               <div className="space-y-1.5">
-                <Label htmlFor="complaint-title" className="text-sm font-semibold">
+                <Label
+                  htmlFor="complaint-title"
+                  className="text-sm font-semibold"
+                >
                   제목
                 </Label>
                 <Input
@@ -121,7 +136,10 @@ export function ComplaintSheet({ triggerClassName }: { triggerClassName?: string
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-semibold">분류</Label>
-                <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
+                <Select
+                  value={category}
+                  onValueChange={(v) => setCategory(v as typeof category)}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -135,7 +153,10 @@ export function ComplaintSheet({ triggerClassName }: { triggerClassName?: string
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="complaint-description" className="text-sm font-semibold">
+                <Label
+                  htmlFor="complaint-description"
+                  className="text-sm font-semibold"
+                >
                   상세 내용
                 </Label>
                 <Textarea
