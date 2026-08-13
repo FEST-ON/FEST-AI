@@ -6,8 +6,6 @@ import {
   Leaf,
   ArrowRight,
   ShieldCheck,
-  Users,
-  Lock,
 } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { Badge } from "@/shared/ui/badge";
@@ -38,9 +36,9 @@ const FEATURES = [
 
 export default function Home() {
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-linear-to-b from-blue-50 via-background to-background dark:from-blue-950/20">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <div className="w-full flex items-center justify-between gap-2">
+    <div className="flex flex-1 flex-col bg-background">
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+        <div className="flex w-full items-center justify-between gap-2">
           <Logo />
           <Link
             href="/admin"
@@ -57,43 +55,44 @@ export default function Home() {
         </Badge>
       </header>
 
-      <main className="mx-auto flex w-full min-h-0 max-w-6xl flex-1 flex-col justify-center px-6 pb-6">
-        <section className="flex flex-col items-center gap-4 text-center">
-          <Badge className="h-auto gap-1.5 bg-blue-100 px-4 py-2 text-md font-bold text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 [&>svg]:size-4!">
-            <Sparkles className="size-4" />
-            AI · ESG 기반 지역축제 DX 플랫폼
-          </Badge>
-          <h1 className="max-w-2xl text-4xl font-extrabold leading-12 tracking-tight text-foreground sm:text-5xl">
-            축제 운영의 신뢰를 잇는,
-            <br />
-            <span className="text-primary">FESTAI</span>
-          </h1>
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 pb-16 pt-6 lg:pt-10 items-center justify-center">
+        <section className="lg:text-center">
+          <div className="flex flex-col gap-5 lg:items-center">
+            <p className="inline-flex w-fit items-center gap-1.5 text-md font-bold uppercase tracking-[0.1em] text-primary ">
+              <Sparkles className="size-3.5" />
+              AI · ESG 기반 지역축제 DX 플랫폼
+            </p>
+            <h1 className="max-w-xl text-4xl font-extrabold leading-[1.15] tracking-tight text-foreground sm:text-5xl">
+              축제 운영의 신뢰를 잇는,
+              <br />
+              <span className="text-primary">FESTAI</span>
+            </h1>
+          </div>
         </section>
-
-        <section className="mt-8 rounded-3xl border border-blue-200/60 bg-blue-600 p-8 text-primary-foreground shadow-lg sm:p-10 dark:border-blue-900">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="mt-12 rounded-2xl border border-border bg-primary p-8 text-primary-foreground sm:p-10 lg:mt-16">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-bold text-blue-100">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary-foreground/70">
                 {festivalInfo.period.start} ~ {festivalInfo.period.end}
               </p>
-              <h2 className="mt-1 text-2xl font-bold">{festivalInfo.name}</h2>
-              <p className="mt-2 max-w-lg text-sm leading-relaxed text-blue-100">
+              <h2 className="mt-2 text-2xl font-bold">{festivalInfo.name}</h2>
+              <p className="mt-2 max-w-lg text-sm leading-relaxed text-primary-foreground/80">
                 {festivalInfo.description}
               </p>
             </div>
             <Link
               href="/visitor"
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-white px-5 py-4 text-lg font-bold text-primary shadow-sm transition-transform hover:scale-[1.02]"
+              className="group inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-background px-5 py-3 text-sm font-bold text-primary transition-colors hover:bg-background/90"
             >
-              방문객으로 둘러보기 <ArrowRight className="size-4" />
+              방문객으로 둘러보기
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
         </section>
       </main>
 
       <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-        FESTAI Demo · Perso AI · 앨런(Alan) 연동 예정 · Powered by Next.js &
-        Vercel
+        © 2026 F:EST AI. All rights reserved.
       </footer>
     </div>
   );
