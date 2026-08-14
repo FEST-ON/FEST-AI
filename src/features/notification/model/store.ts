@@ -8,6 +8,8 @@ export interface VisitorNotice {
   title: string;
   description: string;
   createdAt: string;
+  /** ISO timestamp used to render a locale-aware relative time on the visitor side. */
+  createdAtIso: string;
   level: NoticeLevel;
 }
 
@@ -17,13 +19,15 @@ export interface ReservationCall {
   program: string;
   location: string;
   createdAt: string;
+  /** ISO timestamp used to render a locale-aware relative time on the visitor side. */
+  createdAtIso: string;
 }
 
 interface NotificationState {
   notices: VisitorNotice[];
   reservationCalls: ReservationCall[];
-  addNotice: (notice: Omit<VisitorNotice, "id" | "createdAt">) => void;
-  addReservationCall: (call: Omit<ReservationCall, "id" | "createdAt">) => void;
+  addNotice: (notice: Omit<VisitorNotice, "id" | "createdAt" | "createdAtIso">) => void;
+  addReservationCall: (call: Omit<ReservationCall, "id" | "createdAt" | "createdAtIso">) => void;
   removeNotice: (id: string) => void;
   removeReservationCall: (id: string) => void;
 }
@@ -48,6 +52,7 @@ export const useNotificationStore = create<NotificationState>()(
           title: "메인스테이지 공연 시간이 변경됐어요",
           description: "우천으로 인해 그린 콘서트 시작 시간이 19:00으로 변경됐어요.",
           createdAt: "방금 전",
+          createdAtIso: new Date().toISOString(),
           level: "중요",
         },
         {
@@ -55,6 +60,7 @@ export const useNotificationStore = create<NotificationState>()(
           title: "우천 시 안전 이용 안내",
           description: "미끄럼 사고 예방을 위해 강변 산책로 일부 구간을 통제하고 있어요.",
           createdAt: "15분 전",
+          createdAtIso: new Date(Date.now() - 15 * 60_000).toISOString(),
           level: "일반",
         },
       ],
@@ -65,6 +71,7 @@ export const useNotificationStore = create<NotificationState>()(
           program: "드론라이트쇼 명당석",
           location: "예약 프로그램 입구",
           createdAt: "지금 호출됨",
+          createdAtIso: new Date().toISOString(),
         },
       ],
       addNotice: (notice) =>
@@ -74,6 +81,7 @@ export const useNotificationStore = create<NotificationState>()(
               ...notice,
               id: createId("notice"),
               createdAt: getCurrentTime(),
+              createdAtIso: new Date().toISOString(),
             },
             ...state.notices,
           ],
@@ -85,6 +93,7 @@ export const useNotificationStore = create<NotificationState>()(
               ...call,
               id: createId("reservation-call"),
               createdAt: "지금 호출됨",
+              createdAtIso: new Date().toISOString(),
             },
             ...state.reservationCalls,
           ],

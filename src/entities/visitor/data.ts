@@ -1,5 +1,7 @@
 import { delay } from "@/shared/lib/async";
 import { FESTIVAL_CODE, publicApi, visitorApi } from "@/shared/lib/api";
+import type { Locale } from "@/shared/lib/i18n";
+import { translateEntries } from "@/shared/lib/i18n/translate-client";
 import { surveyQuestionType } from "./model";
 import type { RecommendedCourse, SurveyAnswer, SurveyQuestion, WaitTicket } from "./model";
 
@@ -17,10 +19,18 @@ export const sampleCourse: RecommendedCourse = {
   ],
 };
 
-export const waitTickets: WaitTicket[] = [
-  { id: "w1", program: "업사이클링 공방 체험", number: 128, peopleAhead: 4, estimatedWaitMinutes: 12, status: "대기중" },
-  { id: "w2", program: "드론라이트쇼 명당석", number: 45, peopleAhead: 0, estimatedWaitMinutes: 0, status: "호출됨" },
+// Source-of-truth content (Korean) — also used directly as the reservation
+// store's synchronous initial seed (see features/reservation/model/store.ts).
+export const WAIT_TICKETS_SEED: WaitTicket[] = [
+  { id: "w1", number: 128, peopleAhead: 4, estimatedWaitMinutes: 12, status: "대기중", program: "업사이클링 공방 체험" },
+  { id: "w2", number: 45, peopleAhead: 0, estimatedWaitMinutes: 0, status: "호출됨", program: "드론라이트쇼 명당석" },
 ];
+
+export async function getWaitTickets(locale: Locale): Promise<WaitTicket[]> {
+  const koFields = Object.fromEntries(WAIT_TICKETS_SEED.map((item) => [item.id, item.program]));
+  const text = await translateEntries(koFields, locale);
+  return WAIT_TICKETS_SEED.map((item) => ({ ...item, program: text[item.id] ?? item.program }));
+}
 
 export const surveyQuestions: SurveyQuestion[] = [
   { id: "q1", surveyId: "demo", question: "오늘 축제는 전반적으로 만족스러우셨나요?", type: "rating", required: true },
@@ -31,8 +41,8 @@ export const surveyQuestions: SurveyQuestion[] = [
 export async function fetchRecommendedCourse() {
   return delay(sampleCourse, 700);
 }
-export async function fetchWaitTickets() {
-  return delay(waitTickets, 400);
+export async function fetchWaitTickets(locale: Locale = "ko") {
+  return delay(await getWaitTickets(locale), 400);
 }
 export async function fetchSurveyQuestions() {
   const surveys = await publicApi<Array<{

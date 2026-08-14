@@ -1,35 +1,45 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Stamp, MapPin, Ticket, PartyPopper } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { ProgressRing } from "@/shared/ui/progress-ring";
-import { stampSpots } from "@/entities/coupon";
-import { localCoupons } from "@/entities/coupon";
+import { fetchStampSpots, fetchLocalCoupons } from "@/entities/coupon";
 import { useStampTourStore } from "@/features/stamp-tour/model/store";
+import { useTranslation } from "@/shared/lib/i18n";
 
 export default function StampTourPage() {
+  const { t, locale } = useTranslation();
   const { collectedIds, collect } = useStampTourStore();
+  const { data: stampSpots = [] } = useQuery({
+    queryKey: ["stamp-spots", locale] as const,
+    queryFn: () => fetchStampSpots(locale),
+  });
+  const { data: localCoupons = [] } = useQuery({
+    queryKey: ["local-coupons", locale] as const,
+    queryFn: () => fetchLocalCoupons(locale),
+  });
   const total = stampSpots.length;
   const collected = collectedIds.length;
   const complete = collected >= total;
 
   return (
     <div className="px-4 pt-4 pb-6">
-      <h1 className="text-lg font-extrabold text-foreground">스탬프 투어</h1>
-      <p className="text-xs text-muted-foreground">스탬프를 모두 모으면 지역상권 쿠폰을 드려요</p>
+      <h1 className="text-lg font-extrabold text-foreground">{t.stampTour.title}</h1>
+      <p className="text-xs text-muted-foreground">{t.stampTour.subtitle}</p>
 
       <div className="mt-4 flex flex-col items-center rounded-2xl border border-border bg-card py-6">
-        <ProgressRing value={(collected / total) * 100} label={`${collected}/${total}`} sublabel="스탬프 수집" />
+        <ProgressRing value={(collected / total) * 100} label={`${collected}/${total}`} sublabel={t.stampTour.collectionSubLabel} />
         {complete && (
           <Badge className="mt-3 gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
-            <PartyPopper className="size-3.5" /> 스탬프 완주! 아래 쿠폰을 확인하세요
+            <PartyPopper className="size-3.5" /> {t.stampTour.completeBadge}
           </Badge>
         )}
       </div>
 
       <section className="mt-5">
-        <h2 className="mb-2 text-sm font-bold text-foreground">스탬프 지점</h2>
+        <h2 className="mb-2 text-sm font-bold text-foreground">{t.stampTour.spotsTitle}</h2>
         <div className="space-y-2">
           {stampSpots.map((spot) => {
             const done = collectedIds.includes(spot.id);
@@ -51,7 +61,7 @@ export default function StampTourPage() {
                   </div>
                 </div>
                 <Button size="sm" variant={done ? "secondary" : "default"} disabled={done} onClick={() => collect(spot.id)}>
-                  {done ? "완료" : "스탬프 찍기"}
+                  {done ? t.stampTour.doneButton : t.stampTour.stampButton}
                 </Button>
               </div>
             );
@@ -61,7 +71,7 @@ export default function StampTourPage() {
 
       <section className="mt-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">
-          <Ticket className="size-4" /> 지역상권 디지털 쿠폰
+          <Ticket className="size-4" /> {t.stampTour.couponsTitle}
         </h2>
         <div className="space-y-2">
           {localCoupons.map((c) => (
@@ -74,8 +84,8 @@ export default function StampTourPage() {
                 <Badge variant="outline" className="text-[10px]">{c.category}</Badge>
               </div>
               <p className="mt-1 text-sm font-semibold text-primary">{c.discount}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{c.location} · {c.expiresAt}까지</p>
-              {c.used && <p className="mt-1 text-[11px] font-medium text-muted-foreground">사용완료</p>}
+              <p className="mt-1 text-xs text-muted-foreground">{t.stampTour.expiresLine(c.location, c.expiresAt)}</p>
+              {c.used && <p className="mt-1 text-[11px] font-medium text-muted-foreground">{t.stampTour.usedLabel}</p>}
             </div>
           ))}
         </div>

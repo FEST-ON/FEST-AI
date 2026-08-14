@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AccessibilityLanguage } from "@/entities/visitor";
+import type { Dictionary } from "@/shared/lib/i18n";
 
 interface SpeechRecognitionAlternativeLike {
   transcript: string;
@@ -57,20 +58,13 @@ const LANGUAGE_CODES: Record<AccessibilityLanguage, string> = {
   日本語: "ja-JP",
 };
 
-const ERROR_MESSAGES: Record<string, string> = {
-  "not-allowed": "마이크 권한이 차단됐어요. 브라우저 설정에서 권한을 허용해주세요.",
-  "service-not-allowed": "이 브라우저에서는 음성인식 서비스를 사용할 수 없어요.",
-  "audio-capture": "사용 가능한 마이크를 찾지 못했어요.",
-  "no-speech": "음성이 들리지 않았어요. 다시 눌러 말해주세요.",
-  network: "음성인식 연결이 원활하지 않아요. 잠시 후 다시 시도해주세요.",
-};
-
 interface UseSpeechRecognitionOptions {
   language: AccessibilityLanguage;
+  t: Dictionary;
   onFinalResult: (transcript: string) => void;
 }
 
-export function useSpeechRecognition({ language, onFinalResult }: UseSpeechRecognitionOptions) {
+export function useSpeechRecognition({ language, t, onFinalResult }: UseSpeechRecognitionOptions) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalTranscriptRef = useRef("");
   const onFinalResultRef = useRef(onFinalResult);
@@ -105,7 +99,7 @@ export function useSpeechRecognition({ language, onFinalResult }: UseSpeechRecog
     const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
 
     if (!Recognition) {
-      setError("이 브라우저는 음성인식을 지원하지 않아요. 텍스트로 질문해주세요.");
+      setError(t.aiGuide.errors.unsupported);
       return;
     }
 
@@ -135,7 +129,14 @@ export function useSpeechRecognition({ language, onFinalResult }: UseSpeechRecog
       setInterimTranscript(interim || finalTranscriptRef.current);
     };
     recognition.onerror = (event) => {
-      setError(ERROR_MESSAGES[event.error] ?? "음성을 인식하지 못했어요. 다시 시도해주세요.");
+      const errorMessages: Record<string, string> = {
+        "not-allowed": t.aiGuide.errors.notAllowed,
+        "service-not-allowed": t.aiGuide.errors.serviceNotAllowed,
+        "audio-capture": t.aiGuide.errors.audioCapture,
+        "no-speech": t.aiGuide.errors.noSpeech,
+        network: t.aiGuide.errors.network,
+      };
+      setError(errorMessages[event.error] ?? t.aiGuide.errors.unknown);
     };
     recognition.onend = () => {
       setIsListening(false);
@@ -154,9 +155,9 @@ export function useSpeechRecognition({ language, onFinalResult }: UseSpeechRecog
     } catch {
       recognitionRef.current = null;
       setIsListening(false);
-      setError("마이크를 시작하지 못했어요. 잠시 후 다시 시도해주세요.");
+      setError(t.aiGuide.errors.startFailed);
     }
-  }, [language]);
+  }, [language, t]);
 
   return {
     error,

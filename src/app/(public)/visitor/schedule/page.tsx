@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchSchedule } from "@/entities/festival";
+import { useTranslation } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
 import { Skeleton } from "@/shared/ui/skeleton";
 
@@ -14,7 +15,11 @@ const CATEGORY_STYLE: Record<string, string> = {
 };
 
 export default function SchedulePage() {
-  const { data: schedule, isLoading } = useQuery({ queryKey: ["schedule"], queryFn: fetchSchedule });
+  const { t, locale } = useTranslation();
+  const { data: schedule, isLoading } = useQuery({
+    queryKey: ["schedule", locale] as const,
+    queryFn: () => fetchSchedule(locale),
+  });
 
   const grouped = (schedule ?? []).reduce<Record<string, typeof schedule>>((acc, item) => {
     acc[item.day] = [...(acc[item.day] ?? []), item];
@@ -23,8 +28,8 @@ export default function SchedulePage() {
 
   return (
     <div className="px-4 pt-4 pb-6">
-      <h1 className="text-lg font-extrabold text-foreground">전체 일정</h1>
-      <p className="text-xs text-muted-foreground">승인된 공식 프로그램 일정이에요</p>
+      <h1 className="text-lg font-extrabold text-foreground">{t.schedule.title}</h1>
+      <p className="text-xs text-muted-foreground">{t.schedule.subtitle}</p>
 
       {isLoading || !schedule ? (
         <div className="mt-4 space-y-2.5">
@@ -45,7 +50,7 @@ export default function SchedulePage() {
                       <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
                       <p className="text-xs text-muted-foreground">{item.stage}</p>
                     </div>
-                    <Badge className={`shrink-0 text-[10px] ${CATEGORY_STYLE[item.category]}`}>{item.category}</Badge>
+                    <Badge className={`shrink-0 text-[10px] ${CATEGORY_STYLE[item.category]}`}>{t.festivalData.category[item.category]}</Badge>
                   </div>
                 ))}
               </div>

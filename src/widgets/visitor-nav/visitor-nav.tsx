@@ -6,27 +6,32 @@ import { Home, Sparkles, MapPin, Ticket, Stamp } from "lucide-react";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useVisitorMenuSettingsStore } from "@/features/visitor-menu-settings/model/store";
 import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/store";
+import { useTranslation } from "@/shared/lib/i18n";
+import type { Dictionary } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 
-const NAV_ITEMS: {
+function getNavItems(t: Dictionary): {
   href: string;
   label: string;
   icon: typeof Home;
   kiosk: boolean;
   menuKey?: VisitorMenuKey;
-}[] = [
-  { href: "/visitor", label: "홈", icon: Home, kiosk: true },
-  { href: "/visitor/ai-guide", label: "AI안내", icon: Sparkles, kiosk: true },
-  { href: "/visitor/map", label: "지도", icon: MapPin, kiosk: true },
-  { href: "/visitor/reservation", label: "예약", icon: Ticket, kiosk: false, menuKey: "reservation" },
-  { href: "/visitor/stamp-tour", label: "스탬프", icon: Stamp, kiosk: false, menuKey: "stampTour" },
-];
+}[] {
+  return [
+    { href: "/visitor", label: t.nav.home, icon: Home, kiosk: true },
+    { href: "/visitor/ai-guide", label: t.nav.aiGuide, icon: Sparkles, kiosk: true },
+    { href: "/visitor/map", label: t.nav.map, icon: MapPin, kiosk: true },
+    { href: "/visitor/reservation", label: t.nav.reservation, icon: Ticket, kiosk: false, menuKey: "reservation" },
+    { href: "/visitor/stamp-tour", label: t.nav.stamp, icon: Stamp, kiosk: false, menuKey: "stampTour" },
+  ];
+}
 
 export function VisitorNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const visitorMode = useAccessibilityStore((state) => state.visitorMode);
   const menuSettings = useVisitorMenuSettingsStore();
-  const navItems = NAV_ITEMS.filter(
+  const navItems = getNavItems(t).filter(
     (item) =>
       (visitorMode === "qr" || item.kiosk) &&
       (!item.menuKey || menuSettings[item.menuKey]),

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import type { WaitTicket } from "@/entities/visitor";
-import { waitTickets as seedTickets } from "@/entities/visitor";
+import { WAIT_TICKETS_SEED } from "@/entities/visitor";
 
 interface ReservationState {
   tickets: WaitTicket[];
@@ -13,7 +13,7 @@ interface ReservationState {
 let ticketSeq = 200;
 
 export const useReservationStore = create<ReservationState>((set) => ({
-  tickets: seedTickets,
+  tickets: WAIT_TICKETS_SEED,
   issueTicket: (program) =>
     set((s) => ({
       tickets: [

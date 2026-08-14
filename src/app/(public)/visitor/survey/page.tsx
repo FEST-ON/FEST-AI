@@ -5,11 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Star, CheckCircle2 } from "lucide-react";
 import { fetchSurveyQuestions, hasSurveyAnswer, submitSurvey } from "@/entities/visitor";
 import type { SurveyAnswer } from "@/entities/visitor";
+import { useTranslation } from "@/shared/lib/i18n";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
 export default function SurveyPage() {
+  const { t } = useTranslation();
   const { data: questions, isLoading } = useQuery({ queryKey: ["survey-questions"], queryFn: fetchSurveyQuestions });
   const [answers, setAnswers] = useState<Record<string, SurveyAnswer>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -22,16 +24,16 @@ export default function SurveyPage() {
         <span className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950">
           <CheckCircle2 className="size-7" />
         </span>
-        <h2 className="text-base font-bold text-foreground">소중한 의견 감사합니다!</h2>
-        <p className="text-xs text-muted-foreground">더 나은 축제를 만드는 데 큰 도움이 돼요.</p>
+        <h2 className="text-base font-bold text-foreground">{t.survey.thanksTitle}</h2>
+        <p className="text-xs text-muted-foreground">{t.survey.thanksSubtitle}</p>
       </div>
     );
   }
 
   return (
     <div className="px-4 pt-4 pb-6">
-      <h1 className="text-lg font-extrabold text-foreground">만족도 조사</h1>
-      <p className="text-xs text-muted-foreground">1분이면 충분해요, 솔직한 의견을 들려주세요</p>
+      <h1 className="text-lg font-extrabold text-foreground">{t.survey.title}</h1>
+      <p className="text-xs text-muted-foreground">{t.survey.subtitle}</p>
 
       {isLoading || !questions ? (
         <div className="mt-4 space-y-3">
@@ -49,7 +51,7 @@ export default function SurveyPage() {
               await submitSurvey(questions, answers);
               setSubmitted(true);
             } catch (caught) {
-              setError(caught instanceof Error ? caught.message : "설문 제출에 실패했습니다.");
+              setError(caught instanceof Error ? caught.message : t.survey.submitError);
             } finally {
               setSubmitting(false);
             }
@@ -65,7 +67,7 @@ export default function SurveyPage() {
                       key={n}
                       type="button"
                       onClick={() => setAnswers((a) => ({ ...a, [q.id]: n }))}
-                      aria-label={`${n}점`}
+                      aria-label={t.survey.ratingAria(n)}
                     >
                       <Star
                         className={cn(
@@ -132,7 +134,7 @@ export default function SurveyPage() {
                   value={String(answers[q.id] ?? "")}
                   onChange={(event) => setAnswers((current) => ({ ...current, [q.id]: event.target.value }))}
                   className="mt-3 min-h-24 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none focus:border-primary"
-                  placeholder="의견을 입력해 주세요"
+                  placeholder={t.survey.textPlaceholder}
                 />
               )}
             </div>
@@ -143,7 +145,7 @@ export default function SurveyPage() {
             className="w-full"
             disabled={submitting || questions.some((question) => question.required && !hasSurveyAnswer(answers[question.id]))}
           >
-            {submitting ? "제출 중..." : "제출하기"}
+            {submitting ? t.survey.submitting : t.survey.submit}
           </Button>
         </form>
       )}

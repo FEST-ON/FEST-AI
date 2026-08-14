@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Bus,
   CalendarDays,
@@ -14,29 +14,47 @@ import {
   SendHorizontal,
   Square,
   Sparkles,
+  Users,
   Volume2,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useTranslation } from "@/shared/lib/i18n";
 import { buildPersoMessage, generatePersoReply, resetPersoConversation } from "../lib/generate-reply";
 import { reportAiMessage } from "@/features/ai-guide/lib/generate-reply";
-import { usePersoChatStore } from "../model/chat-store";
+import { usePersoChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
 import { useSpeechRecognition } from "../model/use-speech-recognition";
 
-const EXPECTED_QUESTIONS = [
-  { icon: MapPin, label: "축제 부스 위치 알려줘" },
-  { icon: Bus, label: "셔틀버스 이용 방법" },
-  { icon: MapPin, label: "가까운 화장실 안내" },
-  { icon: CalendarDays, label: "오늘 주요 프로그램" },
-] as const;
+const QUESTION_ICON = {
+  congestion: Users,
+  transport: Bus,
+  facility: MapPin,
+  schedule: CalendarDays,
+} as const;
 
 export function PersoAiGuide() {
-  const { messages, isTyping, addMessage, setTyping, reset } = usePersoChatStore();
+  const { t, locale } = useTranslation();
+  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome } = usePersoChatStore();
   const { language, largeText, voiceGuide } = useAccessibilityStore();
   const [draft, setDraft] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
+
+  const welcomeMessage = useMemo(
+    () => ({
+      id: WELCOME_MESSAGE_ID,
+      role: "assistant" as const,
+      content: t.aiGuide.welcomeContent,
+      timestamp: t.aiGuide.welcomeTimestamp,
+      sources: [t.aiGuide.welcomeSource],
+    }),
+    [t],
+  );
+
+  useEffect(() => {
+    syncWelcome(welcomeMessage);
+  }, [welcomeMessage, syncWelcome]);
 
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
   const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
@@ -53,19 +71,19 @@ export function PersoAiGuide() {
   const handleAsk = useCallback(async (question: string) => {
     if (isTyping) return;
 
-    addMessage(buildPersoMessage("user", question));
+    addMessage(buildPersoMessage("user", question, undefined, undefined, locale));
     setTyping(true);
     setReportStatus("idle");
 
     try {
-      const reply = await generatePersoReply(question);
-      addMessage(buildPersoMessage("assistant", reply.content, reply.sources, reply.messageId));
-    } catch (error) {
-      addMessage(buildPersoMessage("assistant", error instanceof Error ? error.message : "안내 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."));
+      const reply = await generatePersoReply(question, locale);
+      addMessage(buildPersoMessage("assistant", reply.content, reply.sources, reply.messageId, locale));
+    } catch {
+      addMessage(buildPersoMessage("assistant", t.aiGuide.replyFailed, undefined, undefined, locale));
     } finally {
       setTyping(false);
     }
-  }, [addMessage, isTyping, setTyping]);
+  }, [addMessage, isTyping, setTyping, t, locale]);
 
   const handleVoiceResult = useCallback((transcript: string) => {
     void handleAsk(transcript);
@@ -89,7 +107,7 @@ export function PersoAiGuide() {
     isSupported: isSpeechSupported,
     startListening,
     stopListening,
-  } = useSpeechRecognition({ language, onFinalResult: handleVoiceResult });
+  } = useSpeechRecognition({ language, t, onFinalResult: handleVoiceResult });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,7 +122,7 @@ export function PersoAiGuide() {
     <section className="relative isolate flex h-full min-h-0 flex-col overflow-hidden bg-slate-950 text-white">
       <Image
         src="/images/perso-ai-guide.png"
-        alt="Alan AI 축제 안내 디지털 휴먼 예시"
+        alt={t.aiGuide.imageAlt}
         fill
         priority
         sizes="(max-width: 448px) 100vw, 448px"
@@ -114,15 +132,15 @@ export function PersoAiGuide() {
 
       <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[11px] font-semibold text-white/90 backdrop-blur-md">
         <Volume2 className="size-3.5 text-cyan-300" />
-        음성 안내 준비됨
+        {t.aiGuide.voiceReadyBadge}
       </div>
 
       <div className="absolute right-4 top-4 z-30 flex items-center gap-2">
         <AccessibilitySheet triggerClassName="size-10 border-white/20 bg-slate-950/40 text-white backdrop-blur-md hover:bg-slate-950/60 hover:text-white" />
         <button
           type="button"
-          aria-label="대화 새로고침"
-          onClick={() => { resetPersoConversation(); reset(); setReportStatus("idle"); }}
+          aria-label={t.aiGuide.resetAria}
+          onClick={() => { resetPersoConversation(); reset(welcomeMessage); setReportStatus("idle"); }}
           className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-slate-950/40 text-white backdrop-blur-md transition hover:bg-slate-950/60"
         >
           <RotateCcw className="size-4" />
@@ -144,19 +162,19 @@ export function PersoAiGuide() {
         >
           {latestUserMessage && (
             <p className="text-center text-[10px] font-semibold text-slate-700/75 dark:text-white/65">
-              인식된 질문 · “{latestUserMessage.content}”
+              {t.aiGuide.recognizedQuestionPrefix}“{latestUserMessage.content}”
             </p>
           )}
 
           {latestAssistantMessage && (
             <div className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/72">
               <span className="mb-1 flex items-center gap-1 text-[10px] font-bold text-primary">
-                <Sparkles className="size-3" /> Alan AI
+                <Sparkles className="size-3" /> {t.aiGuide.assistantLabel}
               </span>
               {latestAssistantMessage.content}
               {latestAssistantMessage.sources && latestAssistantMessage.sources.length > 0 && (
                 <p className="mt-1.5 border-t border-border/70 pt-1.5 text-[9px] opacity-60">
-                  출처 · {latestAssistantMessage.sources.join(", ")}
+                  {t.aiGuide.sourcePrefix}{latestAssistantMessage.sources.join(", ")}
                 </p>
               )}
               {latestAssistantMessage.backendMessageId && (
@@ -168,11 +186,11 @@ export function PersoAiGuide() {
                     className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-60"
                   >
                     {reportStatus === "done" ? <CheckCircle2 className="size-3" /> : <Flag className="size-3" />}
-                    {reportStatus === "pending" ? "접수 중…" : reportStatus === "done" ? "검토 요청됨" : "답변 오류 신고"}
+                    {reportStatus === "pending" ? t.aiGuide.reportPending : reportStatus === "done" ? t.aiGuide.reportDone : t.aiGuide.reportAction}
                   </button>
                 </div>
               )}
-              {reportStatus === "error" && <p className="mt-1 text-right text-[9px] text-red-600">신고를 접수하지 못했습니다.</p>}
+              {reportStatus === "error" && <p className="mt-1 text-right text-[9px] text-red-600">{t.aiGuide.reportFailed}</p>}
             </div>
           )}
 
@@ -199,7 +217,7 @@ export function PersoAiGuide() {
                 type="button"
                 onClick={isListening ? stopListening : startListening}
                 disabled={isTyping || !isSpeechSupported}
-                aria-label={isListening ? "음성인식 중지" : "음성으로 질문하기"}
+                aria-label={isListening ? t.aiGuide.micStopAria : t.aiGuide.micStartAria}
                 aria-pressed={isListening}
                 className={cn(
                   "relative flex size-16 shrink-0 items-center justify-center rounded-full border-4 border-white/80 text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-35",
@@ -215,7 +233,7 @@ export function PersoAiGuide() {
                   type="button"
                   onClick={() => setShowTextInput((visible) => !visible)}
                   disabled={isListening}
-                  aria-label={showTextInput ? "키보드 입력 닫기" : "키보드로 질문하기"}
+                  aria-label={showTextInput ? t.aiGuide.keyboardCloseAria : t.aiGuide.keyboardOpenAria}
                   aria-expanded={showTextInput}
                   aria-controls="perso-text-question"
                   className={cn(
@@ -231,7 +249,7 @@ export function PersoAiGuide() {
             </div>
 
             <p className="mt-1.5 min-h-4 text-center text-[10px] font-semibold text-foreground/80">
-              {isListening ? interimTranscript || "듣고 있어요…" : "마이크를 눌러 질문하세요"}
+              {isListening ? interimTranscript || t.aiGuide.listeningPlaceholder : t.aiGuide.idlePrompt}
             </p>
 
             {showTextInput && (
@@ -245,14 +263,14 @@ export function PersoAiGuide() {
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                   disabled={isTyping}
-                  aria-label="Alan AI에게 텍스트로 질문하기"
-                  placeholder="질문을 입력하세요"
+                  aria-label={t.aiGuide.textInputAria}
+                  placeholder={t.aiGuide.textInputPlaceholder}
                   className="min-w-0 flex-1 bg-transparent px-2 text-[12px] font-medium text-foreground outline-none placeholder:text-muted-foreground/75"
                 />
                 <button
                   type="submit"
                   disabled={!draft.trim() || isTyping}
-                  aria-label="질문 전송"
+                  aria-label={t.aiGuide.sendAria}
                   className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <SendHorizontal className="size-4" />
@@ -271,37 +289,40 @@ export function PersoAiGuide() {
           >
             {speechError ??
               (isListening
-                ? "음성을 인식하고 있어요. 질문이 끝나면 자동으로 전송됩니다."
+                ? t.aiGuide.statusListening
                 : isSpeechSupported
-                  ? "마이크를 누르고 질문하면 인식 후 자동으로 전송돼요."
-                  : "현재 브라우저에서는 텍스트 질문을 이용해주세요.")}
+                  ? t.aiGuide.statusIdleSupported
+                  : t.aiGuide.statusUnsupported)}
           </p>
 
           <p className={cn("mb-1.5 text-[10px] font-bold tracking-[0.12em] text-muted-foreground", largeText && "text-xs")}>
-            예상 질문
+            {t.aiGuide.expectedQuestionsLabel}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {EXPECTED_QUESTIONS.map(({ icon: Icon, label }) => (
-              <button
-                key={label}
-                type="button"
-                disabled={isTyping}
-                onClick={() => handleAsk(label)}
-                className={cn(
-                  "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/68",
-                  largeText && "text-sm",
-                )}
-              >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Icon className="size-3.5" />
-                </span>
-                <span className="leading-tight">{label}</span>
-              </button>
-            ))}
+            {t.aiGuide.expectedQuestions.map(({ key, label }) => {
+              const Icon = QUESTION_ICON[key as keyof typeof QUESTION_ICON];
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={isTyping}
+                  onClick={() => handleAsk(label)}
+                  className={cn(
+                    "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/68",
+                    largeText && "text-sm",
+                  )}
+                >
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Icon className="size-3.5" />
+                  </span>
+                  <span className="leading-tight">{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
-      {voiceGuide && <span className="sr-only" aria-live="polite">음성 안내가 켜졌습니다.</span>}
+      {voiceGuide && <span className="sr-only" aria-live="polite">{t.aiGuide.voiceGuideOnAnnouncement}</span>}
     </section>
   );
 }

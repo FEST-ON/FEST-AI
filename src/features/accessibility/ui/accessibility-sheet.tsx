@@ -16,6 +16,7 @@ import {
 } from "@/shared/ui/sheet";
 import { useAccessibilityStore } from "../model/store";
 import type { AccessibilityLanguage } from "@/entities/visitor";
+import { useTranslation } from "@/shared/lib/i18n";
 
 const LANGUAGES: AccessibilityLanguage[] = [
   "한국어",
@@ -52,6 +53,7 @@ export function AccessibilitySheet({
     toggleVoiceGuide,
   } = useAccessibilityStore();
   const kioskMode = visitorMode === "kiosk";
+  const { t } = useTranslation();
 
   return (
     <Sheet>
@@ -61,7 +63,7 @@ export function AccessibilitySheet({
             variant="outline"
             size="icon"
             className={cn("rounded-full", triggerClassName)}
-            aria-label="접근성 설정"
+            aria-label={t.accessibility.ariaLabel}
           />
         }
       >
@@ -69,9 +71,9 @@ export function AccessibilitySheet({
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-w-md rounded-t-3xl">
         <SheetHeader>
-          <SheetTitle>이용 환경 및 접근성</SheetTitle>
+          <SheetTitle>{t.accessibility.sheetTitle}</SheetTitle>
           <SheetDescription>
-            기기 이용 방식과 언어, 글씨 크기, 음성 안내를 설정할 수 있어요.
+            {t.accessibility.sheetDescription}
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-5 px-4">
@@ -83,10 +85,10 @@ export function AccessibilitySheet({
                   htmlFor="kiosk-mode"
                   className="text-sm font-semibold"
                 >
-                  키오스크 간편 모드
+                  {t.accessibility.kioskLabel}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  홈, AI 안내, 지도만 표시해요
+                  {t.accessibility.kioskHelper}
                 </p>
               </div>
               <Switch
@@ -112,9 +114,9 @@ export function AccessibilitySheet({
                     !kioskMode ? "text-primary" : "text-muted-foreground",
                   )}
                 />
-                <p className="text-sm font-semibold">QR 모드</p>
+                <p className="text-sm font-semibold">{t.accessibility.qrTitle}</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  전체 축제 기능 제공
+                  {t.accessibility.qrSubtitle}
                 </p>
               </div>
               <div
@@ -131,9 +133,9 @@ export function AccessibilitySheet({
                     kioskMode ? "text-primary" : "text-muted-foreground",
                   )}
                 />
-                <p className="text-sm font-semibold">키오스크 모드</p>
+                <p className="text-sm font-semibold">{t.accessibility.kioskModeTitle}</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  핵심 기능만 간편 제공
+                  {t.accessibility.kioskModeSubtitle}
                 </p>
               </div>
             </div>
@@ -141,7 +143,7 @@ export function AccessibilitySheet({
 
           <div>
             <Label className="mb-2 block text-sm font-semibold">
-              언어 선택
+              {t.accessibility.languageLabel}
             </Label>
             <div className="grid grid-cols-4 gap-2">
               {LANGUAGES.map((lng) => (
@@ -164,10 +166,10 @@ export function AccessibilitySheet({
           <div className="flex items-center justify-between rounded-xl border border-border p-3">
             <div>
               <Label htmlFor="large-text" className="text-sm font-semibold">
-                큰 글씨 모드
+                {t.accessibility.largeTextLabel}
               </Label>
               <p className="text-xs text-muted-foreground">
-                텍스트를 더 크고 굵게 표시해요
+                {t.accessibility.largeTextHelper}
               </p>
             </div>
             <Switch
@@ -179,10 +181,10 @@ export function AccessibilitySheet({
           <div className="flex items-center justify-between rounded-xl border border-border p-3">
             <div>
               <Label htmlFor="voice-guide" className="text-sm font-semibold">
-                음성 안내
+                {t.accessibility.voiceGuideLabel}
               </Label>
               <p className="text-xs text-muted-foreground">
-                AI 축제 안내를 음성으로 들려드려요
+                {t.accessibility.voiceGuideHelper}
               </p>
             </div>
             <Switch
@@ -194,7 +196,7 @@ export function AccessibilitySheet({
         </div>
         <SheetFooter>
           <p className="text-center text-[11px] text-muted-foreground">
-            설정은 이 기기에 자동 저장되며 다음 방문 시에도 유지돼요.
+            {t.accessibility.footerNote}
           </p>
         </SheetFooter>
       </SheetContent>

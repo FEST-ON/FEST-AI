@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MessageSquareWarning, CheckCircle2 } from "lucide-react";
 import { useTicketBoardStore } from "@/features/ticket-board/model/store";
+import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -42,6 +43,7 @@ function formatCreatedAt(date: Date) {
 export function ComplaintSheet({
   triggerClassName,
 }: { triggerClassName?: string } = {}) {
+  const { t } = useTranslation();
   const addTicket = useTicketBoardStore((s) => s.addTicket);
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -89,7 +91,7 @@ export function ComplaintSheet({
             variant="outline"
             size="icon"
             className={cn("rounded-full", triggerClassName)}
-            aria-label="민원 제출"
+            aria-label={t.complaint.ariaLabel}
           />
         }
       >
@@ -101,23 +103,22 @@ export function ComplaintSheet({
             <CheckCircle2 className="size-10 text-emerald-500" />
             <div>
               <p className="text-sm font-bold text-foreground">
-                민원이 접수되었어요
+                {t.complaint.thanksTitle}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                담당자 배정 후 순차적으로 처리돼요. 접수 상태는 운영팀이
-                확인해요.
+                {t.complaint.thanksDescription}
               </p>
             </div>
             <Button size="sm" onClick={() => setOpen(false)}>
-              닫기
+              {t.complaint.closeButton}
             </Button>
           </div>
         ) : (
           <>
             <SheetHeader>
-              <SheetTitle>민원 제출</SheetTitle>
+              <SheetTitle>{t.complaint.sheetTitle}</SheetTitle>
               <SheetDescription>
-                불편사항이나 개선 요청을 남겨주시면 운영팀이 확인 후 처리해요.
+                {t.complaint.sheetDescription}
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 px-4">
@@ -126,28 +127,30 @@ export function ComplaintSheet({
                   htmlFor="complaint-title"
                   className="text-sm font-semibold"
                 >
-                  제목
+                  {t.complaint.titleLabel}
                 </Label>
                 <Input
                   id="complaint-title"
-                  placeholder="예: 그늘막이 부족해요"
+                  placeholder={t.complaint.titlePlaceholder}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-semibold">분류</Label>
+                <Label className="text-sm font-semibold">{t.complaint.categoryLabel}</Label>
                 <Select
                   value={category}
                   onValueChange={(v) => setCategory(v as typeof category)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>
+                      {(value: unknown) => t.complaint.categories[value as string] ?? value}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map((c) => (
                       <SelectItem key={c} value={c}>
-                        {c}
+                        {t.complaint.categories[c]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -158,11 +161,11 @@ export function ComplaintSheet({
                   htmlFor="complaint-description"
                   className="text-sm font-semibold"
                 >
-                  상세 내용
+                  {t.complaint.descriptionLabel}
                 </Label>
                 <Textarea
                   id="complaint-description"
-                  placeholder="어떤 문제가 있었는지 자세히 적어주세요"
+                  placeholder={t.complaint.descriptionPlaceholder}
                   className="min-h-28"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -171,7 +174,7 @@ export function ComplaintSheet({
             </div>
             <SheetFooter>
               <Button disabled={!canSubmit} onClick={handleSubmit}>
-                민원 제출하기
+                {t.complaint.submitButton}
               </Button>
             </SheetFooter>
           </>
