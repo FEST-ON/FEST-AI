@@ -34,12 +34,14 @@ src/
 
 | 스펙 | 화면 경로 |
 | --- | --- |
-| 6.1 AI 축제 안내 (자연어 Q&A, 맞춤 코스 추천, 혼잡도 기반 대체 안내, 접근성 모드) | `/visitor/ai-guide`, 우측 상단 접근성(♿) 버튼 |
-| 6.2 통합 운영관리 (자원 통합관리, 민원/공지/사고 티켓, 운영 대시보드, AI 민원 분류) | `/admin`, `/admin/programs`, `/admin/tickets`, `/admin/ai-insights` |
-| 6.3 방문객 QR 모바일 웹 (일정/지도/시설/교통, 예약·대기표, 스탬프투어, 디지털 쿠폰) | `/visitor`, `/visitor/map`, `/visitor/schedule`, `/visitor/reservation`, `/visitor/stamp-tour`, `/visitor/survey` |
-| 6.4 ESG 성과관리 (자동 집계, 사회성과 측정, 데이터 출처/승인 이력, AI 보고서 초안) | `/admin/esg` |
+| 6.1 AI 축제 안내 (자연어 Q&A, 맞춤 코스 추천, 혼잡도 기반 안내, 접근성 모드·음성 안내) | `/visitor/ai-guide`, `/visitor/course`, `/visitor/map`(혼잡도 탭), 우측 상단 접근성(♿) 버튼 |
+| 6.2 통합 운영관리 (자원 통합관리, 민원/공지/사고 티켓, 운영 대시보드, AI 민원 분류, 현장 혼잡도·대기열, 인력 배치) | `/admin`, `/admin/programs`, `/admin/field`, `/admin/staff`, `/admin/tickets`, `/admin/ai-insights`, `/admin/documents` |
+| 6.3 방문객 QR 모바일 웹 (일정/지도/시설/교통, 예약·대기표, 스탬프투어, 디지털 쿠폰, 지역상권 추천) | `/visitor`, `/visitor/map`, `/visitor/schedule`, `/visitor/reservation`, `/visitor/stamp-tour`, `/visitor/coupons`, `/visitor/nearby`, `/visitor/survey` |
+| 6.4 ESG 성과관리 (실적 등록·증빙·승인·정정, 데이터 출처/승인 이력, 보고서 생성·승인·내보내기, 리워드 캠페인) | `/admin/esg`, `/admin/rewards` |
+| 운영 기준정보·권한 (축제 설정·복제, 편의시설, 참여업체 승인·쿠폰 발행, 계정·권한, 감사 로그 내보내기) | `/admin/festival`, `/admin/businesses`, `/admin/members`, `/admin/audit-logs` |
+| 참여업체(상인) 콘솔 (업체 정보 수정·재검수, 쿠폰 발행·사용 처리·취소, 매출 기록, 성과 조회) | `/merchant` |
 
-랜딩 페이지(`/`)에서 방문객·운영자 두 시나리오로 진입할 수 있습니다.
+랜딩 페이지(`/`)에서 방문객·운영자 두 시나리오로 진입할 수 있습니다. 참여업체 계정은 `/merchant`로 접속합니다.
 
 ## 실행 방법
 
@@ -85,10 +87,12 @@ npm run lint
 
 ## 데이터 & 상태 관리 안내
 
-- 백엔드 1단계 범위인 공개 정보, 설문, AI, 운영자 프로그램·티켓·ESG는 실제 API를 사용합니다.
-- 백엔드에 아직 없는 예약·대기·혼잡·교통·쿠폰·스탬프 기능은 기존 데모 데이터를 유지합니다.
-- 접근성 설정(`features/accessibility`)과 스탬프 투어 진행 상황(`features/stamp-tour`)은 Zustand `persist`로 브라우저 `localStorage`에 저장되어 새로고침 후에도 유지됩니다.
-- 운영자 티켓 조회와 상태 변경은 백엔드에 저장됩니다. 방문객 민원 작성과 대기표 발급은 아직 브라우저 상태만 사용합니다.
+- 화면에 표시되는 값은 모두 백엔드 API에서 옵니다. 예약·대기, 혼잡도, 쿠폰·포인트, 스탬프, 상권 추천, 민원, ESG 실적까지 실제 데이터로 동작합니다.
+- 교통 정보만 연동할 백엔드 API가 없어(3단계 범위) 데모 데이터를 쓰며, 화면에 참고용 안내임을 표시합니다.
+- 랜딩 페이지의 축제 정보는 백엔드에서 읽고, 조회에 실패하면 정적 소개 문구로 대체됩니다.
+- 접근성 설정(`features/accessibility`)과 방문객 메뉴 노출 설정은 Zustand `persist`로 브라우저 `localStorage`에 저장됩니다. 언어·접근성 선호는 방문 세션에도 함께 반영됩니다.
+- 음성 안내를 켜면 브라우저 내장 SpeechSynthesis로 AI 답변을 읽어 줍니다.
+- 파일 저장소가 확정되지 않아 ESG 증빙은 외부 `fileId`와 해시를 연결하는 방식입니다.
 
 ## Vercel 배포
 

@@ -1,0 +1,71 @@
+import { adminApi, json } from "@/shared/lib/api";
+import { uniqueById } from "@/shared/lib/utils";
+
+export interface MerchantBusiness {
+  id: string;
+  festival_id: string;
+  name: string;
+  registration_no: string;
+  category: string;
+  description: string | null;
+  participation_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
+  review_comment: string | null;
+  booth_no: string | null;
+  version: number;
+}
+
+export async function fetchMyBusinesses() {
+  const rows = await adminApi<MerchantBusiness[]>("/merchant/businesses");
+  // 부스가 여러 개면 업체가 부스 수만큼 중복돼 온다. 업체 단위 화면이라 대표 부스만 남긴다.
+  return uniqueById(rows);
+}
+
+export interface BusinessUpdate {
+  businessId: string;
+  version: number;
+  name?: string;
+  category?: string;
+  description?: string;
+}
+
+/** 수정하면 참여 상태가 SUBMITTED로 돌아가 재검수를 받는다. */
+export function updateMyBusiness({ businessId, ...body }: BusinessUpdate) {
+  return adminApi(`/merchant/businesses/${businessId}`, json("PATCH", body));
+}
+
+export interface MerchantCoupon {
+  name: string;
+  description?: string;
+  benefitType: "FIXED" | "PERCENT" | "GIFT";
+  benefitValue: number;
+  issueLimit: number;
+  perVisitorLimit: number;
+  startsAt: string;
+  endsAt: string;
+}
+
+export function createMerchantCoupon({ businessId, ...body }: MerchantCoupon & { businessId: string }) {
+  return adminApi(`/merchant/businesses/${businessId}/coupons`, json("POST", body));
+}
+
+/** 방문객이 보여준 쿠폰 발급 ID와 토큰을 대조해 사용 처리한다. */
+export function redeemCoupon({ issueId, issueToken }: { issueId: string; issueToken: string }) {
+  return adminApi<{ id: string; status: string }>(`/merchant/coupon-issues/${issueId}/redeem`, json("POST", { issueToken }));
+}
+
+export function reverseRedemption({ redemptionId, reason }: { redemptionId: string; reason: string }) {
+  return adminApi(`/merchant/coupon-redemptions/${redemptionId}/reverse`, json("POST", { reason }));
+}
+
+export function recordBusinessEvent({ businessId, ...body }: { businessId: string; eventType: "VISIT" | "SALE"; salesAmount?: number }) {
+  return adminApi(`/merchant/businesses/${businessId}/events`, json("POST", body));
+}
+
+export interface MerchantPerformance {
+  events: Array<{ event_type: string; count: number; sales_amount: number }>;
+  coupons: { issued: number; redeemed: number };
+}
+
+export function fetchPerformance(businessId: string) {
+  return adminApi<MerchantPerformance>(`/merchant/businesses/${businessId}/performance`);
+}

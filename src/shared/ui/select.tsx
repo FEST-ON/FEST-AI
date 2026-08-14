@@ -6,7 +6,37 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/shared/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+/** 트리 어디에 있든 SelectItem을 찾아 value → 라벨 노드로 모은다. */
+function collectItems(node: React.ReactNode, items: Record<string, React.ReactNode>) {
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as { value?: unknown; children?: React.ReactNode }
+    if (child.type === SelectItem && typeof props.value === "string") {
+      items[props.value] = props.children
+      return
+    }
+    collectItems(props.children, items)
+  })
+}
+
+/**
+ * base-ui는 Root에 `items`가 없으면 트리거에 원시 값(코드값·UUID)을 그대로 그린다.
+ * 호출부마다 items를 손으로 넘기는 대신 자식 SelectItem에서 라벨을 모아 채운다.
+ */
+function Select({ children, items, ...props }: SelectPrimitive.Root.Props<string>) {
+  const derived = React.useMemo(() => {
+    if (items) return items
+    const collected: Record<string, React.ReactNode> = {}
+    collectItems(children, collected)
+    return collected
+  }, [children, items])
+
+  return (
+    <SelectPrimitive.Root items={derived} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

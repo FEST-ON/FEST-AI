@@ -4,23 +4,31 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Users2, MapPinned, FileCheck2, Ticket, Sparkles, Leaf, History, LogOut, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users2, MapPinned, FileCheck2, Ticket, Megaphone, Sparkles, Leaf, History, LogOut, Activity, UserCog, Store, Gift, FileSearch, Building2, KeyRound, ChevronDown, type LucideIcon } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
 import { logoutAdmin } from "@/shared/lib/api";
 import { useAdminSessionStore } from "@/features/admin-auth/model/store";
-import { ADMIN_ROLE_LABEL, visibleNavItems } from "@/shared/lib/permissions";
+import { ADMIN_ROLE_LABEL, visibleNavItems, type AdminNavItem } from "@/shared/lib/permissions";
 
 // 권한 정의(shared/lib/permissions)는 아이콘을 모르므로 여기서 href로 이어붙입니다.
 export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
   "/admin/programs": Users2,
+  "/admin/field": Activity,
+  "/admin/staff": UserCog,
+  "/admin/businesses": Store,
+  "/admin/rewards": Gift,
+  "/admin/documents": FileSearch,
   "/admin/map-locations": MapPinned,
   "/admin/content": FileCheck2,
   "/admin/tickets": Ticket,
+  "/admin/announcements": Megaphone,
   "/admin/ai-insights": Sparkles,
   "/admin/esg": Leaf,
   "/admin/audit-logs": History,
+  "/admin/festival": Building2,
+  "/admin/members": KeyRound,
 };
 
 export function AdminLogoutButton({ showLabel = false, className }: { showLabel?: boolean; className?: string }) {
@@ -45,37 +53,69 @@ export function AdminLogoutButton({ showLabel = false, className }: { showLabel?
   );
 }
 
-export function AdminSidebar() {
+/**
+ * 사이드바와 모바일 시트가 공유하는 메뉴 목록. 그룹은 <details>로 접고, 현재 보고 있는
+ * 화면이 속한 그룹만 펼칩니다(open은 렌더마다 다시 계산 = 이동하면 해당 그룹이 열림).
+ */
+export function AdminNavLinks({ role }: { role: string | undefined }) {
   const pathname = usePathname();
-  const user = useAdminSessionStore((s) => s.user);
-  const navItems = visibleNavItems(user?.role);
+  const isActive = (href: string) => (href === "/admin" ? pathname === href : pathname.startsWith(href));
+
+  const groups = new Map<string | undefined, AdminNavItem[]>();
+  for (const item of visibleNavItems(role)) {
+    groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
+  }
+
+  const renderLink = ({ href, label }: AdminNavItem) => {
+    const Icon = NAV_ICONS[href];
+    return (
+      <Link
+        key={href}
+        href={href}
+        className={cn(
+          "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+          isActive(href)
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+        )}
+      >
+        <Icon className="size-4.5" />
+        {label}
+      </Link>
+    );
+  };
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+    <>
+      {[...groups].map(([group, items]) =>
+        group === undefined ? (
+          items.map(renderLink)
+        ) : (
+          <details key={group} open={items.some((item) => isActive(item.href))} className="group">
+            <summary className="mt-1 flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/50 hover:text-sidebar-foreground [&::-webkit-details-marker]:hidden">
+              {group}
+              <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="space-y-1">{items.map(renderLink)}</div>
+          </details>
+        ),
+      )}
+    </>
+  );
+}
+
+export function AdminSidebar() {
+  const user = useAdminSessionStore((s) => s.user);
+
+
+  return (
+    <aside className="hidden w-64 shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
       <div className="flex items-center gap-2 px-5 py-5">
         <Logo tone="dark" />
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-2">
-        {navItems.map(({ href, label }) => {
-          const Icon = NAV_ICONS[href];
-          const active = href === "/admin" ? pathname === href : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-              )}
-            >
-              <Icon className="size-4.5" />
-              {label}
-            </Link>
-          );
-        })}
+        <AdminNavLinks role={user?.role} />
       </nav>
 
       <div className="mx-3 mb-4 flex items-center gap-2.5 rounded-xl border border-sidebar-border p-3">

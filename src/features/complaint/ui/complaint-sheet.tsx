@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MessageSquareWarning, CheckCircle2 } from "lucide-react";
+import { json, visitorApi } from "@/shared/lib/api";
 import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -40,6 +41,8 @@ export function ComplaintSheet({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("기타");
   const [description, setDescription] = useState("");
@@ -51,12 +54,21 @@ export function ComplaintSheet({
     setCategory("기타");
     setDescription("");
     setSubmitted(false);
+    setError("");
   }
 
-  function handleSubmit() {
-    if (!canSubmit) return;
-    // ponytail: 방문객 민원 접수 API가 아직 없어 제출 확인 화면만 보여준다.
-    setSubmitted(true);
+  async function handleSubmit() {
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await visitorApi("/visitor/complaints", json("POST", { title, category, description }));
+      setSubmitted(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "민원 접수에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -155,7 +167,10 @@ export function ComplaintSheet({
               </div>
             </div>
             <SheetFooter>
-              <Button disabled={!canSubmit} onClick={handleSubmit}>
+              {error ? (
+                <p className="text-xs text-destructive" role="alert">{error}</p>
+              ) : null}
+              <Button disabled={!canSubmit || submitting} onClick={handleSubmit}>
                 {t.complaint.submitButton}
               </Button>
             </SheetFooter>

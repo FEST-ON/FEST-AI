@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { Badge } from "@/shared/ui/badge";
 import { festivalInfo } from "@/entities/festival";
+import { FestivalHero } from "@/widgets/landing-hero/festival-hero";
 
 export default function Home() {
   return (
@@ -38,26 +39,7 @@ export default function Home() {
             </h1>
           </div>
         </section>
-        <section className="mt-12 rounded-2xl bg-primary p-8 text-primary-foreground sm:p-10 lg:mt-16">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-primary-foreground/70">
-                {festivalInfo.period.start} ~ {festivalInfo.period.end}
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold">{festivalInfo.name}</h2>
-              <p className="mt-2 max-w-lg text-sm leading-relaxed text-primary-foreground/80">
-                {festivalInfo.description}
-              </p>
-            </div>
-            <Link
-              href="/visitor"
-              className="group inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-background px-6 py-3 text-sm font-medium text-primary transition-transform hover:bg-background/90 active:scale-95"
-            >
-              방문객으로 둘러보기
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          </div>
-        </section>
+        <FestivalHero />
       </main>
 
       <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">

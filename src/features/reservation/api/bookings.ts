@@ -1,4 +1,4 @@
-import { FESTIVAL_CODE, publicApi, visitorApi } from "@/shared/lib/api";
+import { FESTIVAL_CODE, festivalApi, json, publicApi, visitorApi } from "@/shared/lib/api";
 
 export interface VisitorBooking {
   id: string;
@@ -52,4 +52,35 @@ export function createBooking(sessionId: string) {
 
 export function cancelBooking(bookingId: string) {
   return visitorApi<void>(`/visitor/bookings/${bookingId}`, { method: "DELETE" });
+}
+
+export interface AdminBooking {
+  id: string;
+  status: VisitorBooking["status"];
+  party_size: number;
+  queue_number: number | null;
+  called_at: string | null;
+  starts_at: string;
+  program_title: string;
+}
+
+export async function fetchAdminBookings(status?: VisitorBooking["status"]) {
+  return festivalApi<AdminBooking[]>(`/bookings${status ? `?status=${status}` : ""}`);
+}
+
+export type BookingAction = "CALLED" | "NO_SHOW" | "COMPLETED";
+
+const ACTION_NOTE: Record<BookingAction, string> = {
+  CALLED: "FESTAI 운영 화면에서 호출",
+  NO_SHOW: "호출 후 미방문 처리",
+  COMPLETED: "이용 완료 처리",
+};
+
+// 대기(WAITING) 예약만 호출할 수 있다 — 확정(CONFIRMED) 예약은 자리가 이미 보장돼 호출 대상이 아니다.
+export async function updateBookingStatus({ bookingId, status }: { bookingId: string; status: BookingAction }) {
+  return festivalApi(`/bookings/${bookingId}/status`, json("POST", { status, note: ACTION_NOTE[status] }));
+}
+
+export function callBooking(bookingId: string) {
+  return updateBookingStatus({ bookingId, status: "CALLED" });
 }

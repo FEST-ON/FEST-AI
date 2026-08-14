@@ -4,7 +4,8 @@ import type { Locale } from "@/shared/lib/i18n";
 import { translateEntries, translateFields } from "@/shared/lib/i18n/translate-client";
 import type { FacilityInfo, FestivalInfo, ScheduleItem, TransportOption } from "./model";
 
-// 랜딩 페이지(/)는 백엔드 없이도 떠야 해서 축제 소개만 정적으로 둔다.
+// 랜딩 페이지(/)는 백엔드가 죽어도 떠야 한다. 실제 값은 fetchLandingFestival()이 덮어쓰고,
+// 이 상수는 조회에 실패했을 때만 쓰는 마지막 안전망이다.
 export const festivalInfo: FestivalInfo = {
   id: "greenhan-2026",
   name: "2026 그린한강 페스티벌",
@@ -49,6 +50,11 @@ export async function fetchFestivalInfo(locale: Locale = "ko"): Promise<Festival
   };
 }
 
+/** 랜딩 페이지용 축제 정보. 백엔드가 없거나 축제가 비공개면 정적 안내로 대체한다. */
+export async function fetchLandingFestival(): Promise<FestivalInfo> {
+  return fetchFestivalInfo("ko").catch(() => festivalInfo);
+}
+
 export async function fetchSchedule(locale: Locale = "ko") {
   const programs = await publicApi<Array<{
     id: string; title: string; category: string;
@@ -74,7 +80,7 @@ export async function fetchSchedule(locale: Locale = "ko") {
 
 export async function fetchFacilities(locale: Locale = "ko") {
   const rows = await publicApi<Array<{
-    id: string; name: string; facility_type: string; area: { name: string };
+    id: string; name: string; facility_type: string; status: string; area: { name: string };
   }>>(`/public/festivals/${FESTIVAL_CODE}/facilities`);
   const types: Record<string, FacilityInfo["type"]> = {
     RESTROOM: "화장실", PARKING: "주차장", FIRST_AID: "구급실", INFO: "안내소", NURSING_ROOM: "수유실", STORAGE: "물품보관소",
@@ -84,7 +90,7 @@ export async function fetchFacilities(locale: Locale = "ko") {
     name: row.name,
     type: types[row.facility_type] ?? "안내소",
     location: row.area.name,
-    walkMinutes: 0,
+    status: row.status,
   } satisfies FacilityInfo));
   return translateFields(items, ["name", "location"], locale);
 }

@@ -1,21 +1,22 @@
-import { adminApi, adminFestivalId } from "@/shared/lib/api";
+import { festivalApi } from "@/shared/lib/api";
 import type { EsgMetric, EsgPillar, EsgReportSection } from "./model";
 
+/** 백엔드는 E/S/G 약어를, 화면은 한글 축을 쓴다. 예전 데이터의 전체 이름도 함께 받는다. */
+const PILLAR_BY_CATEGORY: Record<string, EsgPillar> = {
+  E: "환경", ENVIRONMENT: "환경", S: "사회", SOCIAL: "사회", G: "거버넌스", GOVERNANCE: "거버넌스",
+};
+
 export async function fetchEsgMetrics() {
-  const festivalId = await adminFestivalId();
   const [metrics, measurements] = await Promise.all([
-    adminApi<Array<{
+    festivalApi<Array<{
       id: string; name: string; category: string;
       versions: Array<{ id: string; unit: string; target: number }>;
-    }>>(`/admin/festivals/${festivalId}/esg/metrics`),
-    adminApi<Array<{
+    }>>(`/esg/metrics`),
+    festivalApi<Array<{
       id: string; metric_version_id: string; value: number; source_type: string; source_ref?: string;
       status: string; measured_at: string; updated_at: string;
-    }>>(`/admin/festivals/${festivalId}/esg/measurements`),
+    }>>(`/esg/measurements`),
   ]);
-  const pillars: Record<string, EsgPillar> = {
-    E: "환경", ENVIRONMENT: "환경", S: "사회", SOCIAL: "사회", G: "거버넌스", GOVERNANCE: "거버넌스",
-  };
   return metrics.flatMap((metric) => {
     const version = metric.versions[0];
     if (!version) return [];
@@ -24,7 +25,7 @@ export async function fetchEsgMetrics() {
     const value = related.filter((item) => item.status === "APPROVED").reduce((sum, item) => sum + Number(item.value), 0);
     return [{
       id: metric.id,
-      pillar: pillars[metric.category] ?? "거버넌스",
+      pillar: PILLAR_BY_CATEGORY[metric.category] ?? "거버넌스",
       name: metric.name,
       value,
       unit: version.unit,
@@ -37,9 +38,8 @@ export async function fetchEsgMetrics() {
   });
 }
 export async function generateEsgReport(): Promise<EsgReportSection[]> {
-  const festivalId = await adminFestivalId();
-  const festival = await adminApi<{ starts_at: string; ends_at: string }>(`/admin/festivals/${festivalId}`);
-  const created = await adminApi<{ reportId: string }>(`/admin/festivals/${festivalId}/esg/reports`, {
+  const festival = await festivalApi<{ starts_at: string; ends_at: string }>();
+  const created = await festivalApi<{ reportId: string }>(`/esg/reports`, {
     method: "POST",
     headers: { "Idempotency-Key": crypto.randomUUID() },
     body: JSON.stringify({
@@ -50,14 +50,11 @@ export async function generateEsgReport(): Promise<EsgReportSection[]> {
   });
   let report: { status: string; snapshot?: { metrics?: Array<{ name: string; category: string; value: number; unit: string }> } };
   for (let attempt = 0; attempt < 12; attempt += 1) {
-    report = await adminApi(`/admin/festivals/${festivalId}/esg/reports/${created.reportId}`);
+    report = await festivalApi(`/esg/reports/${created.reportId}`);
     if (report.status === "DRAFT") {
       const groups = { 환경: [] as string[], 사회: [] as string[], 거버넌스: [] as string[] };
-      const pillars: Record<string, EsgPillar> = {
-        E: "환경", ENVIRONMENT: "환경", S: "사회", SOCIAL: "사회", G: "거버넌스", GOVERNANCE: "거버넌스",
-      };
       for (const metric of report.snapshot?.metrics ?? []) {
-        const pillar = pillars[metric.category] ?? "거버넌스";
+        const pillar = PILLAR_BY_CATEGORY[metric.category] ?? "거버넌스";
         groups[pillar].push(`${metric.name} ${metric.value ?? 0}${metric.unit}`);
       }
       return (Object.keys(groups) as EsgPillar[]).map((pillar) => ({

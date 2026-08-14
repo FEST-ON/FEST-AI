@@ -1,5 +1,5 @@
 import type { ChatMessage } from "@/entities/visitor";
-import { ApiError, FESTIVAL_CODE, visitorApi, visitorSessionGeneration } from "@/shared/lib/api";
+import { ApiError, FESTIVAL_CODE, json, visitorApi, visitorSessionGeneration } from "@/shared/lib/api";
 import { BCP47_BY_LOCALE } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
 
@@ -12,10 +12,7 @@ async function openConversation(locale: Locale) {
   // 언어가 바뀌거나 방문자 세션이 재발급되면 이전 대화는 못 쓰므로 새로 연다.
   if (conversationLocale !== locale || conversationSession !== visitorSessionGeneration()) resetConversation();
   if (!conversationId) {
-    conversationId = (await visitorApi<{ id: string }>("/visitor/ai/conversations", {
-      method: "POST",
-      body: JSON.stringify({ festivalCode: FESTIVAL_CODE, language: locale }),
-    })).id;
+    conversationId = (await visitorApi<{ id: string }>("/visitor/ai/conversations", json("POST", { festivalCode: FESTIVAL_CODE, language: locale }))).id;
     conversationLocale = locale;
     // 생성 요청 중에 세션이 갱신됐을 수 있으므로 응답 이후 값을 기록한다.
     conversationSession = visitorSessionGeneration();
@@ -28,10 +25,7 @@ function sendMessage(id: string, question: string) {
     messageId: string;
     answer: string;
     sources: Array<{ title: string }>;
-  }>(`/visitor/ai/conversations/${id}/messages`, {
-    method: "POST",
-    body: JSON.stringify({ message: question, context: { channel: "PERSO_AI", inputMode: "VOICE_OR_TEXT" } }),
-  });
+  }>(`/visitor/ai/conversations/${id}/messages`, json("POST", { message: question, context: { channel: "PERSO_AI", inputMode: "VOICE_OR_TEXT" } }));
 }
 
 export async function generateReply(question: string, locale: Locale) {
@@ -59,10 +53,7 @@ export function resetConversation() {
 }
 
 export function reportAiMessage(messageId: string) {
-  return visitorApi(`/visitor/ai/messages/${messageId}/reports`, {
-    method: "POST",
-    body: JSON.stringify({ reason: "INCORRECT_OR_UNSAFE", detail: "방문객 AI 화면에서 답변 오류 신고" }),
-  });
+  return visitorApi(`/visitor/ai/messages/${messageId}/reports`, json("POST", { reason: "INCORRECT_OR_UNSAFE", detail: "방문객 AI 화면에서 답변 오류 신고" }));
 }
 
 export function buildMessage(

@@ -5,10 +5,12 @@ import { Bus, Car, TrainFront } from "lucide-react";
 import { fetchFacilities, fetchTransport } from "@/entities/festival";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { StatusPill } from "@/shared/ui/status-pill";
 import { Badge } from "@/shared/ui/badge";
 import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { FestivalMap } from "@/features/map/ui/festival-map";
+import { CrowdList } from "@/features/crowd/ui/crowd-list";
 
 // mode·status는 번역되지 않은 원본 값으로 남으므로 아이콘·색상 키로 그대로 쓴다.
 const TRANSPORT_ICON = {
@@ -18,12 +20,7 @@ const TRANSPORT_ICON = {
   주차: Car,
 } as const;
 
-const STATUS_STYLE = {
-  원활: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  보통: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  혼잡: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
-  지연: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
-} as const;
+const STATUS_TONE = { 원활: "success", 보통: "warning", 혼잡: "danger", 지연: "danger" } as const;
 
 export default function VisitorMapPage() {
   const { t, locale } = useTranslation();
@@ -44,10 +41,15 @@ export default function VisitorMapPage() {
       <FestivalMap />
 
       <Tabs defaultValue="facility" className="mt-4">
-        <TabsList className="grid grid-cols-2">
+        <TabsList className="grid grid-cols-3">
           <TabsTrigger value="facility">{t.map.tabs.facility}</TabsTrigger>
+          <TabsTrigger value="crowd">{t.map.tabs.crowd}</TabsTrigger>
           <TabsTrigger value="transport">{t.map.tabs.transport}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="crowd" className="mt-3">
+          <CrowdList />
+        </TabsContent>
 
         <TabsContent value="facility" className="mt-3 space-y-2">
           {fLoading ? (
@@ -71,7 +73,7 @@ export default function VisitorMapPage() {
                     {t.festivalData.facilityType[f.type] ?? f.type}
                   </Badge>
                   <span className="text-[11px] text-muted-foreground">
-                    {t.map.walkMinutes(f.walkMinutes)}
+                    {f.status === "ACTIVE" ? t.map.facilityOpen : t.map.facilityClosed}
                   </span>
                 </div>
               </div>
@@ -80,6 +82,9 @@ export default function VisitorMapPage() {
         </TabsContent>
 
         <TabsContent value="transport" className="mt-3 space-y-2">
+          <p className="rounded-xl border border-dashed border-border p-2.5 text-center text-[11px] text-muted-foreground">
+            {t.map.transportNotice}
+          </p>
           {tLoading || !transport ? (
             <Skeleton className="h-40 w-full rounded-xl" />
           ) : (
@@ -97,11 +102,9 @@ export default function VisitorMapPage() {
                     <p className="text-sm font-semibold text-foreground">{option.label}</p>
                     <p className="text-xs text-muted-foreground">{option.detail}</p>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLE[option.status]}`}
-                  >
+                  <StatusPill tone={STATUS_TONE[option.status]} className="shrink-0">
                     {t.festivalData.transportStatus[option.status] ?? option.status}
-                  </span>
+                  </StatusPill>
                 </div>
               );
             })

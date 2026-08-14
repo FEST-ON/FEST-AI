@@ -1,54 +1,64 @@
-import { adminApi, adminFestivalId, currentAdmin } from "@/shared/lib/api";
-import { classifyTicket, nextTicketStatus } from "./model";
-import type { Ticket, TicketApiStatus } from "./model";
+import { currentAdmin, festivalApi, json } from "@/shared/lib/api";
+import { TOPIC_LABEL, type IssueAnalysisRow } from "@/features/complaint-insight/api/issue-analysis";
+import { nextTicketStatus } from "./model";
+import type { NewTicket, Ticket, TicketApiStatus, TicketEvent } from "./model";
+import { seoulDateTime } from "@/shared/lib/utils";
+
+interface TicketRow {
+  id: string; ticket_type: string; title: string; description: string; assignee_id?: string;
+  status: TicketApiStatus; priority: string; area_id?: string; created_at: string; version: number;
+}
+
+const STATUS_LABEL = { OPEN: "접수", ASSIGNED: "배정됨", IN_PROGRESS: "처리중", RESOLVED: "해결됨", CLOSED: "완료" } as const;
+const PRIORITY_LABEL = { LOW: "낮음", NORMAL: "중간", HIGH: "높음", EMERGENCY: "긴급" } as const;
 
 export async function fetchTickets() {
-  const festivalId = await adminFestivalId();
-  const rows = await adminApi<Array<{
-    id: string; ticket_type: string; title: string; description: string; assignee_id?: string;
-    status: TicketApiStatus; priority: string; area_id?: string; created_at: string; version: number;
-    ai_tag?: string;
-  }>>(`/admin/festivals/${festivalId}/ops-tickets`);
-  const statuses = { OPEN: "접수", ASSIGNED: "배정됨", IN_PROGRESS: "처리중", RESOLVED: "해결됨", CLOSED: "완료" } as const;
-  const priorities = { LOW: "낮음", NORMAL: "중간", HIGH: "높음", EMERGENCY: "높음" } as const;
+  // 분류는 백엔드 issue-analysis가 담당한다(담당자 수정본 포함). 티켓 목록과 함께 읽어 붙인다.
+  const [rows, analysis] = await Promise.all([
+    festivalApi<TicketRow[]>(`/ops-tickets`),
+    festivalApi<IssueAnalysisRow[]>(`/issue-analysis`).catch(() => [] as IssueAnalysisRow[]),
+  ]);
+  const byTicket = new Map(analysis.map((row) => [row.id, row.analysis]));
   return rows.map<Ticket>((row) => {
-    const type = row.ticket_type === "INCIDENT" ? "사고" : "민원";
-    const category = classifyTicket(row.title, row.description, type);
+    const found = byTicket.get(row.id);
     return {
       id: row.id,
-      type,
+      type: row.ticket_type === "INCIDENT" ? "사고" : "민원",
       title: row.title,
       description: row.description,
       assignee: row.assignee_id ? "배정 완료" : "미배정",
-      status: statuses[row.status],
+      status: STATUS_LABEL[row.status],
       apiStatus: row.status,
       version: row.version,
-      priority: priorities[row.priority as keyof typeof priorities] ?? "중간",
-      category,
-      createdAt: new Date(row.created_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
-      aiTag: row.ai_tag ?? `자동 분류 · ${category}`,
+      priority: PRIORITY_LABEL[row.priority as keyof typeof PRIORITY_LABEL] ?? "중간",
+      category: found ? TOPIC_LABEL[found.topic] ?? found.topic : "미분류",
+      createdAt: seoulDateTime(row.created_at),
+      aiTag: found ? `${found.humanReviewed ? "담당자 확인" : "자동 분류"} · ${TOPIC_LABEL[found.topic] ?? found.topic}` : undefined,
+      urgent: found?.urgent ?? row.priority === "EMERGENCY",
     };
   });
 }
 
+export async function createTicket(input: NewTicket) {
+  return festivalApi(`/ops-tickets`, json("POST", input));
+}
+
+export async function fetchTicketEvents(ticketId: string) {
+  return festivalApi<TicketEvent[]>(`/ops-tickets/${ticketId}/events`);
+}
+
+export async function assignTicket({ ticket, assigneeId }: { ticket: Ticket; assigneeId: string }) {
+  if (ticket.version === undefined) throw new Error("최신 티켓 정보를 다시 불러와 주세요.");
+  return festivalApi(`/ops-tickets/${ticket.id}`, json("PATCH", { assigneeId, version: ticket.version }));
+}
+
 export async function transitionTicket(ticket: Ticket) {
-  const festivalId = await adminFestivalId();
   if (ticket.apiStatus === "OPEN") {
-    if (ticket.version === undefined) throw new Error("최신 티켓 정보를 다시 불러와 주세요.");
     const admin = await currentAdmin();
-    await adminApi(`/admin/festivals/${festivalId}/ops-tickets/${ticket.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ assigneeId: admin.id, version: ticket.version }),
-    });
-    return adminApi(`/admin/festivals/${festivalId}/ops-tickets/${ticket.id}/transitions`, {
-      method: "POST",
-      body: JSON.stringify({ toStatus: "ASSIGNED", note: "FESTAI 운영 화면에서 담당자 배정", attachments: [] }),
-    });
+    await assignTicket({ ticket, assigneeId: admin.id });
+    return festivalApi(`/ops-tickets/${ticket.id}/transitions`, json("POST", { toStatus: "ASSIGNED", note: "FESTAI 운영 화면에서 담당자 배정", attachments: [] }));
   }
   const toStatus = nextTicketStatus(ticket.apiStatus);
   if (!toStatus) throw new Error("더 진행할 상태가 없습니다.");
-  return adminApi(`/admin/festivals/${festivalId}/ops-tickets/${ticket.id}/transitions`, {
-    method: "POST",
-    body: JSON.stringify({ toStatus, note: "FESTAI 운영 화면에서 상태 변경", attachments: [] }),
-  });
+  return festivalApi(`/ops-tickets/${ticket.id}/transitions`, json("POST", { toStatus, note: "FESTAI 운영 화면에서 상태 변경", attachments: [] }));
 }

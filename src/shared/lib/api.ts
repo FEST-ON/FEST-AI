@@ -88,6 +88,7 @@ export async function loginAdmin(email: string, password: string) {
   });
   adminSessionGeneration += 1;
   adminFestival = undefined;
+  adminOrganization = undefined;
   localStorage.setItem(ADMIN_ACCESS, result.accessToken);
   localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
   return result.user;
@@ -95,6 +96,7 @@ export async function loginAdmin(email: string, password: string) {
 
 function clearAdminSession() {
   adminFestival = undefined;
+  adminOrganization = undefined;
   localStorage.removeItem(ADMIN_ACCESS);
   localStorage.removeItem(ADMIN_REFRESH);
   localStorage.removeItem("festai-admin-festival-id"); // 예전 버전이 남긴 캐시 정리
@@ -156,12 +158,24 @@ export async function adminApi<T>(path: string, init?: RequestInit): Promise<T> 
 }
 
 export function currentAdmin() {
-  return adminApi<{ id: string; email: string; name: string; role: string }>("/me");
+  return adminApi<{ id: string; email: string; name: string; role: string; organizationId: string; festivalScope: string[] }>("/me");
 }
 
 // 축제 ID는 localStorage에 남기지 않는다 — 오래된 캐시로 다른 축제의 데이터를 바꾸는 사고를 막기 위해
 // 페이지 로드마다 접근 가능한 축제 목록에서 코드가 정확히 일치하는 축제를 다시 확인한다.
 let adminFestival: Promise<string> | undefined;
+let adminOrganization: Promise<string> | undefined;
+
+/** 조직 ID는 세션당 한 번만 조회한다. 멤버십 API가 호출마다 /me를 다시 부르지 않도록. */
+export function adminOrganizationId() {
+  adminOrganization ??= currentAdmin()
+    .then((admin) => admin.organizationId)
+    .catch((error) => {
+      adminOrganization = undefined;
+      throw error;
+    });
+  return adminOrganization;
+}
 
 export function adminFestivalId() {
   adminFestival ??= (async () => {
@@ -176,4 +190,14 @@ export function adminFestivalId() {
     throw error;
   });
   return adminFestival;
+}
+
+/** `/admin/festivals/{현재 축제}` 하위 경로 호출. 축제 ID 조회를 호출부마다 반복하지 않는다. */
+export async function festivalApi<T>(path = "", init?: RequestInit): Promise<T> {
+  return adminApi<T>(`/admin/festivals/${await adminFestivalId()}${path}`, init);
+}
+
+/** JSON 본문 요청 init. `{ method, body: JSON.stringify(...) }` 반복을 줄인다. */
+export function json(method: "POST" | "PATCH" | "PUT" | "DELETE", body: unknown): RequestInit {
+  return { method, body: JSON.stringify(body) };
 }

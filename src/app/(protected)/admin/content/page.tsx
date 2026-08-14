@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CircleX, FileCheck2, Send, Undo2, Upload } from "lucide-react";
-import { adminApi, adminFestivalId } from "@/shared/lib/api";
+import { festivalApi, json } from "@/shared/lib/api";
 import { Badge } from "@/shared/ui/badge";
+import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { Button } from "@/shared/ui/button";
+import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
-import { Skeleton } from "@/shared/ui/skeleton";
+import { SkeletonList } from "@/shared/ui/skeleton";
 import { Textarea } from "@/shared/ui/textarea";
 import { contentAction, contentPreview, type ContentVersionStatus } from "@/features/content-review/model/content";
 
@@ -39,15 +41,14 @@ interface ContentItem {
 }
 
 const STATUS = {
-  DRAFT: { label: "초안", style: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-  IN_REVIEW: { label: "검수 중", style: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300" },
-  APPROVED: { label: "승인", style: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" },
-  REJECTED: { label: "반려", style: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" },
-} as const;
+  DRAFT: { label: "초안", tone: "neutral" },
+  IN_REVIEW: { label: "검수 중", tone: "warning" },
+  APPROVED: { label: "승인", tone: "success" },
+  REJECTED: { label: "반려", tone: "danger" },
+} as const satisfies Record<string, { label: string; tone: Tone }>;
 
 async function fetchContentItems() {
-  const festivalId = await adminFestivalId();
-  return adminApi<ContentItem[]>(`/admin/festivals/${festivalId}/content-items`);
+  return festivalApi<ContentItem[]>(`/content-items`);
 }
 
 async function changeContentState(input: {
@@ -56,23 +57,16 @@ async function changeContentState(input: {
   versionId: string;
   comment?: string;
 }) {
-  const festivalId = await adminFestivalId();
   if (input.action === "SUBMIT") {
-    return adminApi(`/admin/festivals/${festivalId}/content-versions/${input.versionId}/submit`, { method: "POST" });
+    return festivalApi(`/content-versions/${input.versionId}/submit`, { method: "POST" });
   }
   if (input.action === "APPROVE" || input.action === "REJECT") {
-    return adminApi(`/admin/festivals/${festivalId}/content-versions/${input.versionId}/reviews`, {
-      method: "POST",
-      body: JSON.stringify({ decision: input.action === "APPROVE" ? "APPROVED" : "REJECTED", comment: input.comment || undefined }),
-    });
+    return festivalApi(`/content-versions/${input.versionId}/reviews`, json("POST", { decision: input.action === "APPROVE" ? "APPROVED" : "REJECTED", comment: input.comment || undefined }));
   }
   if (input.action === "PUBLISH") {
-    return adminApi(`/admin/festivals/${festivalId}/content-items/${input.itemId}/publish`, {
-      method: "POST",
-      body: JSON.stringify({ versionId: input.versionId }),
-    });
+    return festivalApi(`/content-items/${input.itemId}/publish`, json("POST", { versionId: input.versionId }));
   }
-  return adminApi(`/admin/festivals/${festivalId}/content-items/${input.itemId}/unpublish`, { method: "POST" });
+  return festivalApi(`/content-items/${input.itemId}/unpublish`, { method: "POST" });
 }
 
 export default function ContentReviewPage() {
@@ -81,6 +75,7 @@ export default function ContentReviewPage() {
   const { data = [], isLoading, error, refetch } = useQuery({ queryKey: ["content-review"], queryFn: fetchContentItems });
   const mutation = useMutation({
     mutationFn: changeContentState,
+    meta: { success: "콘텐츠 상태를 변경했어요." },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-review"] }),
   });
 
@@ -99,7 +94,7 @@ export default function ContentReviewPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-48 rounded-2xl" />)}</div>
+        <SkeletonList count={3} className="h-48 rounded-2xl" wrapperClassName="space-y-3" />
       ) : error ? (
         <ErrorState message={queryErrorMessage(error)} onRetry={() => refetch()} />
       ) : versions.length === 0 ? (
@@ -116,7 +111,7 @@ export default function ContentReviewPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-bold text-foreground">{contentPreview(version.body)}</h2>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status.style}`}>{status.label}</span>
+                      <StatusPill tone={status.tone}>{status.label}</StatusPill>
                       {isPublished && <Badge className="gap-1 text-[10px]"><Upload className="size-3" /> 게시 중</Badge>}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -142,27 +137,40 @@ export default function ContentReviewPage() {
                     )}
                     <div className="flex justify-end gap-2">
                       {action === "SUBMIT" && (
-                        <Button onClick={() => mutation.mutate({ action: "SUBMIT", itemId: item.id, versionId: version.id })} disabled={mutation.isPending}>
+                        <Button onClick={() => mutation.mutate({ action: "SUBMIT", itemId: item.id, versionId: version.id })} disabled={mutation.isPending && mutation.variables?.versionId === version.id}>
                           <Send /> 검수 요청
                         </Button>
                       )}
                       {action === "REVIEW" && <>
-                        <Button variant="destructive" onClick={() => mutation.mutate({ action: "REJECT", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={mutation.isPending}>
+                        <Button variant="destructive" onClick={() => mutation.mutate({ action: "REJECT", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={mutation.isPending && mutation.variables?.versionId === version.id}>
                           <CircleX /> 반려
                         </Button>
-                        <Button onClick={() => mutation.mutate({ action: "APPROVE", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={mutation.isPending}>
+                        <Button onClick={() => mutation.mutate({ action: "APPROVE", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={mutation.isPending && mutation.variables?.versionId === version.id}>
                           <Check /> 승인
                         </Button>
                       </>}
                       {action === "PUBLISH" && (
-                        <Button onClick={() => mutation.mutate({ action: "PUBLISH", itemId: item.id, versionId: version.id })} disabled={mutation.isPending}>
+                        <ConfirmButton
+                          disabled={mutation.isPending && mutation.variables?.versionId === version.id}
+                          title="방문객에게 게시할까요?"
+                          description={`"${contentPreview(version.body)}"이(가) 방문객 화면에 즉시 노출됩니다.`}
+                          confirmLabel="게시"
+                          onConfirm={() => mutation.mutate({ action: "PUBLISH", itemId: item.id, versionId: version.id })}
+                        >
                           <Upload /> 게시
-                        </Button>
+                        </ConfirmButton>
                       )}
                       {action === "UNPUBLISH" && (
-                        <Button variant="outline" onClick={() => mutation.mutate({ action: "UNPUBLISH", itemId: item.id, versionId: version.id })} disabled={mutation.isPending}>
+                        <ConfirmButton
+                          variant="outline"
+                          disabled={mutation.isPending && mutation.variables?.versionId === version.id}
+                          title="게시를 종료할까요?"
+                          description={`"${contentPreview(version.body)}"이(가) 방문객 화면에서 즉시 내려갑니다.`}
+                          confirmLabel="게시 종료"
+                          onConfirm={() => mutation.mutate({ action: "UNPUBLISH", itemId: item.id, versionId: version.id })}
+                        >
                           <Undo2 /> 게시 종료
-                        </Button>
+                        </ConfirmButton>
                       )}
                     </div>
                   </div>
@@ -172,7 +180,6 @@ export default function ContentReviewPage() {
           })}
         </div>
       )}
-      {mutation.error && <p className="text-sm text-destructive">{mutation.error.message}</p>}
     </div>
   );
 }

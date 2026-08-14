@@ -1,4 +1,4 @@
-import { FESTIVAL_CODE, publicApi, visitorApi } from "@/shared/lib/api";
+import { FESTIVAL_CODE, json, publicApi, visitorApi } from "@/shared/lib/api";
 import { surveyQuestionType } from "./model";
 import type { SurveyAnswer, SurveyQuestion } from "./model";
 
@@ -22,10 +22,7 @@ export async function fetchSurveyQuestions() {
 export async function submitSurvey(questions: SurveyQuestion[], answers: Record<string, SurveyAnswer>) {
   const surveyId = questions[0]?.surveyId;
   if (!surveyId) throw new Error("참여 가능한 설문이 없습니다.");
-  return visitorApi(`/visitor/surveys/${surveyId}/responses`, {
-    method: "POST",
-    body: JSON.stringify({
-      answers: Object.entries(answers).map(([questionId, value]) => ({ questionId, value })),
-    }),
-  });
+  return visitorApi(`/visitor/surveys/${surveyId}/responses`, json("POST", {
+    answers: Object.entries(answers).map(([questionId, value]) => ({ questionId, value })),
+  }));
 }

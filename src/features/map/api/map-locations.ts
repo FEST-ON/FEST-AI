@@ -1,4 +1,4 @@
-import { adminApi, adminFestivalId, FESTIVAL_CODE, publicApi } from "@/shared/lib/api";
+import { FESTIVAL_CODE, festivalApi, json, publicApi } from "@/shared/lib/api";
 
 export const MAP_LOCATION_CATEGORIES = [
   { value: "BOOTH", label: "판매 부스" },
@@ -29,7 +29,7 @@ interface PublicMapResponse {
   programs: Array<{ id: string; title: string; area_id: string }>;
 }
 
-interface AdminArea {
+export interface AdminArea {
   id: string;
   name: string;
   area_type: string;
@@ -37,6 +37,11 @@ interface AdminArea {
   longitude: number | null;
   status: string;
   version?: number;
+}
+
+/** 구역 목록은 티켓·혼잡도·인력 배치·부스 화면이 모두 쓰는 기준정보다. */
+export async function fetchAreas() {
+  return festivalApi<AdminArea[]>(`/areas`);
 }
 
 function normalizeCategory(value: string): MapLocationCategory {
@@ -64,8 +69,7 @@ function areaToLocation(area: AdminArea, description?: string): MapLocation | nu
 
 export async function fetchMapLocations(options: { includeHidden?: boolean } = {}): Promise<MapLocation[]> {
   if (options.includeHidden) {
-    const festivalId = await adminFestivalId();
-    const areas = await adminApi<AdminArea[]>(`/admin/festivals/${festivalId}/areas`);
+    const areas = await festivalApi<AdminArea[]>(`/areas`);
     return areas.map((area) => areaToLocation(area)).filter((row): row is MapLocation => Boolean(row));
   }
 
@@ -80,25 +84,27 @@ export async function fetchMapLocations(options: { includeHidden?: boolean } = {
   }).filter((row): row is MapLocation => Boolean(row));
 }
 
+function areaBody(input: MapLocationInput & { version?: number }) {
+  return {
+    name: input.name,
+    areaType: input.category,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    status: input.is_visible ? "ACTIVE" : "INACTIVE",
+    version: input.version,
+  };
+}
+
 export async function createMapLocation(input: MapLocationInput): Promise<MapLocation> {
-  const festivalId = await adminFestivalId();
-  const area = await adminApi<AdminArea>(`/admin/festivals/${festivalId}/areas`, {
-    method: "POST",
-    body: JSON.stringify({ name: input.name, areaType: input.category, latitude: input.latitude, longitude: input.longitude, status: input.is_visible ? "ACTIVE" : "INACTIVE" }),
-  });
+  const area = await festivalApi<AdminArea>(`/areas`, json("POST", areaBody(input)));
   return areaToLocation(area, input.description ?? undefined) as MapLocation;
 }
 
 export async function updateMapLocation(id: string, input: MapLocationInput & { version?: number }): Promise<MapLocation> {
-  const festivalId = await adminFestivalId();
-  const area = await adminApi<AdminArea>(`/admin/festivals/${festivalId}/areas/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ name: input.name, areaType: input.category, latitude: input.latitude, longitude: input.longitude, status: input.is_visible ? "ACTIVE" : "INACTIVE", version: input.version }),
-  });
+  const area = await festivalApi<AdminArea>(`/areas/${id}`, json("PATCH", areaBody(input)));
   return areaToLocation(area, input.description ?? undefined) as MapLocation;
 }
 
 export async function deleteMapLocation(id: string): Promise<void> {
-  const festivalId = await adminFestivalId();
-  await adminApi<void>(`/admin/festivals/${festivalId}/areas/${id}`, { method: "DELETE" });
+  await festivalApi<void>(`/areas/${id}`, { method: "DELETE" });
 }

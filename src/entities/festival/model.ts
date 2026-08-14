@@ -24,7 +24,7 @@ export interface FacilityInfo {
   name: string;
   type: "화장실" | "주차장" | "구급실" | "안내소" | "수유실" | "물품보관소";
   location: string;
-  walkMinutes: number;
+  status: string;
 }
 
 export interface TransportOption {

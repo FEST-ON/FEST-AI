@@ -36,8 +36,11 @@ export async function translateFields<T extends { id: string }>(
   locale: Locale,
 ): Promise<T[]> {
   if (locale === "ko" || items.length === 0) return items;
+  // 값이 비어 있는 필드는 보내지 않는다 — String(null)="null"이 그대로 번역돼 화면에 뜬다.
   const entries = Object.fromEntries(
-    items.flatMap((item) => fields.map((field) => [`${item.id}.${field}`, String(item[field])])),
+    items.flatMap((item) => fields
+      .filter((field) => typeof item[field] === "string" && item[field] !== "")
+      .map((field) => [`${item.id}.${field}`, String(item[field])])),
   );
   const text = await translateEntries(entries, locale);
   return items.map((item) => ({

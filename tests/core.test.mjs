@@ -20,16 +20,21 @@ async function importTypeScript(path, imports) {
 }
 
 const apiUrl = await transpile("../src/shared/lib/api.ts");
-const { adminApi, adminFestivalId, logoutAdmin } = await import(apiUrl);
+const { adminApi, adminFestivalId, festivalApi, json, logoutAdmin } = await import(apiUrl);
 const { generateReply } = await importTypeScript("../src/features/ai-guide/lib/generate-reply.ts", {
   "@/shared/lib/api": apiUrl,
   "@/shared/lib/i18n": moduleUrl('export const BCP47_BY_LOCALE = { ko: "ko-KR" };'),
 });
 const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/entities/visitor/model.ts");
-const { classifyTicket, nextTicketStatus } = await importTypeScript("../src/entities/ticket/model.ts");
+const { nextTicketStatus } = await importTypeScript("../src/entities/ticket/model.ts");
+const { buildImprovementTasks, buildRecurringIssues, buildTopicBreakdown } = await importTypeScript(
+  "../src/features/complaint-insight/api/issue-analysis.ts",
+  { "@/shared/lib/api": apiUrl },
+);
 const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement/model.ts");
 const { contentAction, contentPreview } = await importTypeScript("../src/features/content-review/model/content.ts");
 const { canAccessPath, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
+const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
 const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
 
 class MemoryStorage {
@@ -208,10 +213,24 @@ test("백엔드 설문 타입과 답변 유무를 명시적으로 처리한다",
   assert.throws(() => surveyQuestionType("UNKNOWN"));
 });
 
-test("백엔드 티켓 텍스트를 운영 카테고리로 자동 분류한다", () => {
-  assert.equal(classifyTicket("체험존 미끄럼 사고", "안전 표지 설치", "사고"), "안전·사고");
-  assert.equal(classifyTicket("다회용기 반납 위치", "안내가 필요합니다", "민원"), "ESG운영");
-  assert.equal(classifyTicket("셔틀버스 지연", "교통 문의", "민원"), "교통");
+test("백엔드 민원 분류 결과를 주제별 집계·반복 이슈·개선 과제로 요약한다", () => {
+  const row = (id, topic, urgent, status = "OPEN") => ({
+    id, title: `${topic}-${id}`, description: "", priority: "NORMAL", status, updated_at: null,
+    analysis: { topic, sentiment: urgent ? "NEGATIVE" : "NEUTRAL", urgent, humanReviewed: false, note: null },
+  });
+  const rows = [row("1", "CROWD", false), row("2", "CROWD", false), row("3", "SAFETY", true), row("4", "FACILITY", false, "CLOSED")];
+
+  const breakdown = buildTopicBreakdown(rows);
+  assert.deepEqual(breakdown.map((entry) => [entry.topic, entry.count]), [["CROWD", 2], ["SAFETY", 1], ["FACILITY", 1]]);
+
+  // 2건 이상만 반복 이슈다 — 1건짜리를 반복이라 부르면 신호가 죽는다.
+  assert.deepEqual(buildRecurringIssues(rows).map((issue) => issue.topic), ["CROWD"]);
+
+  // 종료된 티켓은 개선 과제에서 빠지고, 긴급 건이 있는 주제가 높음이 된다.
+  const tasks = buildImprovementTasks(rows);
+  assert.equal(tasks.some((task) => task.title.startsWith("편의시설")), false);
+  assert.equal(tasks.find((task) => task.title.startsWith("안전"))?.priority, "높음");
+  assert.equal(tasks.find((task) => task.title.startsWith("혼잡"))?.priority, "중간");
 });
 
 test("운영 티켓은 배정부터 완료까지 순서대로 전이한다", () => {
@@ -249,14 +268,52 @@ test("콘텐츠 버전 상태에 맞는 다음 검수·게시 동작을 고른�
 
 test("검수자는 검수가 필요한 화면에 모두 접근할 수 있다", () => {
   // 백엔드가 REVIEWER에게 열어둔 화면들 — 하나라도 막히면 검수자가 일을 못 한다
-  for (const path of ["/admin/content", "/admin/ai-insights", "/admin/esg"]) {
+  // businesses/{id}/review와 ai/operations/search도 검수자에게 열려 있다.
+  for (const path of ["/admin/content", "/admin/ai-insights", "/admin/esg", "/admin/businesses", "/admin/documents"]) {
     assert.equal(canAccessPath("REVIEWER", path), true, path);
   }
-  assert.equal(canAccessPath("REVIEWER", "/admin/audit-logs"), false);
+  // 감사 로그·계정 관리·리워드는 검수자 권한 밖이다.
+  for (const path of ["/admin/audit-logs", "/admin/members", "/admin/rewards", "/admin/festival"]) {
+    assert.equal(canAccessPath("REVIEWER", path), false, path);
+  }
   assert.deepEqual(
     visibleNavItems("REVIEWER").map((item) => item.href),
-    ["/admin", "/admin/content", "/admin/ai-insights", "/admin/esg"],
+    ["/admin", "/admin/content", "/admin/ai-insights", "/admin/documents", "/admin/businesses", "/admin/esg"],
   );
+  // 계정·권한 관리는 최고 관리자 전용이다.
+  assert.equal(canAccessPath("SUPER_ADMIN", "/admin/members"), true);
+  assert.equal(canAccessPath("FESTIVAL_MANAGER", "/admin/members"), false);
+});
+
+test("쓰기 결과 알림은 실패를 항상 알리고, 성공은 관리자 화면과 지정 문구에만 띄운다", () => {
+  const call = (outcome, meta, pathname) => mutationToast(outcome, meta, pathname, "서버 오류");
+
+  // 조용히 실패하면 운영자가 처리된 줄 안다 — 실패는 어디서든, meta가 없어도 알린다.
+  assert.deepEqual(call("error", undefined, "/"), { message: "서버 오류", tone: "error" });
+  assert.deepEqual(call("error", {}, "/admin/tickets"), { message: "서버 오류", tone: "error" });
+
+  assert.deepEqual(call("success", { success: "공지를 발행했어요." }, "/admin/announcements"), {
+    message: "공지를 발행했어요.",
+    tone: "success",
+  });
+  // 관리자 화면은 문구를 안 줘도 성공을 알린다.
+  assert.deepEqual(call("success", undefined, "/admin/festival"), { message: "처리했어요.", tone: "success" });
+  // 방문객 화면은 쓰기가 곧 화면 변화라 알리지 않는다.
+  assert.equal(call("success", undefined, "/chat"), null);
+  // silent는 성공·실패 모두 막는다.
+  assert.equal(call("success", { silent: true }, "/admin/documents"), null);
+  assert.equal(call("error", { silent: true }, "/admin/documents"), null);
+});
+
+test("사이드바 그룹은 연속 배치되어 헤더가 한 번만 나온다", () => {
+  // 사이드바는 "앞 항목과 group이 다르면 헤더" 규칙으로 그리므로, 같은 group이
+  // 떨어져 있으면 헤더가 두 번 찍힌다. 역할별로 걸러낸 뒤에도 지켜져야 한다.
+  for (const role of ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR", "REVIEWER"]) {
+    const groups = visibleNavItems(role).map((item) => item.group);
+    const headers = groups.filter((group, i) => group && group !== groups[i - 1]);
+    assert.deepEqual(headers, [...new Set(headers)], role);
+    assert.equal(groups[0], undefined, `${role}: 대시보드가 맨 위에 있어야 한다`);
+  }
 });
 
 test("자동 번역은 항목별 필드를 한 번의 요청으로 묶고, 실패하면 원문을 유지한다", async () => {
@@ -287,4 +344,25 @@ test("자동 번역은 항목별 필드를 한 번의 요청으로 묶고, 실�
 test("역할이 없으면 관리자 화면에 접근할 수 없다", () => {
   assert.equal(canAccessPath(undefined, "/admin"), false);
   assert.equal(canAccessPath("MERCHANT", "/admin/audit-logs"), false);
+});
+
+test("festivalApi는 현재 축제 경로를 붙이고 json()은 본문을 직렬화한다", async () => {
+  localStorage.setItem("festai-admin-access", "access");
+  const requests = [];
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    requests.push([url, init?.method, init?.body]);
+    if (url.endsWith("/admin/festivals")) return Response.json({ data: [{ id: "festival-1", code: "EST34-2026" }] });
+    return Response.json({ data: { ok: true } });
+  };
+
+  await festivalApi("/programs");
+  await festivalApi("", json("PATCH", { name: "새 이름" }));
+
+  const calls = requests.filter(([url]) => !url.endsWith("/admin/festivals"));
+  assert.deepEqual(calls, [
+    ["/api/backend/admin/festivals/festival-1/programs", undefined, undefined],
+    ["/api/backend/admin/festivals/festival-1", "PATCH", JSON.stringify({ name: "새 이름" })],
+  ]);
 });

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Megaphone, Send, Trash2, X } from "lucide-react";
-import { useNotificationStore } from "@/features/notification/model/store";
+import { BellRing, Megaphone, Send, X } from "lucide-react";
+import { callBooking, fetchAdminBookings } from "@/features/reservation/api/bookings";
+import { fetchAreas } from "@/features/map/api/map-locations";
 import {
   AUDIENCE_OPTIONS,
   SEVERITY_OPTIONS,
@@ -11,29 +12,24 @@ import {
   canClose,
   closeAnnouncement,
   fetchAnnouncements,
-  fetchAreaOptions,
   publishAnnouncement,
   validatePublishInput,
   type AnnouncementSeverity,
 } from "@/entities/announcement";
 import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Button } from "@/shared/ui/button";
+import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { StatusPill, type Tone } from "@/shared/ui/status-pill";
+import { datetimeLocal } from "@/shared/lib/utils";
 
-const SEVERITY_STYLE: Record<AnnouncementSeverity, string> = {
-  INFO: "bg-secondary text-secondary-foreground",
-  WARNING: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  EMERGENCY: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+const SEVERITY_TONE: Record<AnnouncementSeverity, Tone> = {
+  INFO: "secondary", WARNING: "warning", EMERGENCY: "danger",
 };
 
 function toggleValue(list: string[], value: string) {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
-}
-
-function toDatetimeLocal(date: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // datetime-local 입력이 브라우저 로컬 시간이므로 표시도 같은 기준으로 맞춘다.
@@ -44,18 +40,30 @@ function formatMoment(value: string) {
 
 export function NotificationAdminPanel() {
   const queryClient = useQueryClient();
-  const reservationCalls = useNotificationStore((s) => s.reservationCalls);
-  const addReservationCall = useNotificationStore((s) => s.addReservationCall);
-  const removeReservationCall = useNotificationStore((s) => s.removeReservationCall);
+
+  const { data: bookings = [], isLoading: bookingsLoading, error: bookingsError, refetch: refetchBookings } = useQuery({
+    queryKey: ["admin-bookings"],
+    queryFn: () => fetchAdminBookings(),
+    refetchInterval: 15_000,
+  });
+  const waitingBookings = bookings.filter((booking) => booking.status === "WAITING");
+  const calledBookings = bookings.filter((booking) => booking.status === "CALLED");
+
+  const callMutation = useMutation({
+    mutationFn: callBooking,
+    meta: { success: "방문객을 호출했어요." },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-bookings"] }),
+  });
 
   const { data: announcements = [], isLoading: announcementsLoading, error: announcementsError, refetch: refetchAnnouncements } = useQuery({
     queryKey: ["announcements"],
     queryFn: fetchAnnouncements,
   });
-  const { data: areaOptions = [] } = useQuery({ queryKey: ["areas"], queryFn: fetchAreaOptions });
+  const { data: areaOptions = [] } = useQuery({ queryKey: ["admin-areas"], queryFn: fetchAreas });
 
   const publishMutation = useMutation({
     mutationFn: publishAnnouncement,
+    meta: { success: "공지를 발행했어요." },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
       setTitle("");
@@ -67,6 +75,7 @@ export function NotificationAdminPanel() {
   });
   const closeMutation = useMutation({
     mutationFn: closeAnnouncement,
+    meta: { success: "공지 노출을 종료했어요." },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
   });
 
@@ -74,18 +83,13 @@ export function NotificationAdminPanel() {
   const [severity, setSeverity] = useState<AnnouncementSeverity>("INFO");
   const [audience, setAudience] = useState<string[]>([]);
   const [targetAreaIds, setTargetAreaIds] = useState<string[]>([]);
-  const [startsAt, setStartsAt] = useState(() => toDatetimeLocal(new Date()));
+  const [startsAt, setStartsAt] = useState(() => datetimeLocal());
   const [endsAt, setEndsAt] = useState("");
-
-  const [ticketNumber, setTicketNumber] = useState("");
-  const [program, setProgram] = useState("");
-  const [location, setLocation] = useState("");
 
   const validationError = validatePublishInput({ title, audience, startsAt, endsAt });
   const canPublish = !validationError && !publishMutation.isPending;
 
-  function publishNotice(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function publishNotice() {
     if (!canPublish) return;
     publishMutation.mutate({
       title: title.trim(),
@@ -95,20 +99,6 @@ export function NotificationAdminPanel() {
       startsAt: new Date(startsAt).toISOString(),
       endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
     });
-  }
-
-  function callReservation(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsedTicketNumber = Number(ticketNumber);
-    if (!Number.isInteger(parsedTicketNumber) || parsedTicketNumber <= 0 || !program.trim()) return;
-    addReservationCall({
-      ticketNumber: parsedTicketNumber,
-      program: program.trim(),
-      location: location.trim() || "예약 프로그램 입구",
-    });
-    setTicketNumber("");
-    setProgram("");
-    setLocation("");
   }
 
   return (
@@ -124,12 +114,13 @@ export function NotificationAdminPanel() {
           </p>
         </div>
         <span className="text-xs font-medium text-muted-foreground">
-          현재 {announcements.filter((item) => canClose(item.status)).length + reservationCalls.length}건
+          현재 {announcements.filter((item) => canClose(item.status)).length + calledBookings.length}건
         </span>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={publishNotice} className="space-y-3 rounded-2xl border border-border bg-background p-4">
+        {/* 방문객 전체로 나가는 되돌릴 수 없는 발행이라, Enter 제출 대신 확인 단계를 반드시 거치게 한다. */}
+        <form onSubmit={(event) => event.preventDefault()} className="space-y-3 rounded-2xl border border-border bg-background p-4">
           <div className="flex items-center gap-2">
             <Megaphone className="size-4 text-primary" />
             <h3 className="text-sm font-bold">공지사항 발행</h3>
@@ -228,61 +219,77 @@ export function NotificationAdminPanel() {
             {validationError && (
               <p className="mr-auto text-xs text-muted-foreground">{validationError}</p>
             )}
-            <Button type="submit" size="sm" disabled={!canPublish}>
+            <ConfirmButton
+              size="sm"
+              disabled={!canPublish}
+              title={severity === "EMERGENCY" ? "긴급 공지를 발행할까요?" : "공지를 발행할까요?"}
+              description={
+                <span className="block space-y-1">
+                  <span className="block font-medium text-foreground">{title.trim()}</span>
+                  <span className="block">
+                    {SEVERITY_OPTIONS.find((option) => option.value === severity)?.label}
+                    {" · "}
+                    {audience.map((value) => AUDIENCE_OPTIONS.find((option) => option.value === value)?.label ?? value).join(", ")}
+                    {" · "}
+                    {targetAreaIds.length === 0
+                      ? "전체 구역"
+                      : targetAreaIds.map((id) => areaOptions.find((area) => area.id === id)?.name ?? id).join(", ")}
+                  </span>
+                  <span className="block">
+                    {formatMoment(startsAt)}부터 {endsAt ? `${formatMoment(endsAt)}까지` : "직접 종료할 때까지"} 노출됩니다.
+                  </span>
+                  {severity === "EMERGENCY" && (
+                    <span className="block text-destructive">대상 방문객 화면 상단에 즉시 고정되고, 되돌리려면 직접 종료해야 해요.</span>
+                  )}
+                </span>
+              }
+              confirmLabel="발행"
+              onConfirm={publishNotice}
+            >
               <Send className="size-3.5" />
               공지 발행
-            </Button>
+            </ConfirmButton>
           </div>
-          {publishMutation.error && (
-            <p className="text-xs text-destructive">{publishMutation.error.message}</p>
-          )}
         </form>
 
-        <form onSubmit={callReservation} className="space-y-3 rounded-2xl border border-border bg-background p-4">
+        <div className="space-y-3 rounded-2xl border border-border bg-background p-4">
           <div className="flex items-center gap-2">
             <BellRing className="size-4 text-primary" />
             <h3 className="text-sm font-bold">예약 번호 호출</h3>
           </div>
-          <div className="grid grid-cols-[8rem_1fr] gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-number">번호표</Label>
-              <Input
-                id="ticket-number"
-                type="number"
-                min={1}
-                value={ticketNumber}
-                onChange={(event) => setTicketNumber(event.target.value)}
-                placeholder="45"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="call-program">프로그램</Label>
-              <Input
-                id="call-program"
-                value={program}
-                onChange={(event) => setProgram(event.target.value)}
-                placeholder="드론라이트쇼 명당석"
-                maxLength={60}
-              />
-            </div>
+          <p className="text-[11px] text-muted-foreground">
+            대기 중인 예약을 호출하면 해당 방문객 화면의 알림에 바로 표시돼요.
+          </p>
+          <div className="space-y-2">
+            {bookingsLoading && <p className="text-xs text-muted-foreground">불러오는 중…</p>}
+            {bookingsError && <ErrorState message={queryErrorMessage(bookingsError)} onRetry={() => refetchBookings()} />}
+            {!bookingsLoading && !bookingsError && waitingBookings.length === 0 && (
+              <EmptyState message="호출할 대기 예약이 없어요." />
+            )}
+            {waitingBookings.map((booking) => (
+              <div key={booking.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">
+                    {booking.queue_number ? `${booking.queue_number}번 · ` : ""}{booking.program_title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {formatMoment(booking.starts_at)} · {booking.party_size}명
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={callMutation.isPending}
+                  onClick={() => callMutation.mutate(booking.id)}
+                >
+                  <BellRing className="size-3.5" />
+                  호출
+                </Button>
+              </div>
+            ))}
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="call-location">호출 장소</Label>
-            <Input
-              id="call-location"
-              value={location}
-              onChange={(event) => setLocation(event.target.value)}
-              placeholder="미입력 시 예약 프로그램 입구"
-              maxLength={60}
-            />
-          </div>
-          <div className="flex justify-end pt-1">
-            <Button type="submit" size="sm" disabled={!ticketNumber || !program.trim()}>
-              <BellRing className="size-3.5" />
-              방문객 호출
-            </Button>
-          </div>
-        </form>
+          {callMutation.error && <p className="text-xs text-destructive">{callMutation.error.message}</p>}
+        </div>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
@@ -298,9 +305,9 @@ export function NotificationAdminPanel() {
             )}
             {announcements.slice(0, 4).map((announcement) => (
               <div key={announcement.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${SEVERITY_STYLE[announcement.severity]}`}>
+                <StatusPill tone={SEVERITY_TONE[announcement.severity]} className="shrink-0">
                   {SEVERITY_OPTIONS.find((o) => o.value === announcement.severity)?.label}
-                </span>
+                </StatusPill>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{announcement.title}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
@@ -328,21 +335,15 @@ export function NotificationAdminPanel() {
         <div>
           <h3 className="mb-2 text-xs font-bold text-muted-foreground">최근 예약 호출</h3>
           <div className="space-y-2">
-            {reservationCalls.slice(0, 4).map((call) => (
-              <div key={call.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{call.ticketNumber}번 · {call.program}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{call.location} · {call.createdAt}</p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeReservationCall(call.id)}
-                  aria-label={`${call.ticketNumber}번 예약 호출 삭제`}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
+            {calledBookings.length === 0 && <EmptyState message="호출한 예약이 없어요." />}
+            {calledBookings.slice(0, 4).map((booking) => (
+              <div key={booking.id} className="rounded-xl border border-border p-3">
+                <p className="truncate text-sm font-semibold">
+                  {booking.queue_number ? `${booking.queue_number}번 · ` : ""}{booking.program_title}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {booking.called_at ? `${formatMoment(booking.called_at)} 호출` : "호출됨"}
+                </p>
               </div>
             ))}
           </div>

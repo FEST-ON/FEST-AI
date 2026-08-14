@@ -1,4 +1,4 @@
-import { adminApi, adminFestivalId } from "@/shared/lib/api";
+import { festivalApi } from "@/shared/lib/api";
 import type { AuditLogEntry } from "./model";
 
 interface AuditLogRow {
@@ -34,11 +34,13 @@ export interface AuditLogFilter {
   resourceType?: string;
 }
 
-export async function fetchAuditLogs(filter: AuditLogFilter = {}) {
-  const festivalId = await adminFestivalId();
-  const params = new URLSearchParams({ limit: "50" });
+/** 백엔드가 limit만 받고 커서를 내려주지 않아(nextCursor는 항상 null) 상한은 100건입니다. */
+export const AUDIT_LOG_MAX_LIMIT = 100;
+
+export async function fetchAuditLogs(filter: AuditLogFilter = {}, limit = 50) {
+  const params = new URLSearchParams({ limit: String(Math.min(limit, AUDIT_LOG_MAX_LIMIT)) });
   if (filter.action) params.set("action", filter.action);
   if (filter.resourceType) params.set("resourceType", filter.resourceType);
-  const rows = await adminApi<AuditLogRow[]>(`/admin/festivals/${festivalId}/audit-logs?${params.toString()}`);
+  const rows = await festivalApi<AuditLogRow[]>(`/audit-logs?${params.toString()}`);
   return rows.map(normalize);
 }

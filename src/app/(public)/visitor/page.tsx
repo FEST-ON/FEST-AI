@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, MapPin, Sparkles, Ticket, Stamp, ClipboardList, ArrowRight } from "lucide-react";
+import { BadgePercent, CalendarDays, MapPin, Route, Sparkles, Store, Ticket, Stamp, ClipboardList, ArrowRight } from "lucide-react";
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
+import { CrowdList } from "@/features/crowd/ui/crowd-list";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { useVisitorMenuSettingsStore } from "@/features/visitor-menu-settings/model/store";
+import { useVisitorMenus } from "@/features/visitor-menu-settings/model/store";
 import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/store";
 import { useTranslation } from "@/shared/lib/i18n";
 import type { Dictionary } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
 import { EmptyState, ErrorState } from "@/shared/ui/query-state";
+import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
 
 const QUICK_MENU: {
   href: string;
@@ -22,8 +24,11 @@ const QUICK_MENU: {
   { href: "/visitor/ai-guide", labelKey: "aiGuide", icon: Sparkles, kiosk: true },
   { href: "/visitor/schedule", labelKey: "schedule", icon: CalendarDays, kiosk: false },
   { href: "/visitor/map", labelKey: "map", icon: MapPin, kiosk: true },
+  { href: "/visitor/course", labelKey: "course", icon: Route, kiosk: true },
   { href: "/visitor/reservation", labelKey: "reservation", icon: Ticket, kiosk: false, menuKey: "reservation" },
   { href: "/visitor/stamp-tour", labelKey: "stampTour", icon: Stamp, kiosk: false, menuKey: "stampTour" },
+  { href: "/visitor/coupons", labelKey: "coupons", icon: BadgePercent, kiosk: false, menuKey: "coupons" },
+  { href: "/visitor/nearby", labelKey: "nearby", icon: Store, kiosk: true, menuKey: "nearby" },
   { href: "/visitor/survey", labelKey: "survey", icon: ClipboardList, kiosk: false, menuKey: "survey" },
 ];
 
@@ -37,9 +42,11 @@ function getGreeting(t: Dictionary) {
 export default function VisitorHomePage() {
   const { t, locale, bcp47 } = useTranslation();
   const visitorMode = useAccessibilityStore((state) => state.visitorMode);
-  const menuSettings = useVisitorMenuSettingsStore();
+  const menuSettings = useVisitorMenus();
+  // 하단 탭·히어로 CTA로 이미 한 번에 닿는 메뉴는 그리드에서 뺀다.
   const quickMenu = QUICK_MENU.filter(
     (item) =>
+      !NAV_ITEMS.some((nav) => nav.href === item.href) &&
       (visitorMode === "qr" || item.kiosk) &&
       (!item.menuKey || menuSettings[item.menuKey]),
   );
@@ -94,6 +101,16 @@ export default function VisitorHomePage() {
           </Link>
         ))}
       </div>
+
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-foreground">{t.home.congestionTitle}</h3>
+          <Link href="/visitor/map" className="inline-flex items-center gap-0.5 text-xs font-medium text-primary">
+            {t.home.mapLink} <ArrowRight className="size-3" />
+          </Link>
+        </div>
+        <CrowdList limit={3} />
+      </section>
 
       {visitorMode === "qr" && (
         <section>

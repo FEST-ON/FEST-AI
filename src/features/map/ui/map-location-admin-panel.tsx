@@ -18,7 +18,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
 import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
-import { Skeleton } from "@/shared/ui/skeleton";
+import { SkeletonList } from "@/shared/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -134,7 +134,7 @@ export function MapLocationAdminPanel() {
       </div>
 
       {isLoading ? (
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-36 rounded-xl" />)}</div>
+        <SkeletonList count={3} className="h-36 rounded-xl" wrapperClassName="mt-5 grid gap-3 space-y-0 md:grid-cols-2 xl:grid-cols-3" />
       ) : isError || !locations ? (
         <ErrorState className="mt-5" message={queryErrorMessage(error)} onRetry={() => refetch()} />
       ) : locations.length === 0 ? (

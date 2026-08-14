@@ -20,6 +20,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useSpeechOutput } from "@/features/accessibility/model/use-speech-output";
 import { useTranslation } from "@/shared/lib/i18n";
 import { buildMessage, generateReply, reportAiMessage, resetConversation } from "../lib/generate-reply";
 import { useChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
@@ -58,14 +59,11 @@ export function PersoAiGuide() {
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
   const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
 
-  const estimatedConversationHeight = messages.slice(-3).reduce((height, message) => {
-    const charactersPerLine = largeText ? 27 : 38;
-    const lineHeight = largeText ? 26 : 20;
-    return height + 34 + Math.ceil(message.content.length / charactersPerLine) * lineHeight;
-  }, 0);
-  const chatPanelHeight = showTextInput
-    ? Math.min(470, Math.max(400, 290 + estimatedConversationHeight))
-    : Math.min(450, Math.max(340, 240 + estimatedConversationHeight));
+  useSpeechOutput(latestAssistantMessage?.content, { enabled: voiceGuide, bcp47 });
+
+  // 패널은 내용만큼 자라고 아래 범위 안에서 멈춘다. 넘치면 대화 영역이 스크롤한다.
+  // 글자 수로 높이를 추정하던 자리 — 큰 글씨·줄바꿈에 따라 어긋나던 것을 실제 레이아웃에 맡긴다.
+  const chatPanelHeight = showTextInput ? "min-h-[400px] max-h-[470px]" : "min-h-[340px] max-h-[450px]";
 
   const handleAsk = useCallback(async (question: string) => {
     if (isTyping) return;
@@ -147,8 +145,10 @@ export function PersoAiGuide() {
       </div>
 
       <div
-        className="absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[height] duration-300 ease-out dark:bg-slate-950/68"
-        style={{ height: chatPanelHeight }}
+        className={cn(
+          "absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[min-height,max-height] duration-300 ease-out dark:bg-slate-950/68",
+          chatPanelHeight,
+        )}
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-linear-to-b from-white/90 via-white/40 to-transparent dark:from-slate-950/85 dark:via-slate-950/35" />
 

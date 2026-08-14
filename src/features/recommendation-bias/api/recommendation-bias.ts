@@ -1,55 +1,37 @@
-import { adminApi, adminFestivalId } from "@/shared/lib/api";
+import { festivalApi } from "@/shared/lib/api";
 
-type ApiEnvelope<T> = { data: T };
+export interface BusinessExposure {
+  business_id: string;
+  name: string;
+  category: string;
+  total_exposures: number;
+  sponsored_exposures: number;
+  exposure_share: number;
+  is_over_threshold: boolean;
+}
 
-export interface RecommendationExposureMetric {
-  key: string;
-  label: string;
-  is_sponsored?: boolean | null;
-  exposure_count: number;
-  exposure_ratio: number;
-  threshold: number;
-  exceeded: boolean;
+export interface CategoryExposure {
+  category: string;
+  total_exposures: number;
+  exposure_share: number;
+  is_over_threshold: boolean;
 }
 
 export interface RecommendationBiasReport {
   festival_id: string;
-  cadence: "weekly";
-  checked_at: string;
-  window_started_at: string;
-  window_ended_at: string;
-  next_recommended_check_at: string;
-  total_events: number;
-  total_regular_exposures: number;
-  total_sponsored_exposures: number;
-  business_exposures: RecommendationExposureMetric[];
-  category_exposures: RecommendationExposureMetric[];
-  sponsored_business_exposures: RecommendationExposureMetric[];
-  sponsored_category_exposures: RecommendationExposureMetric[];
-  violations: RecommendationExposureMetric[];
-  policy_version: string;
+  window_days: number;
+  status: "PASS" | "WARNING" | "INSUFFICIENT_DATA";
+  summary: string;
+  checked_event_count: number;
+  total_exposures: number;
+  sponsored_exposures: number;
+  business_exposures: BusinessExposure[];
+  category_exposures: CategoryExposure[];
+  thresholds: { max_business_exposure_share: number; max_category_exposure_share: number };
+  recommended_actions: string[];
 }
 
-function unwrap<T>(payload: T | ApiEnvelope<T>): T {
-  if (payload && typeof payload === "object" && "data" in payload) {
-    return (payload as ApiEnvelope<T>).data;
-  }
-  return payload as T;
-}
-
-async function requestBiasReport(suffix: string, init?: RequestInit): Promise<RecommendationBiasReport> {
-  const festivalId = await adminFestivalId();
-  const payload = await adminApi<RecommendationBiasReport | ApiEnvelope<RecommendationBiasReport>>(
-    `/admin/festivals/${festivalId}/recommendation-bias${suffix}`,
-    { ...init, cache: "no-store" },
-  );
-  return unwrap<RecommendationBiasReport>(payload);
-}
-
-export function fetchRecommendationBiasReport(options: { refresh?: boolean } = {}) {
-  return requestBiasReport(options.refresh ? "?refresh=true" : "");
-}
-
-export function runRecommendationBiasCheck() {
-  return requestBiasReport("/check", { method: "POST" });
+/** 백엔드는 GET 한 번으로 최근 window_days의 노출 이력을 그때그때 집계한다(저장된 리포트가 아니다). */
+export async function fetchRecommendationBiasReport(windowDays = 7) {
+  return festivalApi<RecommendationBiasReport>(`/recommendation-bias?windowDays=${windowDays}`, { cache: "no-store" });
 }

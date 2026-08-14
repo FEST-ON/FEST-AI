@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, AlertTriangle, RefreshCw, Search, Sparkles } from "lucide-react";
 import { fetchFestivalBrief, type FestivalBrief } from "@/features/festival-brief/api/festival-brief";
 import { Button } from "@/shared/ui/button";
+import { seoulDateTime } from "@/shared/lib/utils";
 
 const QUERY_KEY = ["festival-ai-brief"] as const;
 
@@ -18,7 +19,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
     refetchOnWindowFocus: false,
   });
   const regenerate = useMutation({
-    mutationFn: () => fetchFestivalBrief({ refresh: true }),
+    mutationFn: () => fetchFestivalBrief(),
     onSuccess: (brief) => {
       queryClient.setQueryData<FestivalBrief>(QUERY_KEY, brief);
     },
@@ -27,7 +28,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
   const sources = data?.sources ?? [];
   const generatedAt = data?.generated_at ? new Date(data.generated_at) : null;
   const generatedAtLabel =
-    generatedAt && !Number.isNaN(generatedAt.getTime()) ? generatedAt.toLocaleString("ko-KR") : null;
+    generatedAt && !Number.isNaN(generatedAt.getTime()) ? seoulDateTime(generatedAt) : null;
   const activeError = regenerate.error ?? error;
   const isInitialLoading = isLoading && !data;
   const isRegenerating = regenerate.isPending;
@@ -50,14 +51,14 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
               <Sparkles className="size-4" />
             </span>
             <div>
-              <h2 className="text-sm font-bold text-foreground">Alan ESG 한줄 브리핑</h2>
-              <p className="text-[10px] text-muted-foreground">DB의 ESG 운영 지표를 검색해 우선 조치가 필요한 내용을 요약</p>
+              <h2 className="text-sm font-bold text-foreground">운영 위험 한줄 브리핑</h2>
+              <p className="text-[10px] text-muted-foreground">혼잡·민원·인력·일정 신호를 합산해 우선 조치가 필요한 내용을 요약</p>
             </div>
           </div>
 
           <div className="mt-4 grid gap-3 rounded-xl border border-border bg-background px-4 py-3 text-foreground">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
-              <p className="text-xs font-extrabold text-primary">Allen 한줄평</p>
+              <p className="text-xs font-extrabold text-primary">{data?.alan_comment ? "Alan 한줄평" : "규칙 기반 요약"}</p>
               <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
                 {statusLabel}
               </span>
@@ -75,7 +76,17 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
 
             {data ? (
               <div className="space-y-2">
-                <blockquote className="text-sm font-semibold leading-6 text-foreground">“{data.allen_comment ?? data.summary}”</blockquote>
+                <blockquote className="text-sm font-semibold leading-6 text-foreground">“{data.alan_comment ?? data.summary}”</blockquote>
+                {data.recommended_actions.length > 0 && (
+                  <ul className="space-y-1 border-t border-border pt-2">
+                    {data.recommended_actions.map((action) => (
+                      <li key={action} className="flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
+                        <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
+                        {action}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {isRegenerating && (
                   <p className="inline-flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
                     <RefreshCw className="size-3 animate-spin" />
@@ -87,9 +98,9 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
               <div className="flex items-start gap-3 text-red-800 dark:text-red-100">
                 <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-300" />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold leading-6">아직 표시할 Allen 한줄평이 없습니다.</p>
+                  <p className="text-sm font-bold leading-6">아직 표시할 위험 브리핑이 없습니다.</p>
                   <p className="mt-1 text-xs font-medium leading-5 text-red-700 dark:text-red-200">
-                    DB ESG 지표를 기반으로 Allen이 한줄평을 생성한 뒤 ai_messages에 저장하면 여기에 표시됩니다.
+                    운영 위험 신호를 불러오지 못했습니다. 축제 접근 권한과 백엔드 상태를 확인해 주세요.
                   </p>
                   {activeError instanceof Error && <p className="mt-2 text-[10px] text-red-600 dark:text-red-200">{activeError.message}</p>}
                 </div>
@@ -99,10 +110,10 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
                 <RefreshCw className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold leading-6">
-                    {isInitialLoading ? "저장된 Allen 한줄평을 불러오는 중입니다." : "Allen 한줄평을 확인하는 중입니다."}
+                    {isInitialLoading ? "운영 위험 브리핑을 불러오는 중입니다." : "위험 브리핑을 확인하는 중입니다."}
                   </p>
                   <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
-                    먼저 ai_messages에 저장된 한줄평을 확인하고, 없으면 DB ESG 지표로 새 브리핑을 준비합니다.
+                    수집된 혼잡·민원·인력·일정 신호를 기준으로 요약합니다.
                   </p>
                 </div>
               </div>
