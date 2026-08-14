@@ -1,7 +1,6 @@
 import { delay } from "@/shared/lib/async";
 import { FESTIVAL_CODE, publicApi } from "@/shared/lib/api";
 import type {
-  CongestionZone,
   FacilityInfo,
   FestivalInfo,
   ScheduleItem,
@@ -47,67 +46,23 @@ export const transportOptions: TransportOption[] = [
   { id: "t4", mode: "주차", label: "여의나루 임시주차장 (사전예약)", detail: "잔여 42면 / 200면", status: "혼잡" },
 ];
 
-export const congestionZones: CongestionZone[] = [
-  { id: "c1", zone: "메인스테이지", level: "혼잡", waitMinutes: 18, updatedAt: "방금 전" },
-  { id: "c2", zone: "그린마켓 · 푸드존", level: "보통", waitMinutes: 8, updatedAt: "2분 전" },
-  { id: "c3", zone: "체험존 A (업사이클링)", level: "여유", waitMinutes: 2, updatedAt: "1분 전" },
-  { id: "c4", zone: "전시홀", level: "여유", waitMinutes: 0, updatedAt: "방금 전" },
-];
-
 export async function fetchFestivalInfo() {
-  const festival = await publicApi<{
-    id: string; name: string; description: string; starts_at: string; ends_at: string; updated_at: string;
-  }>(`/public/festivals/${FESTIVAL_CODE}`);
-  return {
-    id: festival.id,
-    name: festival.name,
-    subtitle: festival.description,
-    location: "공식 축제 행사장",
-    period: { start: festival.starts_at.slice(0, 10), end: festival.ends_at.slice(0, 10) },
-    hours: "프로그램별 운영시간 확인",
-    organizer: "축제 운영사무국",
-    approvedAt: festival.updated_at.slice(0, 10),
-    description: festival.description,
-  } satisfies FestivalInfo;
+  const festival = await publicApi<{ id: string; name: string; description: string; starts_at: string; ends_at: string; updated_at: string }>(`/public/festivals/${FESTIVAL_CODE}`);
+  return { id: festival.id, name: festival.name, subtitle: festival.description, location: "공식 축제 행사장", period: { start: festival.starts_at.slice(0, 10), end: festival.ends_at.slice(0, 10) }, hours: "프로그램별 운영시간 확인", organizer: "축제 운영사무국", approvedAt: festival.updated_at.slice(0, 10), description: festival.description } satisfies FestivalInfo;
 }
 export async function fetchSchedule() {
-  const programs = await publicApi<Array<{
-    id: string; title: string; category: string;
-    sessions: Array<{ id: string; startsAt: string; area: { name: string } }>;
-  }>>(`/public/festivals/${FESTIVAL_CODE}/programs?status=OPEN`);
-  const categories: Record<string, ScheduleItem["category"]> = {
-    performance: "공연", experience: "체험", exhibition: "전시", food: "푸드", event: "행사",
-  };
+  const programs = await publicApi<Array<{ id: string; title: string; category: string; sessions: Array<{ id: string; startsAt: string; area: { name: string } }> }>>(`/public/festivals/${FESTIVAL_CODE}/programs?status=OPEN`);
+  const categories: Record<string, ScheduleItem["category"]> = { performance: "공연", experience: "체험", exhibition: "전시", food: "푸드", event: "행사" };
   return programs.flatMap((program) => program.sessions.map((session) => {
     const startsAt = new Date(session.startsAt);
-    return {
-      id: session.id,
-      day: startsAt.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" }),
-      time: startsAt.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }),
-      title: program.title,
-      stage: session.area.name,
-      category: categories[program.category] ?? "행사",
-    } satisfies ScheduleItem;
+    return { id: session.id, day: startsAt.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" }), time: startsAt.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }), title: program.title, stage: session.area.name, category: categories[program.category] ?? "행사" } satisfies ScheduleItem;
   }));
 }
 export async function fetchFacilities() {
-  const rows = await publicApi<Array<{
-    id: string; name: string; facility_type: string; area: { name: string };
-  }>>(`/public/festivals/${FESTIVAL_CODE}/facilities`);
-  const types: Record<string, FacilityInfo["type"]> = {
-    RESTROOM: "화장실", PARKING: "주차장", FIRST_AID: "구급실", INFO: "안내소", NURSING_ROOM: "수유실", STORAGE: "물품보관소",
-  };
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    type: types[row.facility_type] ?? "안내소",
-    location: row.area.name,
-    walkMinutes: 0,
-  }));
+  const rows = await publicApi<Array<{ id: string; name: string; facility_type: string; area: { name: string } }>>(`/public/festivals/${FESTIVAL_CODE}/facilities`);
+  const types: Record<string, FacilityInfo["type"]> = { RESTROOM: "화장실", PARKING: "주차장", FIRST_AID: "구급실", INFO: "안내소", NURSING_ROOM: "수유실", STORAGE: "물품보관소" };
+  return rows.map((row) => ({ id: row.id, name: row.name, type: types[row.facility_type] ?? "안내소", location: row.area.name, walkMinutes: 0 }));
 }
 export async function fetchTransport() {
   return delay(transportOptions, 450);
-}
-export async function fetchCongestion() {
-  return delay(congestionZones, 350);
 }

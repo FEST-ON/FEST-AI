@@ -34,11 +34,3 @@ export interface TransportOption {
   detail: string;
   status: "원활" | "보통" | "혼잡" | "지연";
 }
-
-export interface CongestionZone {
-  id: string;
-  zone: string;
-  level: "여유" | "보통" | "혼잡";
-  waitMinutes: number;
-  updatedAt: string;
-}

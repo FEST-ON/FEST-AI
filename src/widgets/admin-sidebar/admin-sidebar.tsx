@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Users2, Ticket, Sparkles, Leaf, LogOut, FileCheck2 } from "lucide-react";
+import { LayoutDashboard, Users2, Ticket, Sparkles, Leaf, LogOut, MapPinned, FileCheck2 } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
 import { logoutAdmin } from "@/shared/lib/api";
@@ -12,6 +12,7 @@ import { logoutAdmin } from "@/shared/lib/api";
 const NAV_ITEMS = [
   { href: "/admin", label: "운영 대시보드", icon: LayoutDashboard },
   { href: "/admin/programs", label: "통합 운영관리", icon: Users2 },
+  { href: "/admin/map-locations", label: "지도·부스 설정", icon: MapPinned },
   { href: "/admin/content", label: "검수·게시 관리", icon: FileCheck2 },
   { href: "/admin/tickets", label: "민원·공지·사고", icon: Ticket },
   { href: "/admin/ai-insights", label: "AI 민원 인사이트", icon: Sparkles },
@@ -21,23 +22,11 @@ const NAV_ITEMS = [
 export function AdminLogoutButton({ showLabel = false, className }: { showLabel?: boolean; className?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-
   async function logout() {
-    try {
-      await logoutAdmin();
-    } finally {
-      queryClient.clear();
-      router.push("/");
-      router.refresh();
-    }
+    try { await logoutAdmin(); }
+    finally { queryClient.clear(); router.push("/"); router.refresh(); }
   }
-
-  return (
-    <button onClick={() => void logout()} className={className} aria-label="로그아웃">
-      <LogOut className="size-4" />
-      {showLabel && <span>로그아웃</span>}
-    </button>
-  );
+  return <button onClick={() => void logout()} className={className} aria-label="로그아웃"><LogOut className="size-4" />{showLabel && <span>로그아웃</span>}</button>;
 }
 
 export function AdminSidebar() {

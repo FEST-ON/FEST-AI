@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarCheck, DoorOpen, Hourglass, Ticket as TicketIcon, ArrowRight } from "lucide-react";
+import { CalendarCheck, Users, Store, Ticket as TicketIcon, ArrowRight, MapPinned } from "lucide-react";
 import { fetchOpsSnapshot } from "@/widgets/dashboard-stats/data";
-import { fetchCongestion } from "@/entities/festival";
 import { fetchTickets } from "@/entities/ticket";
 import { fetchOperationResources } from "@/entities/program";
 import { StatCard } from "@/shared/ui/stat-card";
 import { Badge } from "@/shared/ui/badge";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { CongestionList } from "@/widgets/congestion-map/congestion-list";
-import { NotificationAdminPanel } from "@/features/notification/ui/notification-admin-panel";
+import { FestivalBriefCard } from "@/features/festival-brief/ui/festival-brief-card";
 
 const PRIORITY_STYLE = {
   높음: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
@@ -21,64 +19,48 @@ const PRIORITY_STYLE = {
 
 export default function AdminDashboardPage() {
   const { data: ops, isLoading: opsLoading } = useQuery({ queryKey: ["ops-snapshot"], queryFn: fetchOpsSnapshot });
-  const { data: congestion } = useQuery({ queryKey: ["congestion"], queryFn: fetchCongestion });
   const { data: tickets } = useQuery({ queryKey: ["tickets"], queryFn: fetchTickets });
   const { data: resources } = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
 
   const openTickets = (tickets ?? []).filter((t) => t.status !== "완료").slice(0, 4);
   const issueResources = (resources ?? []).filter((r) => r.status === "이슈");
 
-  const maxHourly = Math.max(...(ops?.hourlyEntries.map((h) => h.count) ?? [1]));
-
   return (
     <div className="space-y-6">
+      <FestivalBriefCard />
+
       {opsLoading || !ops ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-2xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <StatCard label="오늘 예약" value={ops.reservationsToday.toLocaleString()} helper="누적 예약 건수" icon={CalendarCheck} tone="primary" />
-          <StatCard label="오늘 입장" value={ops.entryToday.toLocaleString()} helper="QR 체크인 기준" icon={DoorOpen} />
-          <StatCard label="평균 대기" value={`${ops.avgWaitMinutes}분`} helper="전체 프로그램 평균" icon={Hourglass} />
-          <StatCard label="쿠폰 발급/사용" value={`${ops.couponsIssued} / ${ops.couponsUsed}`} helper="지역상권 디지털 쿠폰" icon={TicketIcon} />
-          <StatCard label="현재 체류 인원(추정)" value={ops.activeVisitorsEstimate.toLocaleString()} helper="실시간 혼잡도 기반 추정" tone="success" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard label="방문 세션" value={ops.visitors.toLocaleString()} helper="백엔드 누적 방문 세션" icon={Users} tone="primary" />
+          <StatCard label="진행 중 예약" value={ops.active_bookings.toLocaleString()} helper="확정·대기·호출 상태" icon={CalendarCheck} />
+          <StatCard label="처리 필요 티켓" value={ops.open_tickets.toLocaleString()} helper="미해결 민원·사고" icon={TicketIcon} />
+          <StatCard label="승인 참여업체" value={ops.approved_businesses.toLocaleString()} helper="축제 참여 승인 완료" icon={Store} />
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-foreground">시간대별 입장 현황</h2>
-            <span className="text-xs text-muted-foreground">오늘 기준</span>
-          </div>
-          {opsLoading || !ops ? (
-            <Skeleton className="h-40 w-full" />
-          ) : (
-            <div className="flex h-40 items-end gap-2.5">
-              {ops.hourlyEntries.map((h) => (
-                <div key={h.hour} className="flex flex-1 flex-col items-center gap-1.5">
-                  <div className="flex h-32 w-full items-end overflow-hidden rounded-md bg-muted">
-                    <div
-                      className="w-full rounded-md bg-primary transition-all"
-                      style={{ height: `${(h.count / maxHourly) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">{h.hour}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex items-center justify-between"><h2 className="text-sm font-bold">데이터 연동 상태</h2><Badge variant="outline">LIVE API</Badge></div>
+          {opsLoading || !ops ? <Skeleton className="mt-4 h-24 w-full" /> : <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl bg-muted/60 p-4"><p className="text-xs text-muted-foreground">쿠폰 발급</p><p className="mt-1 text-2xl font-extrabold">{ops.coupon_issues.toLocaleString()}</p></div>
+            <div className="rounded-xl bg-muted/60 p-4"><p className="text-xs text-muted-foreground">ESG 포인트 발급</p><p className="mt-1 text-2xl font-extrabold">{ops.points_issued.toLocaleString()}P</p></div>
+            <p className="sm:col-span-2 text-[11px] text-muted-foreground">근거 테이블: {ops.sources.join(" · ")}</p>
+          </div>}
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-foreground">실시간 혼잡 현황</h2>
-            <Link href="/admin/programs" className="text-xs font-medium text-primary">구역관리</Link>
+        <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-5">
+          <div>
+            <span className="grid size-10 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"><MapPinned className="size-5" /></span>
+            <h2 className="mt-4 text-sm font-bold text-foreground">지도 부스 지점</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">카카오맵에 노출할 부스·시설 좌표를 등록하고 공개 여부를 설정하세요.</p>
           </div>
-          {!congestion ? <Skeleton className="h-40 w-full" /> : <CongestionList zones={congestion} />}
+          <Link href="/admin/map-locations" className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-primary">지도 설정 열기 <ArrowRight className="size-3" /></Link>
         </div>
       </div>
 
@@ -128,8 +110,6 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      <NotificationAdminPanel />
     </div>
   );
 }
-

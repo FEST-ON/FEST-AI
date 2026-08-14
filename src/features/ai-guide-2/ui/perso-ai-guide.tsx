@@ -14,19 +14,18 @@ import {
   SendHorizontal,
   Square,
   Sparkles,
-  Users,
   Volume2,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { buildPersoMessage, generatePersoReply } from "../lib/generate-reply";
-import { generateReply, reportAiMessage } from "@/features/ai-guide/lib/generate-reply";
+import { buildPersoMessage, generatePersoReply, resetPersoConversation } from "../lib/generate-reply";
+import { reportAiMessage } from "@/features/ai-guide/lib/generate-reply";
 import { usePersoChatStore } from "../model/chat-store";
 import { useSpeechRecognition } from "../model/use-speech-recognition";
 
 const EXPECTED_QUESTIONS = [
-  { icon: Users, label: "지금 가장 혼잡한 곳은?" },
+  { icon: MapPin, label: "축제 부스 위치 알려줘" },
   { icon: Bus, label: "셔틀버스 이용 방법" },
   { icon: MapPin, label: "가까운 화장실 안내" },
   { icon: CalendarDays, label: "오늘 주요 프로그램" },
@@ -57,16 +56,12 @@ export function PersoAiGuide() {
     addMessage(buildPersoMessage("user", question));
     setTyping(true);
     setReportStatus("idle");
+
     try {
-      const reply = await generateReply(question);
+      const reply = await generatePersoReply(question);
       addMessage(buildPersoMessage("assistant", reply.content, reply.sources, reply.messageId));
     } catch (error) {
-      const fallback = generatePersoReply(question);
-      addMessage(buildPersoMessage(
-        "assistant",
-        error instanceof Error ? `실시간 연결이 원활하지 않아 임시 안내를 보여드려요.\n\n${fallback.content}` : fallback.content,
-        fallback.sources,
-      ));
+      addMessage(buildPersoMessage("assistant", error instanceof Error ? error.message : "안내 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."));
     } finally {
       setTyping(false);
     }
@@ -127,7 +122,7 @@ export function PersoAiGuide() {
         <button
           type="button"
           aria-label="대화 새로고침"
-          onClick={() => { reset(); setReportStatus("idle"); }}
+          onClick={() => { resetPersoConversation(); reset(); setReportStatus("idle"); }}
           className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-slate-950/40 text-white backdrop-blur-md transition hover:bg-slate-950/60"
         >
           <RotateCcw className="size-4" />
