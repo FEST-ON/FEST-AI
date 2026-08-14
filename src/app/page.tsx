@@ -1,38 +1,8 @@
 import Link from "next/link";
-import {
-  Sparkles,
-  LayoutDashboard,
-  QrCode,
-  Leaf,
-  ArrowRight,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { Badge } from "@/shared/ui/badge";
 import { festivalInfo } from "@/entities/festival";
-
-const FEATURES = [
-  {
-    icon: Sparkles,
-    title: "AI 축제 안내",
-    desc: "일정·교통·시설·안전 정보를 자연어로 안내하고, 동행유형·관심사 기반 맞춤 코스를 추천해요.",
-  },
-  {
-    icon: LayoutDashboard,
-    title: "통합 운영관리",
-    desc: "프로그램·업체·부스·인력·자원봉사자를 한 화면에서, 민원·사고는 티켓으로 관리해요.",
-  },
-  {
-    icon: QrCode,
-    title: "방문객 QR 모바일 웹",
-    desc: "앱 설치 없이 지도·예약·대기표·스탬프투어·디지털 쿠폰까지 한 번에 이용해요.",
-  },
-  {
-    icon: Leaf,
-    title: "ESG 성과관리",
-    desc: "다회용기·분리배출·대중교통 데이터를 자동 집계하고 ESG 보고서 초안을 생성해요.",
-  },
-];
 
 export default function Home() {
   return (
@@ -46,7 +16,6 @@ export default function Home() {
             aria-label="운영자 로그인"
             className="rounded-full size-10 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
           >
-            {/* <Lock className="size-3.5" /> */}
           </Link>
         </div>
         <Badge variant="secondary" className="hidden gap-1.5 sm:inline-flex">

@@ -21,9 +21,8 @@ import { cn } from "@/shared/lib/utils";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useTranslation } from "@/shared/lib/i18n";
-import { buildPersoMessage, generatePersoReply, resetPersoConversation } from "../lib/generate-reply";
-import { reportAiMessage } from "@/features/ai-guide/lib/generate-reply";
-import { usePersoChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
+import { buildMessage, generateReply, reportAiMessage, resetConversation } from "../lib/generate-reply";
+import { useChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
 import { useSpeechRecognition } from "../model/use-speech-recognition";
 
 const QUESTION_ICON = {
@@ -34,9 +33,9 @@ const QUESTION_ICON = {
 } as const;
 
 export function PersoAiGuide() {
-  const { t, locale } = useTranslation();
-  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome } = usePersoChatStore();
-  const { language, largeText, voiceGuide } = useAccessibilityStore();
+  const { t, locale, bcp47 } = useTranslation();
+  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome } = useChatStore();
+  const { largeText, voiceGuide } = useAccessibilityStore();
   const [draft, setDraft] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
@@ -71,15 +70,15 @@ export function PersoAiGuide() {
   const handleAsk = useCallback(async (question: string) => {
     if (isTyping) return;
 
-    addMessage(buildPersoMessage("user", question, undefined, undefined, locale));
+    addMessage(buildMessage("user", question, locale));
     setTyping(true);
     setReportStatus("idle");
 
     try {
-      const reply = await generatePersoReply(question, locale);
-      addMessage(buildPersoMessage("assistant", reply.content, reply.sources, reply.messageId, locale));
+      const reply = await generateReply(question, locale);
+      addMessage(buildMessage("assistant", reply.content, locale, { sources: reply.sources, backendMessageId: reply.messageId }));
     } catch {
-      addMessage(buildPersoMessage("assistant", t.aiGuide.replyFailed, undefined, undefined, locale));
+      addMessage(buildMessage("assistant", t.aiGuide.replyFailed, locale));
     } finally {
       setTyping(false);
     }
@@ -107,7 +106,7 @@ export function PersoAiGuide() {
     isSupported: isSpeechSupported,
     startListening,
     stopListening,
-  } = useSpeechRecognition({ language, t, onFinalResult: handleVoiceResult });
+  } = useSpeechRecognition({ bcp47, t, onFinalResult: handleVoiceResult });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -140,7 +139,7 @@ export function PersoAiGuide() {
         <button
           type="button"
           aria-label={t.aiGuide.resetAria}
-          onClick={() => { resetPersoConversation(); reset(welcomeMessage); setReportStatus("idle"); }}
+          onClick={() => { resetConversation(); reset(welcomeMessage); setReportStatus("idle"); }}
           className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-slate-950/40 text-white backdrop-blur-md transition hover:bg-slate-950/60"
         >
           <RotateCcw className="size-4" />

@@ -4,18 +4,12 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarCheck, Users, Store, Ticket as TicketIcon, ArrowRight, MapPinned } from "lucide-react";
 import { fetchOpsSnapshot } from "@/widgets/dashboard-stats/data";
-import { fetchTickets } from "@/entities/ticket";
+import { fetchTickets, PRIORITY_STYLE } from "@/entities/ticket";
 import { fetchOperationResources } from "@/entities/program";
 import { StatCard } from "@/shared/ui/stat-card";
 import { Badge } from "@/shared/ui/badge";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { FestivalBriefCard } from "@/features/festival-brief/ui/festival-brief-card";
-
-const PRIORITY_STYLE = {
-  높음: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
-  중간: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  낮음: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-} as const;
 
 export default function AdminDashboardPage() {
   const { data: ops, isLoading: opsLoading } = useQuery({ queryKey: ["ops-snapshot"], queryFn: fetchOpsSnapshot });

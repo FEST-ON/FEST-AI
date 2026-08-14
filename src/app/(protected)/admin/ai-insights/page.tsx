@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Flag, ListChecks, RefreshCw, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
-import { fetchTickets } from "@/entities/ticket";
+import { fetchTickets, PRIORITY_STYLE } from "@/entities/ticket";
 import { buildCategoryBreakdown, buildRecurringIssues, improvementTasks } from "@/features/complaint-insight/lib/analyze";
 import {
   fetchRecommendationBiasReport,
@@ -39,12 +39,6 @@ async function decideAiReview({ id, decision }: { id: string; decision: string }
     body: JSON.stringify({ decision }),
   });
 }
-
-const PRIORITY_STYLE: Record<string, string> = {
-  높음: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
-  중간: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  낮음: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-};
 
 function formatDateTime(value?: string) {
   if (!value) return "-";
@@ -334,7 +328,7 @@ export default function AiInsightsPage() {
                 <div key={task.title} className="rounded-xl border border-border p-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-foreground">{task.title}</p>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${PRIORITY_STYLE[task.priority] ?? PRIORITY_STYLE["낮음"]}`}>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${PRIORITY_STYLE[task.priority]}`}>
                       {task.priority}
                     </span>
                   </div>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Megaphone, MessageSquareWarning, Sparkles } from "lucide-react";
-import { fetchTickets, transitionTicket } from "@/entities/ticket";
+import { fetchTickets, transitionTicket, PRIORITY_STYLE } from "@/entities/ticket";
 import type { TicketType } from "@/entities/ticket";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
@@ -11,12 +11,6 @@ import { Skeleton } from "@/shared/ui/skeleton";
 
 const TYPES: (TicketType | "전체")[] = ["전체", "공지", "민원", "사고"];
 const TYPE_ICON = { 공지: Megaphone, 민원: MessageSquareWarning, 사고: AlertTriangle } as const;
-
-const PRIORITY_STYLE = {
-  높음: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
-  중간: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  낮음: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-} as const;
 
 const STATUS_DOT = { 접수: "bg-slate-400", 배정됨: "bg-blue-400", 처리중: "bg-amber-500", 해결됨: "bg-teal-500", 완료: "bg-emerald-500" } as const;
 

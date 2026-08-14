@@ -44,7 +44,7 @@ export function publicApi<T>(path: string, init?: RequestInit) {
 
 let visitorSession: Promise<string> | undefined;
 
-export function visitorToken(): Promise<string> {
+function visitorToken(): Promise<string> {
   const stored = localStorage.getItem(VISITOR_TOKEN);
   if (stored) return Promise.resolve(stored);
   visitorSession ??= api<{ sessionToken: string }>(`/public/festivals/${FESTIVAL_CODE}/visitor-sessions`, {

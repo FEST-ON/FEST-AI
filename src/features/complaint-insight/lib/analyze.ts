@@ -1,4 +1,4 @@
-import type { Ticket } from "@/entities/ticket";
+import type { Ticket, TicketPriority } from "@/entities/ticket";
 
 export interface CategoryBreakdown {
   category: string;
@@ -14,7 +14,7 @@ export interface RecurringIssue {
 export interface ImprovementTask {
   title: string;
   detail: string;
-  priority: "높음" | "중간" | "낮음";
+  priority: TicketPriority;
 }
 
 export function buildCategoryBreakdown(tickets: Ticket[]): CategoryBreakdown[] {

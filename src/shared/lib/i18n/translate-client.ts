@@ -25,3 +25,23 @@ export async function translateEntries(
     return entries;
   }
 }
+
+/**
+ * `items`의 지정한 텍스트 필드들을 한 번의 요청으로 번역해 되돌려준다.
+ * 항목별 필드를 개별 키(`${id}.${field}`)로 묶어 보내므로 호출 수는 항상 1회다.
+ */
+export async function translateFields<T extends { id: string }>(
+  items: T[],
+  fields: Array<keyof T & string>,
+  locale: Locale,
+): Promise<T[]> {
+  if (locale === "ko" || items.length === 0) return items;
+  const entries = Object.fromEntries(
+    items.flatMap((item) => fields.map((field) => [`${item.id}.${field}`, String(item[field])])),
+  );
+  const text = await translateEntries(entries, locale);
+  return items.map((item) => ({
+    ...item,
+    ...Object.fromEntries(fields.map((field) => [field, text[`${item.id}.${field}`] ?? item[field]])),
+  }));
+}

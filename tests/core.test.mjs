@@ -17,6 +17,7 @@ const { classifyTicket, nextTicketStatus } = await importTypeScript("../src/enti
 const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement/model.ts");
 const { contentAction, contentPreview } = await importTypeScript("../src/features/content-review/model/content.ts");
 const { canAccessPath, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
+const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
 
 class MemoryStorage {
   #values = new Map();
@@ -161,6 +162,31 @@ test("검수자는 검수가 필요한 화면에 모두 접근할 수 있다", (
     visibleNavItems("REVIEWER").map((item) => item.href),
     ["/admin", "/admin/content", "/admin/ai-insights", "/admin/esg"],
   );
+});
+
+test("자동 번역은 항목별 필드를 한 번의 요청으로 묶고, 실패하면 원문을 유지한다", async () => {
+  const spots = [
+    { id: "st1", name: "통합 안내소", location: "정문 입구", collected: true },
+    { id: "st2", name: "그린마켓", location: "마켓존", collected: false },
+  ];
+  let requests = 0;
+
+  globalThis.fetch = async (_input, init = {}) => {
+    requests += 1;
+    const { entries } = JSON.parse(String(init.body));
+    return Response.json({ entries: Object.fromEntries(Object.keys(entries).map((key) => [key, `EN:${entries[key]}`])) });
+  };
+
+  assert.deepEqual(await translateFields(spots, ["name", "location"], "ko"), spots, "한국어는 요청하지 않는다");
+  assert.equal(requests, 0);
+
+  const translated = await translateFields(spots, ["name", "location"], "en");
+  assert.equal(requests, 1, "항목이 여러 개여도 요청은 한 번");
+  assert.deepEqual(translated[0], { id: "st1", name: "EN:통합 안내소", location: "EN:정문 입구", collected: true });
+  assert.equal(translated[1].collected, false, "번역 대상이 아닌 필드는 그대로 둔다");
+
+  globalThis.fetch = async () => { throw new Error("network down"); };
+  assert.deepEqual(await translateFields(spots, ["name"], "en"), spots, "실패하면 원문으로 fallback");
 });
 
 test("역할이 없으면 관리자 화면에 접근할 수 없다", () => {

@@ -3,6 +3,12 @@ export type TicketStatus = "접수" | "배정됨" | "처리중" | "해결됨" | 
 export type TicketApiStatus = "OPEN" | "ASSIGNED" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
 export type TicketPriority = "높음" | "중간" | "낮음";
 
+export const PRIORITY_STYLE: Record<TicketPriority, string> = {
+  높음: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+  중간: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+  낮음: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+};
+
 export interface Ticket {
   id: string;
   type: TicketType;

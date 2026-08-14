@@ -1,70 +1,39 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AccessibilityLanguage } from "@/entities/visitor";
 import type { Dictionary } from "@/shared/lib/i18n";
 
-interface SpeechRecognitionAlternativeLike {
-  transcript: string;
-}
-
-interface SpeechRecognitionResultLike {
-  isFinal: boolean;
-  length: number;
-  [index: number]: SpeechRecognitionAlternativeLike;
-}
-
-interface SpeechRecognitionResultListLike {
-  length: number;
-  [index: number]: SpeechRecognitionResultLike;
-}
-
-interface SpeechRecognitionEventLike extends Event {
-  resultIndex: number;
-  results: SpeechRecognitionResultListLike;
-}
-
-interface SpeechRecognitionErrorEventLike extends Event {
-  error: string;
-}
-
+// ponytail: 브라우저 SpeechRecognition은 표준 TS 타입이 없어 쓰는 부분만 최소로 선언한다.
 interface SpeechRecognitionLike {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   maxAlternatives: number;
   onstart: (() => void) | null;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onresult: ((event: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;
 }
 
-interface SpeechRecognitionConstructorLike {
-  new (): SpeechRecognitionLike;
+function getRecognitionConstructor() {
+  const speechWindow = window as Window & {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
 }
 
-type SpeechRecognitionWindow = Window & {
-  SpeechRecognition?: SpeechRecognitionConstructorLike;
-  webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
-};
-
-const LANGUAGE_CODES: Record<AccessibilityLanguage, string> = {
-  한국어: "ko-KR",
-  English: "en-US",
-  中文: "zh-CN",
-  日本語: "ja-JP",
-};
-
 interface UseSpeechRecognitionOptions {
-  language: AccessibilityLanguage;
+  /** 인식 언어 (BCP-47, 예: "ko-KR") */
+  bcp47: string;
   t: Dictionary;
   onFinalResult: (transcript: string) => void;
 }
 
-export function useSpeechRecognition({ language, t, onFinalResult }: UseSpeechRecognitionOptions) {
+export function useSpeechRecognition({ bcp47, t, onFinalResult }: UseSpeechRecognitionOptions) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalTranscriptRef = useRef("");
   const onFinalResultRef = useRef(onFinalResult);
@@ -77,27 +46,20 @@ export function useSpeechRecognition({ language, t, onFinalResult }: UseSpeechRe
     onFinalResultRef.current = onFinalResult;
   }, [onFinalResult]);
 
+  // 서버 렌더 결과와 어긋나지 않도록 마운트 이후에 지원 여부를 확정한다.
   useEffect(() => {
-    const speechWindow = window as SpeechRecognitionWindow;
-    const frame = window.requestAnimationFrame(() => {
-      setIsSupported(Boolean(speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition));
-    });
-
+    const frame = window.requestAnimationFrame(() => setIsSupported(Boolean(getRecognitionConstructor())));
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  useEffect(() => {
-    return () => recognitionRef.current?.abort();
-  }, []);
+  useEffect(() => () => recognitionRef.current?.abort(), []);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
   }, []);
 
   const startListening = useCallback(() => {
-    const speechWindow = window as SpeechRecognitionWindow;
-    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-
+    const Recognition = getRecognitionConstructor();
     if (!Recognition) {
       setError(t.aiGuide.errors.unsupported);
       return;
@@ -109,7 +71,7 @@ export function useSpeechRecognition({ language, t, onFinalResult }: UseSpeechRe
     setError(null);
 
     const recognition = new Recognition();
-    recognition.lang = LANGUAGE_CODES[language];
+    recognition.lang = bcp47;
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
@@ -117,15 +79,12 @@ export function useSpeechRecognition({ language, t, onFinalResult }: UseSpeechRe
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event) => {
       let interim = "";
-
       for (let index = event.resultIndex; index < event.results.length; index += 1) {
         const result = event.results[index];
         const transcript = result[0]?.transcript ?? "";
-
         if (result.isFinal) finalTranscriptRef.current += transcript;
         else interim += transcript;
       }
-
       setInterimTranscript(interim || finalTranscriptRef.current);
     };
     recognition.onerror = (event) => {
@@ -157,14 +116,7 @@ export function useSpeechRecognition({ language, t, onFinalResult }: UseSpeechRe
       setIsListening(false);
       setError(t.aiGuide.errors.startFailed);
     }
-  }, [language, t]);
+  }, [bcp47, t]);
 
-  return {
-    error,
-    interimTranscript,
-    isListening,
-    isSupported,
-    startListening,
-    stopListening,
-  };
+  return { error, interimTranscript, isListening, isSupported, startListening, stopListening };
 }
