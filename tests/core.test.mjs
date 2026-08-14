@@ -14,6 +14,7 @@ async function importTypeScript(path) {
 const { adminApi, logoutAdmin } = await importTypeScript("../src/shared/lib/api.ts");
 const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/entities/visitor/model.ts");
 const { classifyTicket, nextTicketStatus } = await importTypeScript("../src/entities/ticket/model.ts");
+const { contentAction, contentPreview } = await importTypeScript("../src/features/content-review/model/content.ts");
 
 class MemoryStorage {
   #values = new Map();
@@ -121,4 +122,13 @@ test("운영 티켓은 배정부터 완료까지 순서대로 전이한다", () 
   assert.equal(nextTicketStatus("IN_PROGRESS"), "RESOLVED");
   assert.equal(nextTicketStatus("RESOLVED"), "CLOSED");
   assert.equal(nextTicketStatus("CLOSED"), undefined);
+});
+
+test("콘텐츠 버전 상태에 맞는 다음 검수·게시 동작을 고른다", () => {
+  assert.equal(contentAction("DRAFT", false), "SUBMIT");
+  assert.equal(contentAction("IN_REVIEW", false), "REVIEW");
+  assert.equal(contentAction("APPROVED", false), "PUBLISH");
+  assert.equal(contentAction("APPROVED", true), "UNPUBLISH");
+  assert.equal(contentAction("REJECTED", false), undefined);
+  assert.equal(contentPreview({ summary: "축제 요약" }), "축제 요약");
 });

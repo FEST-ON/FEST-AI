@@ -4,6 +4,7 @@ import { FESTIVAL_CODE, visitorApi } from "@/shared/lib/api";
 interface ReplyResult {
   content: string;
   sources: string[];
+  messageId: string;
 }
 
 let conversationId: string | undefined;
@@ -14,13 +15,21 @@ export async function generateReply(question: string): Promise<ReplyResult> {
     body: JSON.stringify({ festivalCode: FESTIVAL_CODE, language: "ko" }),
   })).id;
   const response = await visitorApi<{
+    messageId: string;
     answer: string;
     sources: Array<{ title: string }>;
   }>(`/visitor/ai/conversations/${conversationId}/messages`, {
     method: "POST",
     body: JSON.stringify({ message: question, context: {} }),
   });
-  return { content: response.answer, sources: response.sources.map((source) => source.title) };
+  return { content: response.answer, sources: response.sources.map((source) => source.title), messageId: response.messageId };
+}
+
+export function reportAiMessage(messageId: string) {
+  return visitorApi(`/visitor/ai/messages/${messageId}/reports`, {
+    method: "POST",
+    body: JSON.stringify({ reason: "INCORRECT_OR_UNSAFE", detail: "방문객 AI 화면에서 답변 오류 신고" }),
+  });
 }
 
 export function buildMessage(role: ChatMessage["role"], content: string, sources?: string[]): ChatMessage {

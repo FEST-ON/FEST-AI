@@ -3,6 +3,7 @@ export type VisitorInterest = "공연" | "체험" | "푸드" | "전시" | "쇼�
 
 export interface ChatMessage {
   id: string;
+  backendMessageId?: string;
   role: "user" | "assistant";
   content: string;
   timestamp: string;
