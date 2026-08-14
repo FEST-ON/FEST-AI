@@ -6,6 +6,7 @@ import { Check, CircleX, FileCheck2, Send, Undo2, Upload } from "lucide-react";
 import { adminApi, adminFestivalId } from "@/shared/lib/api";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Textarea } from "@/shared/ui/textarea";
 import { contentAction, contentPreview, type ContentVersionStatus } from "@/features/content-review/model/content";
@@ -77,7 +78,7 @@ async function changeContentState(input: {
 export default function ContentReviewPage() {
   const queryClient = useQueryClient();
   const [comments, setComments] = useState<Record<string, string>>({});
-  const { data = [], isLoading, error } = useQuery({ queryKey: ["content-review"], queryFn: fetchContentItems });
+  const { data = [], isLoading, error, refetch } = useQuery({ queryKey: ["content-review"], queryFn: fetchContentItems });
   const mutation = useMutation({
     mutationFn: changeContentState,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-review"] }),
@@ -100,9 +101,9 @@ export default function ContentReviewPage() {
       {isLoading ? (
         <div className="space-y-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-48 rounded-2xl" />)}</div>
       ) : error ? (
-        <p className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">{error.message}</p>
+        <ErrorState message={queryErrorMessage(error)} onRetry={() => refetch()} />
       ) : versions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">등록된 콘텐츠 버전이 없습니다.</div>
+        <EmptyState className="p-10" message="등록된 콘텐츠 버전이 없습니다." />
       ) : (
         <div className="space-y-3">
           {versions.map(({ item, version }) => {

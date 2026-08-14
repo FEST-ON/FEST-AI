@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchSchedule } from "@/entities/festival";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
+import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 
 const CATEGORY_STYLE: Record<string, string> = {
@@ -16,7 +17,7 @@ const CATEGORY_STYLE: Record<string, string> = {
 
 export default function SchedulePage() {
   const { t, locale } = useTranslation();
-  const { data: schedule, isLoading } = useQuery({
+  const { data: schedule, isLoading, isError, refetch } = useQuery({
     queryKey: ["schedule", locale] as const,
     queryFn: () => fetchSchedule(locale),
   });
@@ -31,12 +32,16 @@ export default function SchedulePage() {
       <h1 className="text-lg font-extrabold text-foreground">{t.schedule.title}</h1>
       <p className="text-xs text-muted-foreground">{t.schedule.subtitle}</p>
 
-      {isLoading || !schedule ? (
+      {isLoading ? (
         <div className="mt-4 space-y-2.5">
           <Skeleton className="h-14 w-full rounded-xl" />
           <Skeleton className="h-14 w-full rounded-xl" />
           <Skeleton className="h-14 w-full rounded-xl" />
         </div>
+      ) : isError || !schedule ? (
+        <ErrorState className="mt-4" message={t.common.loadFailed} retryLabel={t.common.retry} onRetry={() => refetch()} />
+      ) : schedule.length === 0 ? (
+        <EmptyState className="mt-4" message={t.common.empty} />
       ) : (
         <div className="mt-4 space-y-5">
           {Object.entries(grouped).map(([day, items]) => (

@@ -16,6 +16,7 @@ import {
   validatePublishInput,
   type AnnouncementSeverity,
 } from "@/entities/announcement";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -47,7 +48,7 @@ export function NotificationAdminPanel() {
   const addReservationCall = useNotificationStore((s) => s.addReservationCall);
   const removeReservationCall = useNotificationStore((s) => s.removeReservationCall);
 
-  const { data: announcements = [], isLoading: announcementsLoading, error: announcementsError } = useQuery({
+  const { data: announcements = [], isLoading: announcementsLoading, error: announcementsError, refetch: refetchAnnouncements } = useQuery({
     queryKey: ["announcements"],
     queryFn: fetchAnnouncements,
   });
@@ -289,9 +290,11 @@ export function NotificationAdminPanel() {
           <h3 className="mb-2 text-xs font-bold text-muted-foreground">최근 공지</h3>
           <div className="space-y-2">
             {announcementsLoading && <p className="text-xs text-muted-foreground">불러오는 중…</p>}
-            {announcementsError && <p className="text-xs text-destructive">{announcementsError.message}</p>}
-            {!announcementsLoading && announcements.length === 0 && (
-              <p className="text-xs text-muted-foreground">발행된 공지가 없어요.</p>
+            {announcementsError && (
+              <ErrorState message={queryErrorMessage(announcementsError)} onRetry={() => refetchAnnouncements()} />
+            )}
+            {!announcementsLoading && !announcementsError && announcements.length === 0 && (
+              <EmptyState message="발행된 공지가 없어요." />
             )}
             {announcements.slice(0, 4).map((announcement) => (
               <div key={announcement.id} className="flex items-center gap-3 rounded-xl border border-border p-3">

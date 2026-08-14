@@ -7,12 +7,13 @@ import { fetchSurveyQuestions, hasSurveyAnswer, submitSurvey } from "@/entities/
 import type { SurveyAnswer } from "@/entities/visitor";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Button } from "@/shared/ui/button";
+import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
 export default function SurveyPage() {
   const { t } = useTranslation();
-  const { data: questions, isLoading } = useQuery({ queryKey: ["survey-questions"], queryFn: fetchSurveyQuestions });
+  const { data: questions, isLoading, isError, refetch } = useQuery({ queryKey: ["survey-questions"], queryFn: fetchSurveyQuestions });
   const [answers, setAnswers] = useState<Record<string, SurveyAnswer>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -35,11 +36,15 @@ export default function SurveyPage() {
       <h1 className="text-lg font-extrabold text-foreground">{t.survey.title}</h1>
       <p className="text-xs text-muted-foreground">{t.survey.subtitle}</p>
 
-      {isLoading || !questions ? (
+      {isLoading ? (
         <div className="mt-4 space-y-3">
           <Skeleton className="h-24 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
         </div>
+      ) : isError || !questions ? (
+        <ErrorState className="mt-4" message={t.common.loadFailed} retryLabel={t.common.retry} onRetry={() => refetch()} />
+      ) : questions.length === 0 ? (
+        <EmptyState className="mt-4" message={t.common.empty} />
       ) : (
         <form
           className="mt-4 space-y-5"

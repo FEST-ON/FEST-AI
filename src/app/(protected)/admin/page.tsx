@@ -8,13 +8,17 @@ import { fetchTickets, PRIORITY_STYLE } from "@/entities/ticket";
 import { fetchOperationResources } from "@/entities/program";
 import { StatCard } from "@/shared/ui/stat-card";
 import { Badge } from "@/shared/ui/badge";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { FestivalBriefCard } from "@/features/festival-brief/ui/festival-brief-card";
 
 export default function AdminDashboardPage() {
-  const { data: ops, isLoading: opsLoading } = useQuery({ queryKey: ["ops-snapshot"], queryFn: fetchOpsSnapshot });
-  const { data: tickets } = useQuery({ queryKey: ["tickets"], queryFn: fetchTickets });
-  const { data: resources } = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
+  const opsQuery = useQuery({ queryKey: ["ops-snapshot"], queryFn: fetchOpsSnapshot });
+  const ticketsQuery = useQuery({ queryKey: ["tickets"], queryFn: fetchTickets });
+  const resourcesQuery = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
+  const { data: ops, isLoading: opsLoading } = opsQuery;
+  const { data: tickets } = ticketsQuery;
+  const { data: resources } = resourcesQuery;
 
   const openTickets = (tickets ?? []).filter((t) => t.status !== "완료").slice(0, 4);
   const issueResources = (resources ?? []).filter((r) => r.status === "이슈");
@@ -23,12 +27,14 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <FestivalBriefCard />
 
-      {opsLoading || !ops ? (
+      {opsLoading ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-2xl" />
           ))}
         </div>
+      ) : opsQuery.isError || !ops ? (
+        <ErrorState message={queryErrorMessage(opsQuery.error)} onRetry={() => opsQuery.refetch()} />
       ) : (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard label="방문 세션" value={ops.visitors.toLocaleString()} helper="백엔드 누적 방문 세션" icon={Users} tone="primary" />
@@ -41,7 +47,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-2">
           <div className="flex items-center justify-between"><h2 className="text-sm font-bold">데이터 연동 상태</h2><Badge variant="outline">LIVE API</Badge></div>
-          {opsLoading || !ops ? <Skeleton className="mt-4 h-24 w-full" /> : <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {opsLoading ? <Skeleton className="mt-4 h-24 w-full" /> : opsQuery.isError || !ops ? <ErrorState className="mt-4" message={queryErrorMessage(opsQuery.error)} onRetry={() => opsQuery.refetch()} /> : <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-muted/60 p-4"><p className="text-xs text-muted-foreground">쿠폰 발급</p><p className="mt-1 text-2xl font-extrabold">{ops.coupon_issues.toLocaleString()}</p></div>
             <div className="rounded-xl bg-muted/60 p-4"><p className="text-xs text-muted-foreground">ESG 포인트 발급</p><p className="mt-1 text-2xl font-extrabold">{ops.points_issued.toLocaleString()}P</p></div>
             <p className="sm:col-span-2 text-[11px] text-muted-foreground">근거 테이블: {ops.sources.join(" · ")}</p>
@@ -67,7 +73,13 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {openTickets.length === 0 && <p className="text-xs text-muted-foreground">처리 대기 중인 티켓이 없어요.</p>}
+            {ticketsQuery.isError ? (
+              <ErrorState message={queryErrorMessage(ticketsQuery.error)} onRetry={() => ticketsQuery.refetch()} />
+            ) : ticketsQuery.isLoading ? (
+              <Skeleton className="h-16 w-full rounded-xl" />
+            ) : openTickets.length === 0 ? (
+              <EmptyState message="처리 대기 중인 티켓이 없어요." />
+            ) : null}
             {openTickets.map((t) => (
               <div key={t.id} className="flex items-center justify-between rounded-xl border border-border p-3">
                 <div className="min-w-0">
@@ -90,7 +102,13 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {issueResources.length === 0 && <p className="text-xs text-muted-foreground">현재 이슈가 없어요.</p>}
+            {resourcesQuery.isError ? (
+              <ErrorState message={queryErrorMessage(resourcesQuery.error)} onRetry={() => resourcesQuery.refetch()} />
+            ) : resourcesQuery.isLoading ? (
+              <Skeleton className="h-16 w-full rounded-xl" />
+            ) : issueResources.length === 0 ? (
+              <EmptyState message="현재 이슈가 없어요." />
+            ) : null}
             {issueResources.map((r) => (
               <div key={r.id} className="flex items-center justify-between rounded-xl border border-border p-3">
                 <div className="min-w-0">

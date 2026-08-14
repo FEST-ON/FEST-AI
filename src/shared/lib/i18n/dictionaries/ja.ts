@@ -2,6 +2,9 @@ import type { ko } from "./ko";
 
 export const ja: typeof ko = {
   common: {
+    loadFailed: "読み込めませんでした。しばらくしてからもう一度お試しください。",
+    retry: "再試行",
+    empty: "表示する内容がありません。",
     close: "閉じる",
     timeAgo: {
       justNow: "たった今",

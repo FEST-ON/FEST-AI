@@ -6,6 +6,7 @@ import { fetchFacilities, fetchTransport } from "@/entities/festival";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
+import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { FestivalMap } from "@/features/map/ui/festival-map";
 
@@ -26,7 +27,7 @@ const STATUS_STYLE = {
 
 export default function VisitorMapPage() {
   const { t, locale } = useTranslation();
-  const { data: facilities, isLoading: fLoading } = useQuery({
+  const { data: facilities, isLoading: fLoading, isError: fError, refetch: refetchFacilities } = useQuery({
     queryKey: ["facilities", locale] as const,
     queryFn: () => fetchFacilities(locale),
   });
@@ -49,8 +50,12 @@ export default function VisitorMapPage() {
         </TabsList>
 
         <TabsContent value="facility" className="mt-3 space-y-2">
-          {fLoading || !facilities ? (
+          {fLoading ? (
             <Skeleton className="h-40 w-full rounded-xl" />
+          ) : fError || !facilities ? (
+            <ErrorState message={t.common.loadFailed} retryLabel={t.common.retry} onRetry={() => refetchFacilities()} />
+          ) : facilities.length === 0 ? (
+            <EmptyState message={t.common.empty} />
           ) : (
             facilities.map((f) => (
               <div

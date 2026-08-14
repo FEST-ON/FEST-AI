@@ -1,5 +1,8 @@
 export const ko = {
   common: {
+    loadFailed: "불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+    retry: "다시 시도",
+    empty: "표시할 내용이 없어요.",
     close: "닫기",
     timeAgo: {
       justNow: "방금 전",

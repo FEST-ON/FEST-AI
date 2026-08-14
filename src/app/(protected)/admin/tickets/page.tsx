@@ -7,6 +7,7 @@ import { fetchTickets, transitionTicket, PRIORITY_STYLE } from "@/entities/ticke
 import type { TicketType } from "@/entities/ticket";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 
 const TYPES: (TicketType | "전체")[] = ["전체", "공지", "민원", "사고"];
@@ -15,7 +16,7 @@ const TYPE_ICON = { 공지: Megaphone, 민원: MessageSquareWarning, 사고: Ale
 const STATUS_DOT = { 접수: "bg-slate-400", 배정됨: "bg-blue-400", 처리중: "bg-amber-500", 해결됨: "bg-teal-500", 완료: "bg-emerald-500" } as const;
 
 export default function TicketsPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["tickets"], queryFn: fetchTickets });
+  const { data, isLoading, isError, error, refetch } = useQuery({ queryKey: ["tickets"], queryFn: fetchTickets });
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: transitionTicket,
@@ -48,6 +49,10 @@ export default function TicketsPage() {
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
+      ) : isError || !data ? (
+        <ErrorState message={queryErrorMessage(error)} onRetry={() => refetch()} />
+      ) : filtered.length === 0 ? (
+        <EmptyState message="표시할 티켓이 없어요." />
       ) : (
         <div className="space-y-3">
           {filtered.map((t) => {

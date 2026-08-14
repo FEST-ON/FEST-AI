@@ -2,6 +2,9 @@ import type { ko } from "./ko";
 
 export const en: typeof ko = {
   common: {
+    loadFailed: "Could not load the data. Please try again.",
+    retry: "Retry",
+    empty: "Nothing to show yet.",
     close: "Close",
     timeAgo: {
       justNow: "Just now",

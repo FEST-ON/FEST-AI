@@ -10,6 +10,7 @@ import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/stor
 import { useTranslation } from "@/shared/lib/i18n";
 import type { Dictionary } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
+import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 
 const QUICK_MENU: {
   href: string;
@@ -42,8 +43,10 @@ export default function VisitorHomePage() {
       (visitorMode === "qr" || item.kiosk) &&
       (!item.menuKey || menuSettings[item.menuKey]),
   );
-  const { data: festival } = useQuery({ queryKey: ["festival-info", locale] as const, queryFn: () => fetchFestivalInfo(locale) });
-  const { data: schedule } = useQuery({ queryKey: ["schedule", locale] as const, queryFn: () => fetchSchedule(locale) });
+  const festivalQuery = useQuery({ queryKey: ["festival-info", locale] as const, queryFn: () => fetchFestivalInfo(locale) });
+  const scheduleQuery = useQuery({ queryKey: ["schedule", locale] as const, queryFn: () => fetchSchedule(locale) });
+  const festival = festivalQuery.data;
+  const schedule = scheduleQuery.data;
 
   const today = new Date().toLocaleDateString(bcp47, {
     year: "numeric",
@@ -65,7 +68,9 @@ export default function VisitorHomePage() {
         <Badge className="bg-white/15 text-white hover:bg-white/15">
           {festival?.period.start.slice(5).replace("-", "/")} ~ {festival?.period.end.slice(5).replace("-", "/")}
         </Badge>
-        <h2 className="mt-2 text-lg font-bold leading-snug">{festival?.name ?? t.home.festivalLoading}</h2>
+        <h2 className="mt-2 text-lg font-bold leading-snug">
+          {festival?.name ?? (festivalQuery.isError ? t.common.loadFailed : t.home.festivalLoading)}
+        </h2>
         <p className="mt-1 text-xs text-blue-100">{festival?.location}</p>
         <Link
           href="/visitor/ai-guide"
@@ -99,6 +104,11 @@ export default function VisitorHomePage() {
             </Link>
           </div>
           <div className="space-y-2">
+            {scheduleQuery.isError ? (
+              <ErrorState message={t.common.loadFailed} retryLabel={t.common.retry} onRetry={() => scheduleQuery.refetch()} />
+            ) : !scheduleQuery.isLoading && !schedule?.length ? (
+              <EmptyState message={t.common.empty} />
+            ) : null}
             {(schedule ?? []).slice(0, 3).map((item) => (
               <div key={item.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
                 <div className="flex w-14 shrink-0 flex-col items-center">

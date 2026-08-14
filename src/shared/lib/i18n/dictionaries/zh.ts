@@ -2,6 +2,9 @@ import type { ko } from "./ko";
 
 export const zh: typeof ko = {
   common: {
+    loadFailed: "加载失败，请稍后重试。",
+    retry: "重试",
+    empty: "暂无可显示的内容。",
     close: "关闭",
     timeAgo: {
       justNow: "刚刚",

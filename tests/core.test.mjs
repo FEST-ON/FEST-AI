@@ -3,15 +3,28 @@ import { readFile } from "node:fs/promises";
 import { after, beforeEach, test } from "node:test";
 import ts from "typescript";
 
-async function importTypeScript(path) {
+const moduleUrl = (code) => `data:text/javascript;base64,${Buffer.from(code).toString("base64")}`;
+
+// `imports`로 `@/...` 별칭을 이미 만들어 둔 모듈 URL에 연결하면 같은 모듈 인스턴스를 공유한다.
+async function transpile(path, imports = {}) {
   const source = await readFile(new URL(path, import.meta.url), "utf8");
-  const output = ts.transpileModule(source, {
+  let output = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  return import(`data:text/javascript;base64,${Buffer.from(output).toString("base64")}`);
+  for (const [specifier, url] of Object.entries(imports)) output = output.replaceAll(`"${specifier}"`, `"${url}"`);
+  return moduleUrl(output);
 }
 
-const { adminApi, logoutAdmin } = await importTypeScript("../src/shared/lib/api.ts");
+async function importTypeScript(path, imports) {
+  return import(await transpile(path, imports));
+}
+
+const apiUrl = await transpile("../src/shared/lib/api.ts");
+const { adminApi, adminFestivalId, logoutAdmin } = await import(apiUrl);
+const { generateReply } = await importTypeScript("../src/features/ai-guide/lib/generate-reply.ts", {
+  "@/shared/lib/api": apiUrl,
+  "@/shared/lib/i18n": moduleUrl('export const BCP47_BY_LOCALE = { ko: "ko-KR" };'),
+});
 const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/entities/visitor/model.ts");
 const { classifyTicket, nextTicketStatus } = await importTypeScript("../src/entities/ticket/model.ts");
 const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement/model.ts");
@@ -103,6 +116,88 @@ test("로그아웃 후 늦게 끝난 token refresh는 세션을 복구하지 않
 
   await assert.rejects(request);
   assert.equal(localStorage.length, 0);
+});
+
+test("축제 코드가 일치하지 않으면 다른 축제를 대신 선택하지 않는다", async () => {
+  localStorage.setItem("festai-admin-access", "access");
+  const requests = [];
+
+  globalThis.fetch = async (input) => {
+    requests.push(String(input));
+    return Response.json({ data: [{ id: "other-festival", code: "OTHER-2026" }] });
+  };
+
+  await assert.rejects(adminFestivalId(), /EST34-2026/);
+  assert.deepEqual(requests, ["/api/backend/admin/festivals"], "데이터를 바꾸는 요청은 보내지 않는다");
+  assert.equal(localStorage.getItem("festai-admin-festival-id"), null, "잘못된 축제 ID를 캐시하지 않는다");
+});
+
+test("축제 ID는 접근 가능한 목록에서 확인하고 로그아웃하면 다시 확인한다", async () => {
+  localStorage.setItem("festai-admin-access", "access");
+  localStorage.setItem("festai-admin-refresh", "rt_current");
+  let lookups = 0;
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/logout")) return new Response(null, { status: 204 });
+    lookups += 1;
+    return Response.json({ data: [{ id: "festival-1", code: "EST34-2026" }] });
+  };
+
+  assert.equal(await adminFestivalId(), "festival-1");
+  assert.equal(await adminFestivalId(), "festival-1");
+  assert.equal(lookups, 1, "같은 세션에서는 한 번만 조회한다");
+
+  await logoutAdmin();
+  localStorage.setItem("festai-admin-access", "other-access");
+  assert.equal(await adminFestivalId(), "festival-1");
+  assert.equal(lookups, 2, "세션이 바뀌면 접근 가능한 축제를 다시 확인한다");
+});
+
+test("방문자 세션이 재발급되면 AI 대화를 새로 만들고 404는 한 번만 복구한다", async () => {
+  localStorage.setItem("festai-visitor-token", "v1");
+  let validToken = "v1";
+  let created = 0;
+  let answered = 0;
+  let alwaysMissing = false;
+  const owner = new Map();
+
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input);
+    if (url.endsWith("/visitor-sessions")) {
+      validToken = "v2";
+      return Response.json({ data: { sessionToken: "v2" } });
+    }
+    if (new Headers(init.headers).get("Authorization") !== `Bearer ${validToken}`) {
+      return Response.json({ error: { message: "세션이 만료되었습니다." } }, { status: 401 });
+    }
+    if (url.endsWith("/visitor/ai/conversations")) {
+      created += 1;
+      const id = `c${created}`;
+      owner.set(id, validToken);
+      return Response.json({ data: { id } });
+    }
+    const conversation = url.match(/conversations\/(c\d+)\/messages$/)?.[1];
+    if (alwaysMissing || owner.get(conversation) !== validToken) {
+      return Response.json({ error: { message: "대화를 찾을 수 없습니다." } }, { status: 404 });
+    }
+    answered += 1;
+    return Response.json({ data: { messageId: `m${answered}`, answer: "안내 답변", sources: [] } });
+  };
+
+  assert.equal((await generateReply("첫 질문", "ko")).content, "안내 답변");
+  assert.equal(created, 1);
+
+  // 방문자 토큰 만료 → 새 세션이 발급되면 이전 대화(c1)는 서버에 없다.
+  validToken = "expired";
+  assert.equal((await generateReply("두 번째 질문", "ko")).content, "안내 답변");
+  assert.equal(created, 2, "새 세션에서는 대화를 새로 연다");
+  assert.equal(localStorage.getItem("festai-visitor-token"), "v2");
+
+  alwaysMissing = true;
+  const before = created;
+  await assert.rejects(generateReply("세 번째 질문", "ko"), /대화를 찾을 수 없습니다/);
+  assert.equal(created - before, 1, "복구는 한 번만 시도한다");
 });
 
 test("백엔드 설문 타입과 답변 유무를 명시적으로 처리한다", () => {

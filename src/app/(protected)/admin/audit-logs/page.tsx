@@ -9,6 +9,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 
@@ -72,7 +73,7 @@ export default function AuditLogsPage() {
   const [actionInput, setActionInput] = useState("");
   const [resourceTypeInput, setResourceTypeInput] = useState("");
 
-  const { data: logs = [], isLoading, error } = useQuery({
+  const { data: logs = [], isLoading, error, refetch } = useQuery({
     queryKey: ["audit-logs", filter],
     queryFn: () => fetchAuditLogs(filter),
   });
@@ -141,9 +142,9 @@ export default function AuditLogsPage() {
             ))}
           </div>
         ) : error ? (
-          <p className="p-6 text-sm text-destructive">{error.message}</p>
+          <ErrorState className="m-4" message={queryErrorMessage(error)} onRetry={() => refetch()} />
         ) : logs.length === 0 ? (
-          <p className="p-10 text-center text-sm text-muted-foreground">기록된 감사 로그가 없어요.</p>
+          <EmptyState className="m-4 p-10" message="기록된 감사 로그가 없어요." />
         ) : (
           <Table>
             <TableHeader>

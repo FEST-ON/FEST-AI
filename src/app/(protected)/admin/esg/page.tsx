@@ -6,6 +6,7 @@ import { fetchEsgMetrics, generateEsgReport } from "@/entities/esg";
 import type { EsgPillar } from "@/entities/esg";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
@@ -18,7 +19,7 @@ const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
 const PILLARS: EsgPillar[] = ["환경", "사회", "거버넌스"];
 
 export default function EsgPage() {
-  const { data: metrics, isLoading } = useQuery({ queryKey: ["esg-metrics"], queryFn: fetchEsgMetrics });
+  const { data: metrics, isLoading, isError, error, refetch } = useQuery({ queryKey: ["esg-metrics"], queryFn: fetchEsgMetrics });
   const { data: report, error: reportError, isPending: reportLoading, mutate: generateReport } = useMutation({
     mutationFn: generateEsgReport,
   });
@@ -46,6 +47,10 @@ export default function EsgPage() {
                   <Skeleton key={i} className="h-32 rounded-2xl" />
                 ))}
               </div>
+            ) : isError || !metrics ? (
+              <ErrorState message={queryErrorMessage(error)} onRetry={() => refetch()} />
+            ) : pillarMetrics.length === 0 ? (
+              <EmptyState message="집계된 지표가 없어요." />
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {pillarMetrics.map((m) => {

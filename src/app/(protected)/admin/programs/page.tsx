@@ -8,6 +8,7 @@ import { useVisitorMenuSettingsStore } from "@/features/visitor-menu-settings/mo
 import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/store";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Switch } from "@/shared/ui/switch";
 import {
@@ -35,7 +36,7 @@ const STATUS_STYLE = {
 } as const;
 
 export default function ProgramsPage() {
-  const { data: resources, isLoading } = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
+  const { data: resources, isLoading, isError, error, refetch } = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("전체");
   const menuSettings = useVisitorMenuSettingsStore();
 
@@ -97,6 +98,10 @@ export default function ProgramsPage() {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
+        ) : isError || !resources ? (
+          <ErrorState className="m-4" message={queryErrorMessage(error)} onRetry={() => refetch()} />
+        ) : filtered.length === 0 ? (
+          <EmptyState className="m-4" message="표시할 운영 자원이 없어요." />
         ) : (
           <div className="overflow-x-auto">
             <Table>

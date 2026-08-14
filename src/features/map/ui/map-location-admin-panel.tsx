@@ -17,6 +17,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import {
   Dialog,
@@ -80,7 +81,7 @@ export function MapLocationAdminPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MapLocation | null>(null);
   const [form, setForm] = useState<MapLocationInput>(EMPTY_FORM);
-  const { data: locations, isLoading } = useQuery({
+  const { data: locations, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-map-locations"],
     queryFn: () => fetchMapLocations({ includeHidden: true }),
   });
@@ -134,6 +135,10 @@ export function MapLocationAdminPanel() {
 
       {isLoading ? (
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-36 rounded-xl" />)}</div>
+      ) : isError || !locations ? (
+        <ErrorState className="mt-5" message={queryErrorMessage(error)} onRetry={() => refetch()} />
+      ) : locations.length === 0 ? (
+        <EmptyState className="mt-5" message="등록된 지점이 없어요." />
       ) : (
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {(locations ?? []).map((location) => (
