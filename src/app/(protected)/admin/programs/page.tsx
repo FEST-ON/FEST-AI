@@ -31,7 +31,7 @@ const VISITOR_MENU_ITEMS: { key: VisitorMenuKey; label: string; description: str
 const STATUS_STYLE = {
   준비중: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   운영중: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  완료: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
+  완료: "bg-primary/10 text-primary dark:bg-primary/25 dark:text-primary-tint",
   이슈: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
 } as const;
 

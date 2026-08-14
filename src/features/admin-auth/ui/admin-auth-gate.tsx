@@ -72,7 +72,7 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6">
         <Logo />
         <div>
           <h1 className="text-lg font-bold">운영자 로그인</h1>

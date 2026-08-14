@@ -79,7 +79,7 @@ export function AdminSidebar() {
       </nav>
 
       <div className="mx-3 mb-4 flex items-center gap-2.5 rounded-xl border border-sidebar-border p-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-300">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/25 text-xs font-bold text-primary-tint">
           {user?.name?.slice(0, 1) ?? "?"}
         </span>
         <div className="min-w-0 flex-1">

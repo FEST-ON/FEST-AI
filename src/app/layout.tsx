@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 const notoSansKr = Noto_Sans_KR({
-  variable: "--font-sans",
+  variable: "--font-noto-kr",
   subsets: ["latin"],
   weight: ["400", "500", "700", "900"],
 });
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#2563eb",
+  themeColor: "#0147FF",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

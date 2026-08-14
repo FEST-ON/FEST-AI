@@ -109,7 +109,7 @@ export function FestivalMap() {
           });
           kakaoMaps.event.addListener(marker, "click", () => {
             infoWindow.setContent(
-              `<div style="min-width:132px;padding:9px 12px;color:#111;font-size:12px;font-weight:700;white-space:nowrap;text-align:center">${escapeHtml(location.name)}<div style="margin-top:3px;color:#64748b;font-size:10px;font-weight:600">${escapeHtml(categoryLabel(location.category))}</div></div>`,
+              `<div style="min-width:132px;padding:9px 12px;color:#111;font-size:12px;font-weight:700;white-space:nowrap;text-align:center">${escapeHtml(location.name)}<div style="margin-top:3px;color:#86868b;font-size:10px;font-weight:600">${escapeHtml(categoryLabel(location.category))}</div></div>`,
             );
             infoWindow.open(map, marker);
             setSelectedLocation(location);
@@ -129,13 +129,13 @@ export function FestivalMap() {
   }, []);
 
   return (
-    <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
       <div className="relative h-64 bg-muted" aria-label="축제 부스와 시설 지도">
         <div ref={containerRef} className="absolute inset-0" />
         {status === "loading" && <div className="absolute inset-0 grid place-items-center bg-muted text-xs font-semibold text-muted-foreground">카카오 지도를 불러오는 중입니다.</div>}
         {(status === "missing-key" || status === "error") && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted px-6 text-center">
-            <span className="grid size-11 place-items-center rounded-full bg-background text-primary shadow-sm"><AlertCircle className="size-5" /></span>
+            <span className="grid size-11 place-items-center rounded-full bg-background text-primary"><AlertCircle className="size-5" /></span>
             <div>
               <p className="text-sm font-bold text-foreground">{status === "missing-key" ? "카카오 지도 키 설정이 필요합니다" : "카카오 지도를 불러오지 못했습니다"}</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -146,7 +146,7 @@ export function FestivalMap() {
             </div>
           </div>
         )}
-        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[10px] font-bold text-foreground shadow-sm">
+        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[10px] font-bold text-foreground">
           {status === "ready" ? <CheckCircle2 className="size-3 text-emerald-600" /> : <MapPin className="size-3" />}
           {status === "ready" ? "Kakao Map 연결됨" : `${locations.length}개 지점 등록`}
         </span>

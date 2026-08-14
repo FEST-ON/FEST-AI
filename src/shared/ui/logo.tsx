@@ -17,8 +17,8 @@ export function Logo({ className, withTagline = false, tone = "default" }: LogoP
           isDark ? "text-white" : "text-foreground",
         )}
       >
-        F<span className={isDark ? "text-blue-400" : "text-primary"}>:</span>
-        <span className={cn("font-black", isDark ? "text-blue-400" : "text-primary")}>EST</span>
+        F<span className={isDark ? "text-primary-tint" : "text-primary"}>:</span>
+        <span className={cn("font-black", isDark ? "text-primary-tint" : "text-primary")}>EST</span>
         <span className="ml-1">AI</span>
       </span>
       {withTagline && (

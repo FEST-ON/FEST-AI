@@ -13,7 +13,7 @@ import { Skeleton } from "@/shared/ui/skeleton";
 const TYPES: (TicketType | "전체")[] = ["전체", "공지", "민원", "사고"];
 const TYPE_ICON = { 공지: Megaphone, 민원: MessageSquareWarning, 사고: AlertTriangle } as const;
 
-const STATUS_DOT = { 접수: "bg-slate-400", 배정됨: "bg-blue-400", 처리중: "bg-amber-500", 해결됨: "bg-teal-500", 완료: "bg-emerald-500" } as const;
+const STATUS_DOT = { 접수: "bg-slate-400", 배정됨: "bg-primary", 처리중: "bg-amber-500", 해결됨: "bg-teal-500", 완료: "bg-emerald-500" } as const;
 
 export default function TicketsPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({ queryKey: ["tickets"], queryFn: fetchTickets });
@@ -79,7 +79,7 @@ export default function TicketsPage() {
                         <span>{t.createdAt}</span>
                       </div>
                       {t.aiTag && (
-                        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-semibold text-primary dark:bg-blue-950/40">
+                        <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/8 px-2 py-1 text-[10px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-tint">
                           <Sparkles className="size-3" /> AI 분류: {t.aiTag}
                         </div>
                       )}

@@ -64,17 +64,17 @@ export default function VisitorHomePage() {
         </h1>
       </div>
 
-      <div className="overflow-hidden rounded-2xl bg-linear-to-br from-blue-600 to-blue-700 p-5 text-primary-foreground shadow-md">
+      <div className="overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
         <Badge className="bg-white/15 text-white hover:bg-white/15">
           {festival?.period.start.slice(5).replace("-", "/")} ~ {festival?.period.end.slice(5).replace("-", "/")}
         </Badge>
         <h2 className="mt-2 text-lg font-bold leading-snug">
           {festival?.name ?? (festivalQuery.isError ? t.common.loadFailed : t.home.festivalLoading)}
         </h2>
-        <p className="mt-1 text-xs text-blue-100">{festival?.location}</p>
+        <p className="mt-1 text-xs text-primary-foreground/75">{festival?.location}</p>
         <Link
           href="/visitor/ai-guide"
-          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-blue-700"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-background px-3.5 py-1.5 text-xs font-bold text-primary"
         >
           <Sparkles className="size-3.5" /> {t.home.aiCta}
         </Link>
@@ -85,7 +85,7 @@ export default function VisitorHomePage() {
           <Link
             key={href}
             href={href}
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card py-3.5 text-center shadow-sm"
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card py-3.5 text-center"
           >
             <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Icon className="size-4.5" />

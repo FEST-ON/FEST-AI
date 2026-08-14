@@ -27,31 +27,31 @@ export default function Home() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 pb-16 pt-6 lg:pt-10 items-center justify-center">
         <section className="lg:text-center">
           <div className="flex flex-col gap-5 lg:items-center">
-            <p className="inline-flex w-fit items-center gap-1.5 text-md font-bold uppercase tracking-[0.1em] text-primary ">
+            <p className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.1em] text-primary">
               <Sparkles className="size-3.5" />
               AI · ESG 기반 지역축제 DX 플랫폼
             </p>
-            <h1 className="max-w-xl text-4xl font-extrabold leading-[1.15] tracking-tight text-foreground sm:text-5xl">
+            <h1 className="max-w-xl text-[40px] font-semibold leading-[1.07] tracking-[-0.022em] text-foreground sm:text-[56px]">
               축제 운영의 신뢰를 잇는,
               <br />
               <span className="text-primary">FESTAI</span>
             </h1>
           </div>
         </section>
-        <section className="mt-12 rounded-2xl border border-border bg-primary p-8 text-primary-foreground sm:p-10 lg:mt-16">
+        <section className="mt-12 rounded-2xl bg-primary p-8 text-primary-foreground sm:p-10 lg:mt-16">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-primary-foreground/70">
                 {festivalInfo.period.start} ~ {festivalInfo.period.end}
               </p>
-              <h2 className="mt-2 text-2xl font-bold">{festivalInfo.name}</h2>
+              <h2 className="mt-2 text-2xl font-semibold">{festivalInfo.name}</h2>
               <p className="mt-2 max-w-lg text-sm leading-relaxed text-primary-foreground/80">
                 {festivalInfo.description}
               </p>
             </div>
             <Link
               href="/visitor"
-              className="group inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-background px-5 py-3 text-sm font-bold text-primary transition-colors hover:bg-background/90"
+              className="group inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-background px-6 py-3 text-sm font-medium text-primary transition-transform hover:bg-background/90 active:scale-95"
             >
               방문객으로 둘러보기
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />

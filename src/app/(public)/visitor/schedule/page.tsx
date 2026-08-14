@@ -8,9 +8,9 @@ import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 
 const CATEGORY_STYLE: Record<string, string> = {
-  공연: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
+  공연: "bg-primary/10 text-primary dark:bg-primary/25 dark:text-primary-tint",
   체험: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  전시: "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300",
+  전시: "bg-muted text-foreground dark:bg-muted dark:text-foreground",
   푸드: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
   행사: "bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300",
 };

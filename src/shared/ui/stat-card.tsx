@@ -21,7 +21,7 @@ export function StatCard({ label, value, helper, icon: Icon, tone = "default", c
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border p-4 shadow-sm",
+        "rounded-2xl border border-border p-4",
         toneStyles[tone],
         tone === "primary" && "border-transparent",
         className,

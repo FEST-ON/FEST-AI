@@ -77,7 +77,7 @@ export default function StampTourPage() {
           {localCoupons.map((c) => (
             <div
               key={c.id}
-              className={`rounded-xl border p-3 ${c.used ? "border-border bg-muted/50 opacity-60" : "border-primary/30 bg-blue-50 dark:bg-blue-950/20"}`}
+              className={`rounded-xl border p-3 ${c.used ? "border-border bg-muted/50 opacity-60" : "border-primary/30 bg-primary/6 dark:bg-primary/15"}`}
             >
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-foreground">{c.store}</p>

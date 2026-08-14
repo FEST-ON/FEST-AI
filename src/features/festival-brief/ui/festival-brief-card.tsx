@@ -42,7 +42,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
       : "조회 중";
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-blue-200 bg-linear-to-r from-blue-50 via-card to-violet-50 p-5 dark:border-blue-900 dark:from-blue-950/50 dark:via-card dark:to-violet-950/40">
+    <section className="overflow-hidden rounded-2xl border border-border bg-secondary p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-primary">
@@ -55,7 +55,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 rounded-xl border border-primary/20 bg-background px-4 py-3 text-foreground shadow-sm">
+          <div className="mt-4 grid gap-3 rounded-xl border border-border bg-background px-4 py-3 text-foreground">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
               <p className="text-xs font-extrabold text-primary">Allen 한줄평</p>
               <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">

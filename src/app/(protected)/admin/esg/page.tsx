@@ -12,8 +12,8 @@ import { cn } from "@/shared/lib/utils";
 
 const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
   환경: { icon: Leaf, tone: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300" },
-  사회: { icon: Users, tone: "text-blue-600 bg-blue-100 dark:bg-blue-950/50 dark:text-blue-300" },
-  거버넌스: { icon: Scale, tone: "text-violet-600 bg-violet-100 dark:bg-violet-950/50 dark:text-violet-300" },
+  사회: { icon: Users, tone: "text-primary bg-primary/10 dark:bg-primary/25 dark:text-primary-tint" },
+  거버넌스: { icon: Scale, tone: "text-foreground bg-muted dark:bg-muted dark:text-foreground" },
 };
 
 const PILLARS: EsgPillar[] = ["환경", "사회", "거버넌스"];

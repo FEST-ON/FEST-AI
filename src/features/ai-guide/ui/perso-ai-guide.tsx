@@ -219,7 +219,7 @@ export function PersoAiGuide() {
                 aria-label={isListening ? t.aiGuide.micStopAria : t.aiGuide.micStartAria}
                 aria-pressed={isListening}
                 className={cn(
-                  "relative flex size-16 shrink-0 items-center justify-center rounded-full border-4 border-white/80 text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-35",
+                  "relative flex size-16 shrink-0 items-center justify-center rounded-full border-4 border-white/80 text-white shadow-[0_8px_24px_rgba(1,71,255,0.35)] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-35",
                   isListening ? "bg-red-500 hover:bg-red-600" : "bg-primary hover:bg-primary/90",
                 )}
               >
