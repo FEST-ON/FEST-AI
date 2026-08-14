@@ -35,6 +35,15 @@ declare global {
 let kakaoSdkPromise: Promise<void> | null = null;
 let kakaoSdkFailureReported = false;
 
+function getKakaoMapAppKey() {
+  return (
+    process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY ||
+    process.env.NEXT_PUBLIC_KAKAO_KEY ||
+    process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY ||
+    ""
+  ).trim();
+}
+
 function loadKakaoSdk(appKey: string) {
   if (window.kakao?.maps) return new Promise<void>((resolve) => window.kakao!.maps.load(resolve));
   if (kakaoSdkPromise) return kakaoSdkPromise;
@@ -80,7 +89,7 @@ export function FestivalMap() {
       if (cancelled) return;
       setLocations(rows);
       setSelectedLocation(rows[0] ?? null);
-      const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY?.trim();
+      const appKey = getKakaoMapAppKey();
       if (!appKey) return setStatus("missing-key");
 
       try {
@@ -129,7 +138,11 @@ export function FestivalMap() {
             <span className="grid size-11 place-items-center rounded-full bg-background text-primary shadow-sm"><AlertCircle className="size-5" /></span>
             <div>
               <p className="text-sm font-bold text-foreground">{status === "missing-key" ? "카카오 지도 키 설정이 필요합니다" : "카카오 지도를 불러오지 못했습니다"}</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">등록된 부스 목록은 아래에서 확인할 수 있습니다.</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {status === "missing-key"
+                  ? "실행 중인 Frontend/.env.local 또는 Frontend/.env에 NEXT_PUBLIC_KAKAO_MAP_APP_KEY를 설정하고 개발 서버를 다시 시작해 주세요."
+                  : "카카오 JavaScript 키의 도메인 등록 상태를 확인해 주세요. 등록된 부스 목록은 아래에서 확인할 수 있습니다."}
+              </p>
             </div>
           </div>
         )}

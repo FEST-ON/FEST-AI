@@ -1,31 +1,145 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, RefreshCw, Search, Sparkles } from "lucide-react";
-import { fetchFestivalBrief } from "@/features/festival-brief/api/festival-brief";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, AlertTriangle, RefreshCw, Search, Sparkles } from "lucide-react";
+import { fetchFestivalBrief, type FestivalBrief } from "@/features/festival-brief/api/festival-brief";
 import { Button } from "@/shared/ui/button";
-import { Skeleton } from "@/shared/ui/skeleton";
 
-export function FestivalBriefCard() {
-  const { data, isLoading, isFetching, refetch } = useQuery({ queryKey: ["festival-ai-brief"], queryFn: fetchFestivalBrief });
+const QUERY_KEY = ["festival-ai-brief"] as const;
+
+export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: FestivalBrief | null }) {
+  const queryClient = useQueryClient();
+  const { data, error, isError, isFetching, isLoading, refetch } = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: () => fetchFestivalBrief(),
+    initialData: initialBrief ?? undefined,
+    retry: false,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const regenerate = useMutation({
+    mutationFn: () => fetchFestivalBrief({ refresh: true }),
+    onSuccess: (brief) => {
+      queryClient.setQueryData<FestivalBrief>(QUERY_KEY, brief);
+    },
+  });
+
+  const sources = data?.sources ?? [];
+  const generatedAt = data?.generated_at ? new Date(data.generated_at) : null;
+  const generatedAtLabel =
+    generatedAt && !Number.isNaN(generatedAt.getTime()) ? generatedAt.toLocaleString("ko-KR") : null;
+  const activeError = regenerate.error ?? error;
+  const isInitialLoading = isLoading && !data;
+  const isRegenerating = regenerate.isPending;
+  const statusLabel = data
+    ? isRegenerating
+      ? "재생성 중"
+      : isFetching
+        ? "확인 중"
+        : "저장됨"
+    : isError || regenerate.isError
+      ? "생성 실패"
+      : "조회 중";
 
   return (
     <section className="overflow-hidden rounded-2xl border border-blue-200 bg-linear-to-r from-blue-50 via-card to-violet-50 p-5 dark:border-blue-900 dark:from-blue-950/50 dark:via-card dark:to-violet-950/40">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-primary"><span className="grid size-8 place-items-center rounded-full bg-primary/10"><Sparkles className="size-4" /></span><div><h2 className="text-sm font-bold text-foreground">Alan ESG 한줄 브리핑</h2><p className="text-[10px] text-muted-foreground">DB의 ESG 운영 지표를 검색해 우선 조치가 필요한 내용을 요약</p></div></div>
-          {isLoading || !data ? <Skeleton className="mt-4 h-14 w-full rounded-xl" /> : (
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
-              <div className="flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+          <div className="flex items-center gap-2 text-primary">
+            <span className="grid size-8 place-items-center rounded-full bg-primary/10">
+              <Sparkles className="size-4" />
+            </span>
+            <div>
+              <h2 className="text-sm font-bold text-foreground">Alan ESG 한줄 브리핑</h2>
+              <p className="text-[10px] text-muted-foreground">DB의 ESG 운영 지표를 검색해 우선 조치가 필요한 내용을 요약</p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 rounded-xl border border-primary/20 bg-background px-4 py-3 text-foreground shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
+              <p className="text-xs font-extrabold text-primary">Allen 한줄평</p>
+              <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
+                {statusLabel}
+              </span>
+            </div>
+
+            {data?.metric_label && (
+              <div className="flex w-fit items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                 <AlertTriangle className="size-4" />
-                <div><p className="text-[10px] font-semibold">{data.metric_label}</p><p className="text-lg font-extrabold">{data.metric_value}</p></div>
+                <div>
+                  <p className="text-[10px] font-semibold">{data.metric_label}</p>
+                  <p className="text-lg font-extrabold">{data.metric_value}</p>
+                </div>
               </div>
-              <blockquote className="text-base font-bold leading-7 text-foreground">“{data.summary}”</blockquote>
+            )}
+
+            {data ? (
+              <div className="space-y-2">
+                <blockquote className="text-sm font-semibold leading-6 text-foreground">“{data.allen_comment ?? data.summary}”</blockquote>
+                {isRegenerating && (
+                  <p className="inline-flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                    <RefreshCw className="size-3 animate-spin" />
+                    새 한줄평을 생성하고 있습니다. 기존 저장값은 그대로 유지됩니다.
+                  </p>
+                )}
+              </div>
+            ) : isError || regenerate.isError ? (
+              <div className="flex items-start gap-3 text-red-800 dark:text-red-100">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-300" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold leading-6">아직 표시할 Allen 한줄평이 없습니다.</p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-red-700 dark:text-red-200">
+                    DB ESG 지표를 기반으로 Allen이 한줄평을 생성한 뒤 ai_messages에 저장하면 여기에 표시됩니다.
+                  </p>
+                  {activeError instanceof Error && <p className="mt-2 text-[10px] text-red-600 dark:text-red-200">{activeError.message}</p>}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 text-foreground">
+                <RefreshCw className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold leading-6">
+                    {isInitialLoading ? "저장된 Allen 한줄평을 불러오는 중입니다." : "Allen 한줄평을 확인하는 중입니다."}
+                  </p>
+                  <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+                    먼저 ai_messages에 저장된 한줄평을 확인하고, 없으면 DB ESG 지표로 새 브리핑을 준비합니다.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {data && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <Search className="size-3" />
+                근거 {sources.length}개
+              </span>
+              {generatedAtLabel && (
+                <>
+                  <span>·</span>
+                  <span>{generatedAtLabel} 기준</span>
+                </>
+              )}
+              {sources.map((source) => (
+                <span key={source} className="rounded-full bg-background/70 px-2 py-1">
+                  {source}
+                </span>
+              ))}
             </div>
           )}
-          {data && <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground"><span className="inline-flex items-center gap-1"><Search className="size-3" />근거 {data.sources.length}개</span><span>·</span><span>{new Date(data.generated_at).toLocaleString("ko-KR")} 기준</span>{data.sources.map((source) => <span key={source} className="rounded-full bg-background/70 px-2 py-1">{source}</span>)}</div>}
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={isFetching ? "animate-spin" : ""} />새로고침</Button>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching || isRegenerating}>
+            <RefreshCw className={isFetching && !isRegenerating ? "animate-spin" : ""} />
+            {isFetching && !isRegenerating ? "확인 중" : "다시 확인"}
+          </Button>
+          <Button size="sm" onClick={() => regenerate.mutate()} disabled={isFetching || isRegenerating}>
+            <Sparkles className={isRegenerating ? "animate-pulse" : ""} />
+            {isRegenerating ? "생성 중" : "새로 생성"}
+          </Button>
+        </div>
       </div>
     </section>
   );
