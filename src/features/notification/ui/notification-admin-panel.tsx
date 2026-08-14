@@ -1,42 +1,102 @@
 "use client";
 
-import { useState } from "react";
-import { BellRing, Megaphone, Send, Trash2 } from "lucide-react";
-import { useNotificationStore, type NoticeLevel } from "@/features/notification/model/store";
+import { useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BellRing, Megaphone, Send, Trash2, X } from "lucide-react";
+import { useNotificationStore } from "@/features/notification/model/store";
+import {
+  AUDIENCE_OPTIONS,
+  SEVERITY_OPTIONS,
+  STATUS_LABEL,
+  canClose,
+  closeAnnouncement,
+  fetchAnnouncements,
+  fetchAreaOptions,
+  publishAnnouncement,
+  validatePublishInput,
+  type AnnouncementSeverity,
+} from "@/entities/announcement";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { Textarea } from "@/shared/ui/textarea";
+
+const SEVERITY_STYLE: Record<AnnouncementSeverity, string> = {
+  INFO: "bg-secondary text-secondary-foreground",
+  WARNING: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+  EMERGENCY: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+};
+
+function toggleValue(list: string[], value: string) {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
+
+function toDatetimeLocal(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// datetime-local 입력이 브라우저 로컬 시간이므로 표시도 같은 기준으로 맞춘다.
+function formatMoment(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ko-KR");
+}
 
 export function NotificationAdminPanel() {
-  const notices = useNotificationStore((state) => state.notices);
-  const reservationCalls = useNotificationStore((state) => state.reservationCalls);
-  const addNotice = useNotificationStore((state) => state.addNotice);
-  const addReservationCall = useNotificationStore((state) => state.addReservationCall);
-  const removeNotice = useNotificationStore((state) => state.removeNotice);
-  const removeReservationCall = useNotificationStore((state) => state.removeReservationCall);
+  const queryClient = useQueryClient();
+  const reservationCalls = useNotificationStore((s) => s.reservationCalls);
+  const addReservationCall = useNotificationStore((s) => s.addReservationCall);
+  const removeReservationCall = useNotificationStore((s) => s.removeReservationCall);
 
-  const [noticeTitle, setNoticeTitle] = useState("");
-  const [noticeDescription, setNoticeDescription] = useState("");
-  const [noticeLevel, setNoticeLevel] = useState<NoticeLevel>("일반");
+  const { data: announcements = [], isLoading: announcementsLoading, error: announcementsError } = useQuery({
+    queryKey: ["announcements"],
+    queryFn: fetchAnnouncements,
+  });
+  const { data: areaOptions = [] } = useQuery({ queryKey: ["areas"], queryFn: fetchAreaOptions });
+
+  const publishMutation = useMutation({
+    mutationFn: publishAnnouncement,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements"] });
+      setTitle("");
+      setSeverity("INFO");
+      setAudience([]);
+      setTargetAreaIds([]);
+      setEndsAt("");
+    },
+  });
+  const closeMutation = useMutation({
+    mutationFn: closeAnnouncement,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
+  });
+
+  const [title, setTitle] = useState("");
+  const [severity, setSeverity] = useState<AnnouncementSeverity>("INFO");
+  const [audience, setAudience] = useState<string[]>([]);
+  const [targetAreaIds, setTargetAreaIds] = useState<string[]>([]);
+  const [startsAt, setStartsAt] = useState(() => toDatetimeLocal(new Date()));
+  const [endsAt, setEndsAt] = useState("");
+
   const [ticketNumber, setTicketNumber] = useState("");
   const [program, setProgram] = useState("");
   const [location, setLocation] = useState("");
 
-  function publishNotice(event: React.FormEvent<HTMLFormElement>) {
+  const validationError = validatePublishInput({ title, audience, startsAt, endsAt });
+  const canPublish = !validationError && !publishMutation.isPending;
+
+  function publishNotice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!noticeTitle.trim() || !noticeDescription.trim()) return;
-    addNotice({
-      title: noticeTitle.trim(),
-      description: noticeDescription.trim(),
-      level: noticeLevel,
+    if (!canPublish) return;
+    publishMutation.mutate({
+      title: title.trim(),
+      severity,
+      audience,
+      targetAreaIds,
+      startsAt: new Date(startsAt).toISOString(),
+      endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
     });
-    setNoticeTitle("");
-    setNoticeDescription("");
-    setNoticeLevel("일반");
   }
 
-  function callReservation(event: React.FormEvent<HTMLFormElement>) {
+  function callReservation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const parsedTicketNumber = Number(ticketNumber);
     if (!Number.isInteger(parsedTicketNumber) || parsedTicketNumber <= 0 || !program.trim()) return;
@@ -59,11 +119,11 @@ export function NotificationAdminPanel() {
             <h2 className="text-base font-bold text-foreground">방문객 알림 관리</h2>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            발행한 내용은 방문객 화면 오른쪽 위 종 알림에 바로 반영됩니다.
+            발행한 공지는 지정한 대상·구역·시간에만 노출되고, 긴급 공지는 상단에 고정돼요.
           </p>
         </div>
         <span className="text-xs font-medium text-muted-foreground">
-          현재 {notices.length + reservationCalls.length}건
+          현재 {announcements.filter((item) => canClose(item.status)).length + reservationCalls.length}건
         </span>
       </div>
 
@@ -73,45 +133,108 @@ export function NotificationAdminPanel() {
             <Megaphone className="size-4 text-primary" />
             <h3 className="text-sm font-bold">공지사항 발행</h3>
           </div>
+
           <div className="space-y-1.5">
-            <Label htmlFor="notice-title">제목</Label>
+            <Label htmlFor="notice-title">공지 내용</Label>
             <Input
               id="notice-title"
-              value={noticeTitle}
-              onChange={(event) => setNoticeTitle(event.target.value)}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
               placeholder="예: 메인스테이지 운영 안내"
-              maxLength={60}
+              maxLength={200}
             />
           </div>
+
           <div className="space-y-1.5">
-            <Label htmlFor="notice-description">내용</Label>
-            <Textarea
-              id="notice-description"
-              value={noticeDescription}
-              onChange={(event) => setNoticeDescription(event.target.value)}
-              placeholder="방문객에게 전달할 내용을 입력하세요."
-              maxLength={240}
-            />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex gap-2" aria-label="공지 중요도">
-              {(["일반", "중요"] as NoticeLevel[]).map((level) => (
+            <Label>긴급도</Label>
+            <div className="flex flex-wrap gap-2">
+              {SEVERITY_OPTIONS.map((option) => (
                 <Button
-                  key={level}
+                  key={option.value}
                   type="button"
                   size="sm"
-                  variant={noticeLevel === level ? "default" : "outline"}
-                  onClick={() => setNoticeLevel(level)}
+                  variant={severity === option.value ? "default" : "outline"}
+                  onClick={() => setSeverity(option.value)}
                 >
-                  {level}
+                  {option.label}
                 </Button>
               ))}
             </div>
-            <Button type="submit" size="sm" disabled={!noticeTitle.trim() || !noticeDescription.trim()}>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>노출 대상 (최소 1개)</Label>
+            <div className="flex flex-wrap gap-2">
+              {AUDIENCE_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  type="button"
+                  size="sm"
+                  variant={audience.includes(option.value) ? "default" : "outline"}
+                  onClick={() => setAudience((current) => toggleValue(current, option.value))}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {areaOptions.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>노출 구역 (선택, 비우면 전체 구역)</Label>
+              <div className="flex flex-wrap gap-2">
+                {areaOptions.map((area) => (
+                  <Button
+                    key={area.id}
+                    type="button"
+                    size="sm"
+                    variant={targetAreaIds.includes(area.id) ? "default" : "outline"}
+                    onClick={() => setTargetAreaIds((current) => toggleValue(current, area.id))}
+                  >
+                    {area.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="notice-starts-at">노출 시작</Label>
+              <Input
+                id="notice-starts-at"
+                type="datetime-local"
+                value={startsAt}
+                onChange={(event) => setStartsAt(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="notice-ends-at">자동 해제 시각 (선택)</Label>
+              <Input
+                id="notice-ends-at"
+                type="datetime-local"
+                min={startsAt}
+                value={endsAt}
+                onChange={(event) => setEndsAt(event.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            비워두면 직접 종료할 때까지 노출돼요. 설정하면 해당 시각 이후 자동으로 노출이 해제돼요.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+            {validationError && (
+              <p className="mr-auto text-xs text-muted-foreground">{validationError}</p>
+            )}
+            <Button type="submit" size="sm" disabled={!canPublish}>
               <Send className="size-3.5" />
               공지 발행
             </Button>
           </div>
+          {publishMutation.error && (
+            <p className="text-xs text-destructive">{publishMutation.error.message}</p>
+          )}
         </form>
 
         <form onSubmit={callReservation} className="space-y-3 rounded-2xl border border-border bg-background p-4">
@@ -165,21 +288,36 @@ export function NotificationAdminPanel() {
         <div>
           <h3 className="mb-2 text-xs font-bold text-muted-foreground">최근 공지</h3>
           <div className="space-y-2">
-            {notices.slice(0, 4).map((notice) => (
-              <div key={notice.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+            {announcementsLoading && <p className="text-xs text-muted-foreground">불러오는 중…</p>}
+            {announcementsError && <p className="text-xs text-destructive">{announcementsError.message}</p>}
+            {!announcementsLoading && announcements.length === 0 && (
+              <p className="text-xs text-muted-foreground">발행된 공지가 없어요.</p>
+            )}
+            {announcements.slice(0, 4).map((announcement) => (
+              <div key={announcement.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${SEVERITY_STYLE[announcement.severity]}`}>
+                  {SEVERITY_OPTIONS.find((o) => o.value === announcement.severity)?.label}
+                </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{notice.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{notice.level} · {notice.createdAt}</p>
+                  <p className="truncate text-sm font-semibold">{announcement.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {STATUS_LABEL[announcement.status]}
+                    {announcement.startsAt && ` · ${formatMoment(announcement.startsAt)}`}
+                    {announcement.endsAt && ` ~ ${formatMoment(announcement.endsAt)}`}
+                  </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeNotice(notice.id)}
-                  aria-label={`${notice.title} 공지 삭제`}
-                >
-                  <Trash2 className="size-3.5" />
-                </Button>
+                {canClose(announcement.status) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={closeMutation.isPending}
+                    onClick={() => closeMutation.mutate(announcement.id)}
+                    aria-label={`${announcement.title} 공지 종료`}
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -210,4 +348,3 @@ export function NotificationAdminPanel() {
     </section>
   );
 }
-
