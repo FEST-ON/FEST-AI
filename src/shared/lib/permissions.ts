@@ -36,6 +36,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/tickets", label: "민원·공지·사고", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
   // bookings 조회·상태 변경(호출·노쇼·입장)은 현장에서 처리하므로 현장 운영자까지 포함한다.
   { href: "/admin/bookings", label: "예약·호출 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
+  // coupon-redemptions 는 백엔드에서 Operator(최고 관리자·축제 담당자·현장 운영자) 범위다.
+  { href: "/admin/coupons", label: "쿠폰 사용 처리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
 
   // content-versions/{id}/reviews → SUPER_ADMIN, REVIEWER
   { href: "/admin/content", label: "검수·게시 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
