@@ -5,32 +5,44 @@ export interface StampSpot {
   collected: boolean;
 }
 
-export type BenefitType = "FIXED" | "PERCENT" | "GIFT";
+export type CouponBenefitType = "FIXED" | "PERCENT" | "GIFT";
 
-/** 발급 가능한 축제 쿠폰(공개 목록). */
-export interface AvailableCoupon {
+/** 방문객이 발행받을 수 있는 지역상권 쿠폰(발행 전). */
+export interface CouponOffer {
   id: string;
-  name: string;
-  description: string | null;
-  benefit_type: BenefitType;
-  benefit_value: number;
-  valid_from: string;
-  valid_until: string;
+  couponName: string;
+  businessName: string;
+  description: string;
+  benefitType: CouponBenefitType;
+  benefitValue: number;
+  validUntil: string;
+  /** 남은 발행 수량. 0이면 소진. */
   remaining: number;
-  business_name: string;
 }
 
-/** 방문객이 발급받은 쿠폰. */
+export type IssuedCouponStatus = "ISSUED" | "REDEEMED" | "EXPIRED";
+
+/** 방문객에게 발행된 쿠폰 1장. 업체가 QR을 읽어 사용 처리한다. */
 export interface IssuedCoupon {
   id: string;
-  status: "ISSUED" | "REDEEMED" | "EXPIRED" | "CANCELLED";
-  issued_at: string;
-  expires_at: string;
-  name: string;
-  description: string | null;
-  benefit_type: BenefitType;
-  benefit_value: number;
-  business_name: string;
+  couponName: string;
+  businessName: string;
+  benefitType: CouponBenefitType;
+  benefitValue: number;
+  status: IssuedCouponStatus;
+  issuedAt: string;
+  expiresAt: string;
+  /**
+   * 발행 응답에서 한 번만 내려오는 사용 토큰(서버에는 해시만 저장된다).
+   * 목록 재조회로는 다시 받을 수 없어 이 기기에 보관한 값을 붙여준다.
+   */
+  issueToken?: string;
+}
+
+export function isCouponUsable(coupon: IssuedCoupon, now = Date.now()) {
+  if (coupon.status !== "ISSUED") return false;
+  const expiresAt = new Date(coupon.expiresAt).getTime();
+  return !Number.isFinite(expiresAt) || expiresAt > now;
 }
 
 export interface PointLedgerEntry {
@@ -43,10 +55,4 @@ export interface PointLedgerEntry {
 export interface PointSummary {
   balance: number;
   ledger: PointLedgerEntry[];
-}
-
-export function benefitLabel(type: BenefitType, value: number) {
-  if (type === "PERCENT") return `${value}% 할인`;
-  if (type === "FIXED") return `${value.toLocaleString()}원 할인`;
-  return "사은품 증정";
 }

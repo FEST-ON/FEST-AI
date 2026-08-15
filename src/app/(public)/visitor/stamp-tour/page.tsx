@@ -1,17 +1,18 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { Stamp, MapPin, Coins, PartyPopper, ArrowRight } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Stamp, MapPin, Coins, Ticket, PartyPopper } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { ProgressRing } from "@/shared/ui/progress-ring";
-import { collectStamp, fetchStampSpots, fetchPoints } from "@/entities/coupon";
+import { collectStamp, fetchStampSpots, fetchMyCoupons, fetchPoints, isCouponUsable } from "@/entities/coupon";
 import { useTranslation } from "@/shared/lib/i18n";
-import { ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import { useNow } from "@/shared/lib/use-now";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 
 export default function StampTourPage() {
-  const { t, locale } = useTranslation();
+  const { t, locale, bcp47 } = useTranslation();
   const queryClient = useQueryClient();
   const { data: stampSpots = [], error: spotsError, refetch: refetchSpots } = useQuery({
     queryKey: ["stamp-spots", locale] as const,
@@ -23,6 +24,12 @@ export default function StampTourPage() {
       queryClient.invalidateQueries({ queryKey: ["stamp-spots"] });
       queryClient.invalidateQueries({ queryKey: ["visitor-points"] });
     },
+  });
+  // 발행받은 쿠폰은 쿠폰함(/visitor/coupons)이 원본이고, 여기서는 최근 것만 요약해 보여준다.
+  const now = useNow(60_000);
+  const { data: myCoupons = [] } = useQuery({
+    queryKey: ["my-coupons", locale] as const,
+    queryFn: () => fetchMyCoupons(locale),
   });
   const { data: points } = useQuery({ queryKey: ["visitor-points"], queryFn: fetchPoints });
   const total = stampSpots.length;
@@ -106,6 +113,43 @@ export default function StampTourPage() {
               <li className="text-center text-xs text-muted-foreground">{t.stampTour.pointsEmpty}</li>
             )}
           </ul>
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <Ticket className="size-4" /> {t.stampTour.couponsTitle}
+          </h2>
+          <Link href="/visitor/coupons" className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary">
+            {t.stampTour.couponsLink} <ArrowRight className="size-3" />
+          </Link>
+        </div>
+        <div className="space-y-2">
+          {myCoupons.length === 0 && <EmptyState message={t.stampTour.emptyCoupons} />}
+          {myCoupons.slice(0, 3).map((coupon) => {
+            const usable = isCouponUsable(coupon, now);
+            return (
+              <Link
+                key={coupon.id}
+                href="/visitor/coupons"
+                className={`block rounded-xl border p-3 ${usable ? "border-primary/30 bg-primary/6 dark:bg-primary/15" : "border-border bg-muted/50"}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-bold text-foreground">{coupon.businessName}</p>
+                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                    {t.coupon.status[coupon.status]}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm font-semibold text-primary">{coupon.couponName} · {t.coupon.benefitLabel(coupon.benefitType, coupon.benefitValue)}</p>
+                {coupon.expiresAt && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t.coupon.expiresLine(new Date(coupon.expiresAt).toLocaleDateString(bcp47))}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>

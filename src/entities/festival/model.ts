@@ -7,6 +7,8 @@ export interface FestivalInfo {
   hours: string;
   organizer: string;
   approvedAt: string;
+  // 운영자가 축제 정보를 마지막으로 고친 시각(ISO). 방문객 화면의 "최종 갱신"에 그대로 쓴다.
+  updatedAt: string;
   description: string;
 }
 

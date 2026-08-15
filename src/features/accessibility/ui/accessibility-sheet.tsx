@@ -37,10 +37,12 @@ export function AccessibilitySheet({
 }: { triggerClassName?: string } = {}) {
   const {
     largeText,
+    highContrast,
     voiceGuide,
     visitorMode,
     setVisitorMode,
     toggleLargeText,
+    toggleHighContrast,
     toggleVoiceGuide,
   } = useAccessibilityStore();
   const kioskMode = visitorMode === "kiosk";
@@ -151,6 +153,21 @@ export function AccessibilitySheet({
               id="large-text"
               checked={largeText}
               onCheckedChange={toggleLargeText}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-xl border border-border p-3">
+            <div>
+              <Label htmlFor="high-contrast" className="text-sm font-semibold">
+                {t.accessibility.highContrastLabel}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t.accessibility.highContrastHelper}
+              </p>
+            </div>
+            <Switch
+              id="high-contrast"
+              checked={highContrast}
+              onCheckedChange={toggleHighContrast}
             />
           </div>
           <div className="flex items-center justify-between rounded-xl border border-border p-3">

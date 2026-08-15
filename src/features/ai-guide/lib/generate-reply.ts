@@ -25,6 +25,10 @@ function sendMessage(id: string, question: string) {
     messageId: string;
     answer: string;
     sources: Array<{ title: string }>;
+    // 답변이 어느 시점 데이터로 만들어졌는지. 서버가 안 내려주면 표시하지 않는다.
+    freshnessAt?: string | null;
+    // 검증된 근거로 답하지 못했을 때 서버가 채워 보내는 값.
+    fallback?: { reason?: string } | null;
   }>(`/visitor/ai/conversations/${id}/messages`, json("POST", { message: question, context: { channel: "PERSO_AI", inputMode: "VOICE_OR_TEXT" } }));
 }
 
@@ -43,6 +47,10 @@ export async function generateReply(question: string, locale: Locale) {
     content: response.answer,
     sources: response.sources.map((source) => source.title),
     messageId: response.messageId,
+    freshnessAt: response.freshnessAt ?? undefined,
+    // 근거(출처)가 하나도 없거나 서버가 fallback을 표시하면 AI 답변만으로는 부족하다 —
+    // 이때는 안내데스크·전화 같은 사람이 응대하는 채널을 함께 안내한다.
+    needsFallbackChannel: Boolean(response.fallback) || response.sources.length === 0,
   };
 }
 
@@ -60,7 +68,12 @@ export function buildMessage(
   role: ChatMessage["role"],
   content: string,
   locale: Locale,
-  extra: { sources?: string[]; backendMessageId?: string } = {},
+  extra: {
+    sources?: string[];
+    backendMessageId?: string;
+    freshnessAt?: string;
+    needsFallbackChannel?: boolean;
+  } = {},
 ): ChatMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

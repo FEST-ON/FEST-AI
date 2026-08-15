@@ -7,10 +7,12 @@ import {
   CalendarDays,
   CheckCircle2,
   Flag,
+  Headset,
   Keyboard,
   Languages,
   MapPin,
   Mic,
+  Phone,
   RotateCcw,
   SendHorizontal,
   Square,
@@ -19,6 +21,8 @@ import {
   Volume2,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/shared/lib/support-contact";
+import { LastUpdated } from "@/shared/ui/last-updated";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useFestivalLanguages } from "@/features/accessibility/model/use-festival-languages";
@@ -80,10 +84,16 @@ export function PersoAiGuide() {
 
     try {
       const reply = await generateReply(question, askLocale);
-      addMessage(buildMessage("assistant", reply.content, askLocale, { sources: reply.sources, backendMessageId: reply.messageId }));
+      addMessage(buildMessage("assistant", reply.content, askLocale, {
+        sources: reply.sources,
+        backendMessageId: reply.messageId,
+        freshnessAt: reply.freshnessAt,
+        needsFallbackChannel: reply.needsFallbackChannel,
+      }));
     } catch {
+      // 답변 자체를 받지 못한 경우도 근거가 없는 상황이라 대체 채널을 함께 안내한다.
       // 자동 전환 직후에는 t가 아직 이전 언어라 실패 안내도 물어본 언어로 맞춘다.
-      addMessage(buildMessage("assistant", dictionaries[askLocale].aiGuide.replyFailed, askLocale));
+      addMessage(buildMessage("assistant", dictionaries[askLocale].aiGuide.replyFailed, askLocale, { needsFallbackChannel: true }));
     } finally {
       setTyping(false);
     }
@@ -196,10 +206,35 @@ export function PersoAiGuide() {
                 <Sparkles className="size-3" /> {t.aiGuide.assistantLabel}
               </span>
               {latestAssistantMessage.content}
-              {latestAssistantMessage.sources && latestAssistantMessage.sources.length > 0 && (
-                <p className="mt-1.5 border-t border-border/70 pt-1.5 text-[9px] opacity-60">
-                  {t.aiGuide.sourcePrefix}{latestAssistantMessage.sources.join(", ")}
-                </p>
+              {(latestAssistantMessage.sources?.length || latestAssistantMessage.freshnessAt) && (
+                <div className="mt-1.5 space-y-0.5 border-t border-border/70 pt-1.5">
+                  {latestAssistantMessage.sources && latestAssistantMessage.sources.length > 0 && (
+                    <p className="text-[9px] opacity-60">
+                      {t.aiGuide.sourcePrefix}{latestAssistantMessage.sources.join(", ")}
+                    </p>
+                  )}
+                  <LastUpdated
+                    value={latestAssistantMessage.freshnessAt}
+                    bcp47={bcp47}
+                    label={t.aiGuide.answerFreshness}
+                    className="text-[9px] opacity-60"
+                  />
+                </div>
+              )}
+
+              {latestAssistantMessage.needsFallbackChannel && (
+                <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
+                  <p className="flex items-center gap-1 text-[10px] font-bold">
+                    <Headset className="size-3" /> {t.aiGuide.fallbackChannelTitle}
+                  </p>
+                  <p className="mt-1 text-[10px] leading-4">{t.aiGuide.fallbackChannelDescription}</p>
+                  <a
+                    href={SUPPORT_PHONE_HREF}
+                    className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[10px] font-bold text-white dark:bg-amber-100 dark:text-amber-950"
+                  >
+                    <Phone className="size-3" /> {t.aiGuide.fallbackCallAction(SUPPORT_PHONE)}
+                  </a>
+                </div>
               )}
               {latestAssistantMessage.backendMessageId && (
                 <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-2">

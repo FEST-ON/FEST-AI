@@ -15,6 +15,7 @@ export const festivalInfo: FestivalInfo = {
   hours: "매일 11:00 - 22:00",
   organizer: "영등포구청 축제운영과",
   approvedAt: "2026-08-01",
+  updatedAt: "2026-08-01T09:00:00+09:00",
   description:
     "다회용기·분리배출·대중교통 이용을 장려하는 친환경 축제로, 지역 소상공인과 함께 성장하는 지속가능한 지역축제를 지향합니다.",
 };
@@ -46,6 +47,7 @@ export async function fetchFestivalInfo(locale: Locale = "ko"): Promise<Festival
     hours: text.fallbackHours,
     organizer: text.fallbackOrganizer,
     approvedAt: festival.updated_at.slice(0, 10),
+    updatedAt: festival.updated_at,
     description: translated.description ?? festival.description,
   };
 }

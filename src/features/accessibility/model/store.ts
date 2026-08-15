@@ -14,11 +14,13 @@ interface AccessibilityState {
   language: AccessibilityLanguage;
   languageSource: LanguageSource;
   largeText: boolean;
+  highContrast: boolean;
   voiceGuide: boolean;
   visitorMode: VisitorAccessMode;
   setLanguage: (language: AccessibilityLanguage, source?: LanguageSource) => void;
   setVisitorMode: (visitorMode: VisitorAccessMode) => void;
   toggleLargeText: () => void;
+  toggleHighContrast: () => void;
   toggleVoiceGuide: () => void;
 }
 
@@ -30,6 +32,7 @@ function syncVisitorSession(state: AccessibilityState) {
     language: LOCALE_BY_LANGUAGE[state.language],
     accessibilityPreferences: {
       largeText: state.largeText,
+      highContrast: state.highContrast,
       voiceGuide: state.voiceGuide,
       visitorMode: state.visitorMode,
       languageSource: state.languageSource,
@@ -45,6 +48,7 @@ export const useAccessibilityStore = create<AccessibilityState>()(
       language: "한국어",
       languageSource: "DEFAULT",
       largeText: false,
+      highContrast: false,
       voiceGuide: false,
       visitorMode: "qr",
       setLanguage: (language, source = "MANUAL") => {
@@ -57,6 +61,10 @@ export const useAccessibilityStore = create<AccessibilityState>()(
       },
       toggleLargeText: () => {
         set((state) => ({ largeText: !state.largeText }));
+        syncVisitorSession(get());
+      },
+      toggleHighContrast: () => {
+        set((state) => ({ highContrast: !state.highContrast }));
         syncVisitorSession(get());
       },
       toggleVoiceGuide: () => {

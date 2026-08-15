@@ -24,6 +24,7 @@ const mutationCache = new MutationCache({
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const largeText = useAccessibilityStore((state) => state.largeText);
+  const highContrast = useAccessibilityStore((state) => state.highContrast);
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -40,6 +41,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset.largeText = String(largeText);
   }, [largeText]);
+
+  useEffect(() => {
+    document.documentElement.dataset.highContrast = String(highContrast);
+  }, [highContrast]);
 
   return (
     <QueryClientProvider client={queryClient}>

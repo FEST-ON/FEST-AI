@@ -154,3 +154,65 @@ html[data-large-text="true"] {
   font-size: 112.5%;
 }
 
+/* 고대비 모드 — 야외 직사광선·저시력 환경용. 색 토큰만 덮어쓰면 모든 화면에 한 번에
+   적용된다. 회색 계열(muted)을 본문색과 같게 만들어 대비 4.5:1 미만인 조합을 없앤다. */
+html[data-high-contrast="true"] {
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #0000c8;
+  --primary-foreground: #ffffff;
+  --primary-tint: #0000c8;
+  --secondary: #ffffff;
+  --secondary-foreground: #000000;
+  --muted: #ffffff;
+  --muted-foreground: #000000;
+  --accent: #ffffff;
+  --accent-foreground: #0000c8;
+  --destructive: #a10000;
+  --border: #000000;
+  --input: #000000;
+  --ring: #0000c8;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #ffffff;
+}
+
+html[data-high-contrast="true"].dark,
+html[data-high-contrast="true"] .dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+  --primary: #ffe600;
+  --primary-foreground: #000000;
+  --primary-tint: #ffe600;
+  --secondary: #000000;
+  --secondary-foreground: #ffffff;
+  --muted: #000000;
+  --muted-foreground: #ffffff;
+  --accent: #000000;
+  --accent-foreground: #ffe600;
+  --destructive: #ff6b6b;
+  --border: #ffffff;
+  --input: #ffffff;
+  --ring: #ffe600;
+}
+
+/* 반투명·블러·흐린 글자는 대비를 떨어뜨리므로 고대비 모드에서는 끈다. */
+html[data-high-contrast="true"] * {
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+
+html[data-high-contrast="true"] [class*="opacity-"] {
+  opacity: 1 !important;
+}
+

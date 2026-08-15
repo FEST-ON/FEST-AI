@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock, MapPin, Ticket, Users, X } from "lucide-react";
+import { Clock, Info, MapPin, Ticket, Users, X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cancelBooking, createBooking, fetchBookableSessions, fetchVisitorBookings, type VisitorBooking } from "@/features/reservation/api/bookings";
+import { BOOKING_CANCEL_DEADLINE_MINUTES, BOOKING_NO_SHOW_GRACE_MINUTES } from "@/shared/lib/booking-policy";
 import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
 import type { Dictionary } from "@/shared/lib/i18n";
 
@@ -64,7 +65,16 @@ export default function ReservationPage() {
         </div>)}</div>}
       {issue.isError && <p className="mt-2 text-xs text-destructive">{issue.error instanceof Error ? issue.error.message : t.reservation.bookFailed}</p>}
     </section>
-    <Badge variant="outline" className="mt-6 w-full justify-center py-2 text-[11px] text-muted-foreground">{t.reservation.autoRefreshNotice}</Badge>
+    <section className="mt-6 rounded-2xl border border-border bg-muted/40 p-4">
+      <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Info className="size-4" /> {t.reservation.policyTitle}</h2>
+      <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
+        <li>· {t.reservation.policyCancel(BOOKING_CANCEL_DEADLINE_MINUTES)}</li>
+        <li>· {t.reservation.policyNoShow(BOOKING_NO_SHOW_GRACE_MINUTES)}</li>
+        <li>· {t.reservation.policyRepeat}</li>
+      </ul>
+    </section>
+
+    <Badge variant="outline" className="mt-3 w-full justify-center py-2 text-[11px] text-muted-foreground">{t.reservation.autoRefreshNotice}</Badge>
   </div>;
 }
 

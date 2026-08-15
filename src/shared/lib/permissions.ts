@@ -34,6 +34,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   // staff-assignments 등록은 Manager, 배정 확인은 본인 계정
   { href: "/admin/staff", label: "인력 배치", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
   { href: "/admin/tickets", label: "민원·공지·사고", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
+  // bookings 조회·상태 변경(호출·노쇼·입장)은 현장에서 처리하므로 현장 운영자까지 포함한다.
+  { href: "/admin/bookings", label: "예약·호출 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
 
   // content-versions/{id}/reviews → SUPER_ADMIN, REVIEWER
   { href: "/admin/content", label: "검수·게시 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
@@ -60,6 +62,17 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/members", label: "계정·권한", roles: ["SUPER_ADMIN"], group: "설정·관리" },
   { href: "/admin/audit-logs", label: "감사 로그", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
 ];
+
+/**
+ * 긴급(EMERGENCY) 공지는 방문객 화면 상단에 강제로 고정되고 되돌리기 어려워, 일반 공지와
+ * 같은 권한으로 두지 않는다. 발행 6단계(검수 승인 포함)를 혼자 끝낼 수 있는 최고 관리자만
+ * 긴급도로 발행할 수 있고, 축제 담당자는 일반·주의 공지까지만 발행한다.
+ */
+const EMERGENCY_PUBLISH_ROLES: AdminRole[] = ["SUPER_ADMIN"];
+
+export function canPublishEmergency(role: string | undefined) {
+  return role !== undefined && (EMERGENCY_PUBLISH_ROLES as string[]).includes(role);
+}
 
 export function findNavItem(pathname: string) {
   return ADMIN_NAV_ITEMS.find((item) => (item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href)));

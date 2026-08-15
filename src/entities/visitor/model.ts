@@ -5,6 +5,10 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   sources?: string[];
+  // 답변 근거 데이터의 기준 시각(ISO). 서버가 내려줄 때만 채워진다.
+  freshnessAt?: string;
+  // 검증된 근거가 부족해 사람이 응대하는 채널을 함께 안내해야 하는 답변인지.
+  needsFallbackChannel?: boolean;
 }
 
 export interface SurveyQuestion {

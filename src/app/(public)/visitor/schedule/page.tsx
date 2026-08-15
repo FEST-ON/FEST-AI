@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchSchedule } from "@/entities/festival";
+import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
+import { LastUpdated } from "@/shared/ui/last-updated";
 import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { TONE } from "@/shared/ui/status-pill";
@@ -13,12 +14,17 @@ const CATEGORY_STYLE: Record<string, string> = {
 };
 
 export default function SchedulePage() {
-  const { t, locale } = useTranslation();
+  const { t, locale, bcp47 } = useTranslation();
   const scheduleQuery = useQuery({
     queryKey: ["schedule", locale] as const,
     queryFn: () => fetchSchedule(locale),
   });
   const schedule = scheduleQuery.data;
+  // 일정 API는 갱신 시각을 내려주지 않아, 같은 축제의 updated_at을 기준 시각으로 쓴다.
+  const { data: festival } = useQuery({
+    queryKey: ["festival-info", locale] as const,
+    queryFn: () => fetchFestivalInfo(locale),
+  });
 
   const grouped = (schedule ?? []).reduce<Record<string, typeof schedule>>((acc, item) => {
     acc[item.day] = [...(acc[item.day] ?? []), item];
@@ -29,6 +35,12 @@ export default function SchedulePage() {
     <div className="px-4 pt-4 pb-6">
       <h1 className="text-lg font-extrabold text-foreground">{t.schedule.title}</h1>
       <p className="text-xs text-muted-foreground">{t.schedule.subtitle}</p>
+      <LastUpdated
+        value={festival?.updatedAt}
+        bcp47={bcp47}
+        label={t.common.lastUpdated}
+        className="mt-1 text-muted-foreground"
+      />
 
       <QueryState
         query={scheduleQuery}
