@@ -15,15 +15,8 @@ import {
   SheetFooter,
 } from "@/shared/ui/sheet";
 import { useAccessibilityStore } from "../model/store";
-import type { AccessibilityLanguage } from "@/entities/visitor";
+import { LanguageBar } from "./language-bar";
 import { useTranslation } from "@/shared/lib/i18n";
-
-const LANGUAGES: AccessibilityLanguage[] = [
-  "한국어",
-  "English",
-  "中文",
-  "日本語",
-];
 
 function AccessibilityIcon({ className }: { className?: string }) {
   return (
@@ -43,11 +36,9 @@ export function AccessibilitySheet({
   triggerClassName,
 }: { triggerClassName?: string } = {}) {
   const {
-    language,
     largeText,
     voiceGuide,
     visitorMode,
-    setLanguage,
     setVisitorMode,
     toggleLargeText,
     toggleVoiceGuide,
@@ -145,23 +136,7 @@ export function AccessibilitySheet({
             <Label className="mb-2 block text-sm font-semibold">
               {t.accessibility.languageLabel}
             </Label>
-            <div className="grid grid-cols-4 gap-2">
-              {LANGUAGES.map((lng) => (
-                <button
-                  type="button"
-                  key={lng}
-                  onClick={() => setLanguage(lng)}
-                  className={cn(
-                    "rounded-lg border px-2 py-2 text-xs font-medium transition-colors",
-                    language === lng
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-foreground hover:bg-accent",
-                  )}
-                >
-                  {lng}
-                </button>
-              ))}
-            </div>
+            <LanguageBar />
           </div>
           <div className="flex items-center justify-between rounded-xl border border-border p-3">
             <div>

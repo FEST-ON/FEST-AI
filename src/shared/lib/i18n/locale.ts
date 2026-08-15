@@ -9,6 +9,10 @@ export const LOCALE_BY_LANGUAGE: Record<AccessibilityLanguage, Locale> = {
   日本語: "ja",
 };
 
+export const LANGUAGE_BY_LOCALE = Object.fromEntries(
+  Object.entries(LOCALE_BY_LANGUAGE).map(([language, locale]) => [locale, language as AccessibilityLanguage]),
+) as Record<Locale, AccessibilityLanguage>;
+
 export const BCP47_BY_LOCALE: Record<Locale, string> = {
   ko: "ko-KR",
   en: "en-US",

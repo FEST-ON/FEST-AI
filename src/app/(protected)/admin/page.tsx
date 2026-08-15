@@ -12,6 +12,8 @@ import { Badge } from "@/shared/ui/badge";
 import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { FestivalBriefCard } from "@/features/festival-brief/ui/festival-brief-card";
+import { LANGUAGE_BY_LOCALE } from "@/shared/lib/i18n";
+import type { Locale } from "@/shared/lib/i18n";
 
 export default function AdminDashboardPage() {
   const opsQuery = useQuery({ queryKey: ["ops-snapshot"], queryFn: fetchOpsSnapshot });
@@ -109,6 +111,21 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* AI-05 언어별 이용 로그: 방문 세션 언어와 첫 발화 자동 전환 건수 */}
+      {ops && ops.languages.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="mb-3 text-sm font-bold text-foreground">언어별 이용</h2>
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            {ops.languages.map((row) => (
+              <div key={row.language} className="rounded-xl border border-border p-3">
+                <p className="text-sm font-semibold text-foreground">{LANGUAGE_BY_LOCALE[row.language as Locale] ?? row.language}</p>
+                <p className="text-lg font-bold text-primary">{row.sessions.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">키오스크 {row.kiosk_sessions} · 자동 전환 {row.auto_switched}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

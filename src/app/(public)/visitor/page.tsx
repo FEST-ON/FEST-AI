@@ -6,6 +6,7 @@ import { BadgePercent, CalendarDays, MapPin, Route, Sparkles, Store, Ticket, Sta
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { CrowdList } from "@/features/crowd/ui/crowd-list";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { LanguageBar } from "@/features/accessibility/ui/language-bar";
 import { useVisitorMenus } from "@/features/visitor-menu-settings/model/store";
 import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/store";
 import { useTranslation } from "@/shared/lib/i18n";
@@ -70,6 +71,16 @@ export default function VisitorHomePage() {
           {getGreeting(t)}{t.home.greetingSuffix} 👋
         </h1>
       </div>
+
+      {/* 키오스크 진입 화면에서는 축제 지원 언어를 바로 고를 수 있어야 한다(AI-05). */}
+      {visitorMode === "kiosk" && (
+        <section aria-labelledby="kiosk-language-label">
+          <h2 id="kiosk-language-label" className="mb-2 text-sm font-bold text-foreground">
+            {t.accessibility.languageLabel}
+          </h2>
+          <LanguageBar buttonClassName="py-3 text-sm" />
+        </section>
+      )}
 
       <div className="overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
         <Badge className="bg-white/15 text-white hover:bg-white/15">

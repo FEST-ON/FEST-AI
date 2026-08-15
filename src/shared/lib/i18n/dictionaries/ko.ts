@@ -240,6 +240,8 @@ export const ko = {
     statusUnsupported: "현재 브라우저에서는 텍스트 질문을 이용해주세요.",
     expectedQuestionsLabel: "예상 질문",
     voiceGuideOnAnnouncement: "음성 안내가 켜졌습니다.",
+    autoSwitchNotice: (language: string) => `음성을 인식해 ${language}로 안내를 전환했어요.`,
+    autoSwitchRevertAria: (language: string) => `${language} 안내로 되돌리기`,
     welcomeContent: "안녕하세요! Perso AI 축제 가이드예요. 일정, 교통, 편의시설과 안전 정보를 편하게 물어보세요.",
     welcomeTimestamp: "지금",
     welcomeSource: "축제 운영 승인 정보",

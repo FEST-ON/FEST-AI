@@ -242,6 +242,8 @@ export const zh: typeof ko = {
     statusUnsupported: "当前浏览器请使用文字提问。",
     expectedQuestionsLabel: "推荐问题",
     voiceGuideOnAnnouncement: "语音引导已开启。",
+    autoSwitchNotice: (language: string) => `已识别您的语音，导览已切换为${language}。`,
+    autoSwitchRevertAria: (language: string) => `切换回${language}导览`,
     welcomeContent: "您好！我是Perso AI庆典导览。欢迎随时咨询日程、交通、便利设施和安全信息。",
     welcomeTimestamp: "现在",
     welcomeSource: "庆典运营核准信息",

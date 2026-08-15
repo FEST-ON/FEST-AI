@@ -242,6 +242,8 @@ export const en: typeof ko = {
     statusUnsupported: "Please use text questions in this browser.",
     expectedQuestionsLabel: "Suggested questions",
     voiceGuideOnAnnouncement: "Voice guidance is on.",
+    autoSwitchNotice: (language: string) => `We detected your speech and switched the guide to ${language}.`,
+    autoSwitchRevertAria: (language: string) => `Switch the guide back to ${language}`,
     welcomeContent: "Hi! I'm the Perso AI festival guide. Feel free to ask about schedule, transport, facilities, and safety info.",
     welcomeTimestamp: "Now",
     welcomeSource: "Approved festival operations info",

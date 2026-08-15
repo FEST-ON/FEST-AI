@@ -9,7 +9,8 @@ import { BCP47_BY_LOCALE, LOCALE_BY_LANGUAGE } from "./locale";
 import type { Locale } from "./locale";
 
 export type { Locale } from "./locale";
-export { LOCALE_BY_LANGUAGE, BCP47_BY_LOCALE } from "./locale";
+export { LOCALE_BY_LANGUAGE, LANGUAGE_BY_LOCALE, BCP47_BY_LOCALE } from "./locale";
+export { detectLocale } from "./detect-locale";
 export { useAutoTranslate } from "./use-auto-translate";
 
 export type Dictionary = typeof ko;

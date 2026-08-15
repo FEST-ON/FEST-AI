@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Flag,
   Keyboard,
+  Languages,
   MapPin,
   Mic,
   RotateCcw,
@@ -20,8 +21,10 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useFestivalLanguages } from "@/features/accessibility/model/use-festival-languages";
 import { useSpeechOutput } from "@/features/accessibility/model/use-speech-output";
-import { useTranslation } from "@/shared/lib/i18n";
+import { detectLocale, dictionaries, LANGUAGE_BY_LOCALE, useTranslation } from "@/shared/lib/i18n";
+import type { Locale } from "@/shared/lib/i18n";
 import { buildMessage, generateReply, reportAiMessage, resetConversation } from "../lib/generate-reply";
 import { useChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
 import { useSpeechRecognition } from "../model/use-speech-recognition";
@@ -36,10 +39,12 @@ const QUESTION_ICON = {
 export function PersoAiGuide() {
   const { t, locale, bcp47 } = useTranslation();
   const { messages, isTyping, addMessage, setTyping, reset, syncWelcome } = useChatStore();
-  const { largeText, voiceGuide } = useAccessibilityStore();
+  const { largeText, voiceGuide, visitorMode, languageSource, setLanguage } = useAccessibilityStore();
+  const { languages } = useFestivalLanguages();
   const [draft, setDraft] = useState("");
   const [showTextInput, setShowTextInput] = useState(false);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
+  const [switchedFrom, setSwitchedFrom] = useState<Locale | null>(null);
 
   const welcomeMessage = useMemo(
     () => ({
@@ -65,26 +70,46 @@ export function PersoAiGuide() {
   // 글자 수로 높이를 추정하던 자리 — 큰 글씨·줄바꿈에 따라 어긋나던 것을 실제 레이아웃에 맡긴다.
   const chatPanelHeight = showTextInput ? "min-h-[400px] max-h-[470px]" : "min-h-[340px] max-h-[450px]";
 
-  const handleAsk = useCallback(async (question: string) => {
+  // 자동 전환된 언어로 바로 답해야 해서 사용할 언어를 인자로 받는다(전환 직후 locale은 아직 이전 값).
+  const handleAsk = useCallback(async (question: string, askLocale: Locale = locale) => {
     if (isTyping) return;
 
-    addMessage(buildMessage("user", question, locale));
+    addMessage(buildMessage("user", question, askLocale));
     setTyping(true);
     setReportStatus("idle");
 
     try {
-      const reply = await generateReply(question, locale);
-      addMessage(buildMessage("assistant", reply.content, locale, { sources: reply.sources, backendMessageId: reply.messageId }));
+      const reply = await generateReply(question, askLocale);
+      addMessage(buildMessage("assistant", reply.content, askLocale, { sources: reply.sources, backendMessageId: reply.messageId }));
     } catch {
-      addMessage(buildMessage("assistant", t.aiGuide.replyFailed, locale));
+      // 자동 전환 직후에는 t가 아직 이전 언어라 실패 안내도 물어본 언어로 맞춘다.
+      addMessage(buildMessage("assistant", dictionaries[askLocale].aiGuide.replyFailed, askLocale));
     } finally {
       setTyping(false);
     }
-  }, [addMessage, isTyping, setTyping, t, locale]);
+  }, [addMessage, isTyping, setTyping, locale]);
 
+  // AI-05: 키오스크에서 방문객이 언어를 직접 고르기 전까지는 발화 언어를 따라간다.
+  // 판별 실패·미지원 언어면 detectLocale이 null을 주고 기존(축제 기본) 언어를 유지한다.
   const handleVoiceResult = useCallback((transcript: string) => {
+    const autoLocale = visitorMode === "kiosk" && languageSource !== "MANUAL"
+      ? detectLocale(transcript, languages)
+      : null;
+    if (autoLocale && autoLocale !== locale) {
+      setLanguage(LANGUAGE_BY_LOCALE[autoLocale], "AUTO");
+      setSwitchedFrom(locale);
+      void handleAsk(transcript, autoLocale);
+      return;
+    }
     void handleAsk(transcript);
-  }, [handleAsk]);
+  }, [handleAsk, languageSource, languages, locale, setLanguage, visitorMode]);
+
+  function revertLanguage() {
+    if (!switchedFrom) return;
+    // 되돌리면 방문객이 고른 언어가 되므로 다음 발화에서 다시 자동 전환되지 않는다.
+    setLanguage(LANGUAGE_BY_LOCALE[switchedFrom], "MANUAL");
+    setSwitchedFrom(null);
+  }
 
   async function reportLatestAnswer() {
     if (!latestAssistantMessage?.backendMessageId || reportStatus === "pending") return;
@@ -137,7 +162,7 @@ export function PersoAiGuide() {
         <button
           type="button"
           aria-label={t.aiGuide.resetAria}
-          onClick={() => { resetConversation(); reset(welcomeMessage); setReportStatus("idle"); }}
+          onClick={() => { resetConversation(); reset(welcomeMessage); setReportStatus("idle"); setSwitchedFrom(null); }}
           className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-slate-950/40 text-white backdrop-blur-md transition hover:bg-slate-950/60"
         >
           <RotateCcw className="size-4" />
@@ -209,6 +234,26 @@ export function PersoAiGuide() {
         </div>
 
         <div className="relative z-30 shrink-0 bg-transparent px-4 pb-2 pt-1.5">
+          {switchedFrom && (
+            <div
+              aria-live="polite"
+              className="mb-2 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] font-semibold text-foreground"
+            >
+              <Languages className="size-3.5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">{t.aiGuide.autoSwitchNotice(LANGUAGE_BY_LOCALE[locale])}</span>
+              <button
+                type="button"
+                onClick={revertLanguage}
+                lang={switchedFrom}
+                aria-label={t.aiGuide.autoSwitchRevertAria(LANGUAGE_BY_LOCALE[switchedFrom])}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 font-bold text-foreground"
+              >
+                <RotateCcw className="size-3" />
+                {LANGUAGE_BY_LOCALE[switchedFrom]}
+              </button>
+            </div>
+          )}
+
           <div className="flex flex-col items-center pb-1">
             <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center">
               <span aria-hidden="true" />

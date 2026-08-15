@@ -242,6 +242,8 @@ export const ja: typeof ko = {
     statusUnsupported: "現在のブラウザではテキストで質問してください。",
     expectedQuestionsLabel: "おすすめの質問",
     voiceGuideOnAnnouncement: "音声案内がオンになりました。",
+    autoSwitchNotice: (language: string) => `音声を認識し、案内を${language}に切り替えました。`,
+    autoSwitchRevertAria: (language: string) => `${language}の案内に戻す`,
     welcomeContent: "こんにちは！Perso AIフェスティバルガイドです。日程、交通、施設、安全情報などお気軽にお尋ねください。",
     welcomeTimestamp: "たった今",
     welcomeSource: "フェスティバル運営承認情報",

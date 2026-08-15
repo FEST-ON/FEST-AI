@@ -36,6 +36,7 @@ const { contentAction, contentPreview } = await importTypeScript("../src/feature
 const { canAccessPath, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
 const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
 const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
+const { detectLocale } = await importTypeScript("../src/shared/lib/i18n/detect-locale.ts");
 
 class MemoryStorage {
   #values = new Map();
@@ -339,6 +340,19 @@ test("자동 번역은 항목별 필드를 한 번의 요청으로 묶고, 실�
 
   globalThis.fetch = async () => { throw new Error("network down"); };
   assert.deepEqual(await translateFields(spots, ["name"], "en"), spots, "실패하면 원문으로 fallback");
+});
+
+test("첫 발화 언어는 문자 종류로 판별하고 미지원 언어는 전환하지 않는다", () => {
+  const all = ["ko", "en", "zh", "ja"];
+  assert.equal(detectLocale("화장실 어디예요", all), "ko");
+  assert.equal(detectLocale("where is the restroom", all), "en");
+  assert.equal(detectLocale("トイレはどこですか", all), "ja");
+  assert.equal(detectLocale("洗手间在哪里", all), "zh");
+  // 일본어는 한자가 섞여 있어도 가나로 먼저 가른다.
+  assert.equal(detectLocale("駅はどこですか", all), "ja");
+  assert.equal(detectLocale("Где туалет", all), null, "지원 목록에 없는 문자는 판별 실패");
+  assert.equal(detectLocale("洗手间在哪里", ["ko", "en"]), null, "축제가 지원하지 않는 언어로는 전환하지 않는다");
+  assert.equal(detectLocale("", all), null);
 });
 
 test("역할이 없으면 관리자 화면에 접근할 수 없다", () => {

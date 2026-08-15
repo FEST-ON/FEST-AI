@@ -50,6 +50,14 @@ export async function fetchFestivalInfo(locale: Locale = "ko"): Promise<Festival
   };
 }
 
+/** 축제별 지원 언어 설정(AI-05). 자동 전환·언어 선택 화면이 이 목록만 쓴다. */
+export async function fetchFestivalLanguages(): Promise<{ supported: Locale[]; default: Locale }> {
+  const festival = await publicApi<{ supported_languages: string[]; default_language: string }>(`/public/festivals/${FESTIVAL_CODE}`);
+  const supported = festival.supported_languages.filter((language): language is Locale => language in dictionaries);
+  const fallback = (festival.default_language in dictionaries ? festival.default_language : "ko") as Locale;
+  return { supported: supported.length ? supported : [fallback], default: fallback };
+}
+
 /** 랜딩 페이지용 축제 정보. 백엔드가 없거나 축제가 비공개면 정적 안내로 대체한다. */
 export async function fetchLandingFestival(): Promise<FestivalInfo> {
   return fetchFestivalInfo("ko").catch(() => festivalInfo);
