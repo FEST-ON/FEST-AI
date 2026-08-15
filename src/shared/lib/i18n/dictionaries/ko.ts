@@ -202,6 +202,8 @@ export const ko = {
     noticesTitle: "공지사항",
     emptyNotices: "현재 게시된 공지가 없어요.",
     fallbackTicketLabel: "예약",
+    emergencyBadge: "긴급",
+    emergencyDismissAria: "긴급 공지 닫기",
   },
   congestion: {
     level: {

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { EmergencyAnnouncementBanner } from "@/features/notification/ui/emergency-announcement-banner";
 import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 import { VisitorNav } from "@/widgets/visitor-nav/visitor-nav";
@@ -35,6 +36,7 @@ export function VisitorShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-background">
+      <EmergencyAnnouncementBanner />
       {!isImmersiveAiGuide && <VisitorTopbar />}
       <main
         className={cn(

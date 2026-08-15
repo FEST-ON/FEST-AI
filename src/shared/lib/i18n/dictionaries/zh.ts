@@ -204,6 +204,8 @@ export const zh: typeof ko = {
     noticesTitle: "公告事项",
     emptyNotices: "目前没有公告。",
     fallbackTicketLabel: "预约",
+    emergencyBadge: "紧急",
+    emergencyDismissAria: "关闭紧急公告",
   },
   congestion: {
     level: {

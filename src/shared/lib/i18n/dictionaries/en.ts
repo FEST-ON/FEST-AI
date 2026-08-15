@@ -204,6 +204,8 @@ export const en: typeof ko = {
     noticesTitle: "Notices",
     emptyNotices: "No notices are posted right now.",
     fallbackTicketLabel: "Booking",
+    emergencyBadge: "Emergency",
+    emergencyDismissAria: "Dismiss emergency notice",
   },
   congestion: {
     level: {
