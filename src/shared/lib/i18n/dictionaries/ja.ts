@@ -204,6 +204,8 @@ export const ja: typeof ko = {
     noticesTitle: "お知らせ",
     emptyNotices: "現在掲載されているお知らせはありません。",
     fallbackTicketLabel: "予約",
+    emergencyBadge: "緊急",
+    emergencyDismissAria: "緊急のお知らせを閉じる",
   },
   congestion: {
     level: {
