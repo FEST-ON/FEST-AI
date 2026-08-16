@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Leaf, Users, Scale, Sparkles, FileCheck2, CheckCircle2, CircleDashed, Download, Paperclip } from "lucide-react";
+import { AlertTriangle, Leaf, Users, Scale, Sparkles, FileCheck2, CheckCircle2, CircleDashed, Download, Paperclip } from "lucide-react";
 import { fetchEsgMetrics, generateEsgReport } from "@/entities/esg";
 import type { EsgPillar } from "@/entities/esg";
 import {
@@ -10,24 +10,28 @@ import {
   approveReport,
   createMeasurement,
   exportReport,
+  fetchEsgDashboard,
+  fetchExportJob,
   fetchMeasurements,
   fetchMetricVersions,
   fetchReports,
   MEASUREMENT_STATUS_LABEL,
   reviewMeasurement,
   type NewMeasurement,
-} from "@/features/esg-admin/api/esg-admin";
+} from "@/features/esg-admin";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { Meter } from "@/shared/ui/meter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { useForm } from "@/shared/lib/use-form";
 import { cn, datetimeLocal, seoulDate, seoulDateTime } from "@/shared/lib/utils";
+import { artifactOf, downloadArtifact, formatBytes } from "@/shared/lib/download-artifact";
 
 const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
   환경: { icon: Leaf, tone: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300" },
@@ -36,6 +40,9 @@ const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
 };
 
 const PILLARS: EsgPillar[] = ["환경", "사회", "거버넌스"];
+
+/** 데이터 품질 경고를 한 번에 펼쳐 보여줄 최대 건수. */
+const WARNING_PREVIEW = 5;
 
 const STATUS_TONE: Record<string, Tone> = {
   APPROVED: "success", REJECTED: "danger", DRAFT: "neutral", IN_REVIEW: "warning", SUPERSEDED: "muted",
@@ -56,6 +63,8 @@ export default function EsgPage() {
   const versions = useQuery({ queryKey: ["esg-metric-versions"], queryFn: fetchMetricVersions });
   const measurements = useQuery({ queryKey: ["esg-measurements"], queryFn: () => fetchMeasurements() });
   const reports = useQuery({ queryKey: ["esg-reports"], queryFn: fetchReports });
+  // 데이터 품질 경고와 외부 AI 브리핑은 서버가 계속 내려주고 있었는데 화면이 버리고 있었다.
+  const dashboard = useQuery({ queryKey: ["esg-dashboard"], queryFn: fetchEsgDashboard });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["esg-measurements"] });
@@ -83,12 +92,56 @@ export default function EsgPage() {
   const generate = useMutation({ mutationFn: generateEsgReport, meta: { success: "리포트를 생성했어요." }, onSuccess: refreshReports });
   const approve = useMutation({ mutationFn: approveReport, meta: { success: "리포트를 승인했어요." }, onSuccess: refreshReports });
   const exportJob = useMutation({ mutationFn: exportReport, meta: { success: "내보내기를 시작했어요." }, onSuccess: refreshReports });
+  // 잡 워커가 파일을 만들 때까지 기다린다 — 예전에는 jobId만 찍고 끝나서 산출물을 받을 길이 없었다.
+  const exportedJob = useQuery({
+    queryKey: ["esg-export-job", exportJob.data?.jobId],
+    queryFn: () => fetchExportJob(exportJob.data!.jobId),
+    enabled: Boolean(exportJob.data?.jobId),
+    refetchInterval: (query) => (query.state.data?.status === "COMPLETED" || query.state.data?.status === "FAILED" ? false : 2000),
+  });
+  const reportArtifact = artifactOf(exportedJob.data?.result);
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
         환경·사회·거버넌스 실적을 등록하고 검수자가 승인해요. 승인된 실적만 성과 집계와 보고서에 반영되고, 승인 후에는 수정 대신 정정 실적으로 대체합니다.
       </p>
+
+      {/* 서버가 계속 내려주던 데이터 품질 경고. 화면이 버리고 있어서 미승인·미등록 지표가 드러나지 않았다. */}
+      {(dashboard.data?.dataQualityWarnings.length ?? 0) > 0 && (
+        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" /> 데이터 품질 경고
+          </h2>
+          <ul className="mt-2 space-y-1">
+            {/* 지표가 많은 축제에서 경고가 수십 줄로 늘어지면 오히려 안 읽힌다. 앞부분만 펼친다. */}
+            {dashboard.data?.dataQualityWarnings.slice(0, WARNING_PREVIEW).map((warning) => {
+              const metric = dashboard.data?.metrics.find((row) => row.id === warning.metricId);
+              return (
+                <li key={warning.metricId} className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">{metric?.name ?? warning.metricId}</span>
+                  {warning.type === "MISSING_DATA"
+                    ? " · 승인된 실적이 없어 집계에 반영되지 않아요."
+                    : ` · 승인 대기 실적 ${warning.count}건이 집계에서 빠져 있어요.`}
+                </li>
+              );
+            })}
+            {(dashboard.data?.dataQualityWarnings.length ?? 0) > WARNING_PREVIEW && (
+              <li className="text-xs font-semibold text-muted-foreground">
+                외 {(dashboard.data?.dataQualityWarnings.length ?? 0) - WARNING_PREVIEW}건 — 아래 실적 목록에서 확인하세요.
+              </li>
+            )}
+          </ul>
+        </section>
+      )}
+
+      {/* 외부 AI가 실제로 쓰였을 때만 AI 브리핑으로 표시한다 — 규칙 문장을 AI라고 부르지 않는다. */}
+      {dashboard.data?.aiBrief && dashboard.data.externalAiUsed && (
+        <p className="flex items-start gap-2 rounded-2xl border border-border bg-card p-4 text-sm text-foreground">
+          <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
+          {dashboard.data.aiBrief}
+        </p>
+      )}
 
       {PILLARS.map((pillar) => {
         const { icon: Icon, tone } = PILLAR_META[pillar];
@@ -116,9 +169,7 @@ export default function EsgPage() {
                           {metric.value.toLocaleString()}
                           <span className="ml-0.5 text-xs font-medium text-muted-foreground">{metric.unit}</span>
                         </p>
-                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                        </div>
+                        <Meter percent={pct} className="mt-2 h-1.5" />
                         <p className="mt-1 text-[10px] text-muted-foreground">목표 {metric.target.toLocaleString()}{metric.unit} 대비 {pct}%</p>
                         <p className="mt-2 truncate text-[10px] text-muted-foreground">출처: {metric.source}</p>
                         <p className="text-[10px] text-muted-foreground">{metric.approved ? `${metric.approvedAt} 승인` : "승인 대기중"}</p>
@@ -196,17 +247,17 @@ export default function EsgPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-sm font-semibold text-foreground">{row.metric_name}</p>
+                        <p className="text-sm font-semibold text-foreground">{row.metricName}</p>
                         <StatusPill tone={STATUS_TONE[row.status] ?? "neutral"}>
                           {MEASUREMENT_STATUS_LABEL[row.status] ?? row.status}
                         </StatusPill>
-                        {row.supersedes_id && <Badge variant="outline" className="text-[10px]">정정</Badge>}
-                        <Badge variant="outline" className="gap-1 text-[10px]"><Paperclip className="size-3" /> 증빙 {row.evidence_count}</Badge>
+                        {row.supersedesId && <Badge variant="outline" className="text-[10px]">정정</Badge>}
+                        <Badge variant="outline" className="gap-1 text-[10px]"><Paperclip className="size-3" /> 증빙 {row.evidenceCount}</Badge>
                       </div>
                       <p className="mt-1 text-[11px] text-muted-foreground">
-                        {Number(row.value).toLocaleString()}{row.unit} · {row.source_type}
-                        {row.source_ref && ` · ${row.source_ref}`}
-                        {" · "}{seoulDateTime(row.measured_at)}
+                        {Number(row.value).toLocaleString()}{row.unit} · {row.sourceType}
+                        {row.sourceRef && ` · ${row.sourceRef}`}
+                        {" · "}{seoulDateTime(row.measuredAt)}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -217,7 +268,7 @@ export default function EsgPage() {
                             size="sm"
                             disabled={review.isPending && review.variables?.measurementId === row.id}
                             title="실적을 승인할까요?"
-                            description={`${row.metric_name} ${Number(row.value).toLocaleString()}${row.unit}이(가) ESG 리포트 집계에 반영됩니다. 승인 후에는 정정으로만 바꿀 수 있어요.`}
+                            description={`${row.metricName} ${Number(row.value).toLocaleString()}${row.unit}이(가) ESG 리포트 집계에 반영됩니다. 승인 후에는 정정으로만 바꿀 수 있어요.`}
                             confirmLabel="승인"
                             onConfirm={() => review.mutate({ measurementId: row.id, decision: "APPROVED" })}
                           >
@@ -228,7 +279,7 @@ export default function EsgPage() {
                             variant="destructive"
                             disabled={review.isPending && review.variables?.measurementId === row.id}
                             title="실적을 반려할까요?"
-                            description={`${row.metric_name} · 증빙 ${row.evidence_count}건. 사유는 제출자에게 그대로 전달됩니다.`}
+                            description={`${row.metricName} · 증빙 ${row.evidenceCount}건. 사유는 제출자에게 그대로 전달됩니다.`}
                             confirmLabel="반려"
                             reason={{ label: "반려 사유", placeholder: "예: 반납 스테이션 집계표가 측정 시각과 맞지 않아요." }}
                             onConfirm={(comment) => review.mutate({ measurementId: row.id, decision: "REJECTED", comment })}
@@ -238,7 +289,7 @@ export default function EsgPage() {
                         </>
                       )}
                       {row.status === "APPROVED" && (
-                        <Button size="sm" variant="outline" onClick={() => { setCorrecting(row.id); setForm({ ...emptyMeasurement(), metricVersionId: row.metric_version_id }); }}>
+                        <Button size="sm" variant="outline" onClick={() => { setCorrecting(row.id); setForm({ ...emptyMeasurement(), metricVersionId: row.metricVersionId }); }}>
                           정정
                         </Button>
                       )}
@@ -310,17 +361,13 @@ export default function EsgPage() {
         )}
 
         <div className="mt-4 space-y-2">
-          {reports.isLoading ? (
-            <Skeleton className="h-20 w-full rounded-xl" />
-          ) : reports.data?.length === 0 ? (
-            <p className="text-xs text-muted-foreground">생성된 보고서가 없습니다.</p>
-          ) : (
-            reports.data?.map((report) => (
+          <QueryState query={reports} empty="생성된 보고서가 없습니다." skeleton={<Skeleton className="h-20 w-full rounded-xl" />}>
+            {(rows) => rows.map((report) => (
               <div key={report.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{report.title}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {seoulDate(report.period_from)} ~ {seoulDate(report.period_to)} · {report.format}
+                    {seoulDate(report.periodFrom)} ~ {seoulDate(report.periodTo)} · {report.format}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -330,17 +377,42 @@ export default function EsgPage() {
                   {report.status === "DRAFT" && (
                     <Button size="sm" disabled={approve.isPending && approve.variables === report.id} onClick={() => approve.mutate(report.id)}>보고서 승인</Button>
                   )}
+                  {/* 백엔드 PDF는 표준 14폰트(Latin-1)로만 그려서 한글이 깨진다. DOCX는 본문이 UTF-8 XML이라 정확히 나온다. */}
                   {report.status === "APPROVED" && (
-                    <Button size="sm" variant="outline" disabled={exportJob.isPending && exportJob.variables?.reportId === report.id} onClick={() => exportJob.mutate({ reportId: report.id, format: "PDF" })}>
-                      <Download className="size-3.5" /> PDF 내보내기
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" disabled={exportJob.isPending && exportJob.variables?.reportId === report.id} onClick={() => exportJob.mutate({ reportId: report.id, format: "DOCX" })}>
+                        <Download className="size-3.5" /> DOCX 내보내기
+                      </Button>
+                      <Button size="sm" variant="ghost" title="PDF는 한글이 '?'로 깨집니다" disabled={exportJob.isPending && exportJob.variables?.reportId === report.id} onClick={() => exportJob.mutate({ reportId: report.id, format: "PDF" })}>
+                        PDF(라틴 문자만)
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
-            ))
-          )}
+            ))}
+          </QueryState>
           {(approve.error || exportJob.error) && <p className="text-sm text-destructive">{queryErrorMessage(approve.error ?? exportJob.error)}</p>}
-          {exportJob.data && <p className="text-xs text-muted-foreground">내보내기 작업 {exportJob.data.jobId} · {exportJob.data.status}</p>}
+          {exportJob.data && (
+            <div className="space-y-1.5 rounded-xl border border-border p-3">
+              <p className="text-xs text-muted-foreground">
+                내보내기 작업 {exportJob.data.jobId.slice(0, 8)}… · {exportedJob.data?.status ?? exportJob.data.status}
+              </p>
+              {exportedJob.data?.status === "FAILED" && (
+                <p className="text-xs text-destructive">파일을 만들지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+              )}
+              {reportArtifact && (
+                <>
+                  <Button size="sm" variant="secondary" onClick={() => downloadArtifact(reportArtifact)}>
+                    <Download className="size-3.5" /> {reportArtifact.fileName} 내려받기 ({formatBytes(reportArtifact.byteSize)})
+                  </Button>
+                  {reportArtifact.textLossWarning && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400" role="alert">{reportArtifact.textLossWarning}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </div>

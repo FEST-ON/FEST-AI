@@ -17,7 +17,7 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
-import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import {
   Dialog,
@@ -34,7 +34,7 @@ const EMPTY_FORM: MapLocationInput = {
   latitude: 37.5266,
   longitude: 126.9338,
   description: "",
-  is_visible: true,
+  isVisible: true,
 };
 
 function categoryLabel(category: MapLocationCategory) {
@@ -69,7 +69,7 @@ function LocationForm({ value, onChange }: { value: MapLocationInput; onChange: 
         <Textarea id="location-description" value={value.description ?? ""} onChange={(event) => onChange({ ...value, description: event.target.value })} placeholder="지도에서 방문객에게 보여줄 설명을 입력하세요." rows={3} />
       </div>
       <label className="flex items-center gap-2 text-sm font-medium">
-        <input type="checkbox" checked={value.is_visible} onChange={(event) => onChange({ ...value, is_visible: event.target.checked })} className="size-4 accent-primary" />
+        <input type="checkbox" checked={value.isVisible} onChange={(event) => onChange({ ...value, isVisible: event.target.checked })} className="size-4 accent-primary" />
         방문객 지도에 공개
       </label>
     </div>
@@ -81,7 +81,7 @@ export function MapLocationAdminPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MapLocation | null>(null);
   const [form, setForm] = useState<MapLocationInput>(EMPTY_FORM);
-  const { data: locations, isLoading, isError, error, refetch } = useQuery({
+  const locations = useQuery({
     queryKey: ["admin-map-locations"],
     queryFn: () => fetchMapLocations({ includeHidden: true }),
   });
@@ -93,7 +93,7 @@ export function MapLocationAdminPanel() {
   });
   const deleteMutation = useMutation({ mutationFn: deleteMapLocation, onSuccess: refresh });
   const visibilityMutation = useMutation({
-    mutationFn: (location: MapLocation) => updateMapLocation(location.id, { ...location, is_visible: !location.is_visible }),
+    mutationFn: (location: MapLocation) => updateMapLocation(location.id, { ...location, isVisible: !location.isVisible }),
     onSuccess: refresh,
   });
 
@@ -111,7 +111,7 @@ export function MapLocationAdminPanel() {
       latitude: location.latitude,
       longitude: location.longitude,
       description: location.description,
-      is_visible: location.is_visible,
+      isVisible: location.isVisible,
       version: location.version,
     });
     setDialogOpen(true);
@@ -133,38 +133,38 @@ export function MapLocationAdminPanel() {
         <Button onClick={openCreate}><Plus />지점 추가</Button>
       </div>
 
-      {isLoading ? (
-        <SkeletonList count={3} className="h-36 rounded-xl" wrapperClassName="mt-5 grid gap-3 space-y-0 md:grid-cols-2 xl:grid-cols-3" />
-      ) : isError || !locations ? (
-        <ErrorState className="mt-5" message={queryErrorMessage(error)} onRetry={() => refetch()} />
-      ) : locations.length === 0 ? (
-        <EmptyState className="mt-5" message="등록된 지점이 없어요." />
-      ) : (
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {(locations ?? []).map((location) => (
-            <article key={location.id} className="rounded-xl border border-border p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{categoryLabel(location.category)}</span>
-                    {!location.is_visible && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">비공개</span>}
+      <QueryState
+        query={locations}
+        className="mt-5"
+        empty="등록된 지점이 없어요."
+        skeleton={<SkeletonList count={3} className="h-36 rounded-xl" wrapperClassName="mt-5 grid gap-3 space-y-0 md:grid-cols-2 xl:grid-cols-3" />}
+      >
+        {(rows) => (
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {rows.map((location) => (
+              <article key={location.id} className="rounded-xl border border-border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{categoryLabel(location.category)}</span>
+                      {!location.isVisible && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">비공개</span>}
+                    </div>
+                    <h3 className="mt-2 truncate text-sm font-bold text-foreground">{location.name}</h3>
                   </div>
-                  <h3 className="mt-2 truncate text-sm font-bold text-foreground">{location.name}</h3>
+                  <MapPinned className="size-5 shrink-0 text-muted-foreground" />
                 </div>
-                <MapPinned className="size-5 shrink-0 text-muted-foreground" />
-              </div>
-              <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{location.description || "등록된 안내 문구가 없습니다."}</p>
-              <p className="mt-2 font-mono text-[10px] text-muted-foreground">{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
-              <div className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-3">
-                <Button variant="ghost" size="sm" onClick={() => visibilityMutation.mutate(location)} aria-label={location.is_visible ? "지도에서 숨기기" : "지도에 공개하기"}>{location.is_visible ? <Eye /> : <EyeOff />}{location.is_visible ? "공개" : "비공개"}</Button>
-                <Button variant="ghost" size="icon-sm" onClick={() => openEdit(location)} aria-label="지점 수정"><Pencil /></Button>
-                <Button variant="destructive" size="icon-sm" onClick={() => window.confirm(`${location.name} 지점을 삭제할까요?`) && deleteMutation.mutate(location.id)} aria-label="지점 삭제"><Trash2 /></Button>
-              </div>
-            </article>
-          ))}
-          {locations?.length === 0 && <div className="col-span-full rounded-xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">등록된 부스 지점이 없습니다.</div>}
-        </div>
-      )}
+                <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{location.description || "등록된 안내 문구가 없습니다."}</p>
+                <p className="mt-2 font-mono text-[10px] text-muted-foreground">{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
+                <div className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-3">
+                  <Button variant="ghost" size="sm" onClick={() => visibilityMutation.mutate(location)} aria-label={location.isVisible ? "지도에서 숨기기" : "지도에 공개하기"}>{location.isVisible ? <Eye /> : <EyeOff />}{location.isVisible ? "공개" : "비공개"}</Button>
+                  <Button variant="ghost" size="icon-sm" onClick={() => openEdit(location)} aria-label="지점 수정"><Pencil /></Button>
+                  <Button variant="destructive" size="icon-sm" onClick={() => window.confirm(`${location.name} 지점을 삭제할까요?`) && deleteMutation.mutate(location.id)} aria-label="지점 삭제"><Trash2 /></Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </QueryState>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">

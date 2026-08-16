@@ -10,9 +10,9 @@ export interface CouponRedemption {
 
 interface RedemptionRow {
   id: string;
-  coupon_issue_id: string;
+  couponIssueId: string;
   status: string;
-  redeemed_at: string;
+  redeemedAt: string;
   couponName?: string;
 }
 
@@ -28,10 +28,10 @@ export async function redeemCouponOnSite(issueToken: string): Promise<CouponRede
   });
   return {
     id: row.id,
-    couponIssueId: row.coupon_issue_id,
+    couponIssueId: row.couponIssueId,
     couponName: row.couponName ?? "쿠폰",
     status: row.status,
-    redeemedAt: row.redeemed_at,
+    redeemedAt: row.redeemedAt,
   };
 }
 

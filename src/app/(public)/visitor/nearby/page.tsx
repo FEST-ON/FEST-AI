@@ -8,12 +8,12 @@ import {
   fetchBusinessRecommendations,
   fetchFestivalBusinesses,
   type RecommendedBusiness,
-} from "@/features/business-recommendation/api/recommendations";
+} from "@/features/business-recommendation";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
-import { Skeleton } from "@/shared/ui/skeleton";
+import { QueryState } from "@/shared/ui/query-state";
+import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { useTranslation } from "@/shared/lib/i18n";
 
 function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; sponsored?: boolean; label: string }) {
@@ -24,8 +24,8 @@ function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; s
           <p className="truncate text-sm font-bold text-foreground">{item.name}</p>
           <p className="text-xs text-muted-foreground">
             {item.category}
-            {item.area_name && ` · ${item.area_name}`}
-            {item.distance_meters !== null && ` · ${item.distance_meters}m`}
+            {item.areaName && ` · ${item.areaName}`}
+            {item.distanceMeters !== null && ` · ${item.distanceMeters}m`}
           </p>
         </div>
         {sponsored ? (
@@ -107,30 +107,38 @@ export default function VisitorNearbyPage() {
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">
           <Store className="size-4" /> {t.nearby.recommendedTitle}
         </h2>
-        {recommendations.isLoading || locating ? (
-          <div className="space-y-2"><Skeleton className="h-24 rounded-xl" /><Skeleton className="h-24 rounded-xl" /></div>
-        ) : recommendations.isError ? (
-          <ErrorState message={queryErrorMessage(recommendations.error)} retryLabel={t.common.retry} onRetry={() => recommendations.refetch()} />
-        ) : recommendations.data?.items.length === 0 ? (
-          <EmptyState message={t.nearby.empty} />
+        {/* 위치 확인 중에는 아직 요청 전이라 쿼리 상태로는 드러나지 않는다. */}
+        {locating ? (
+          <SkeletonList count={2} className="h-24 rounded-xl" />
         ) : (
-          <div className="space-y-2">
-            {recommendations.data?.items.map((item) => (
-              <BusinessCard key={item.business_id} item={item} label={t.nearby.sponsoredBadge} />
-            ))}
-          </div>
+          <QueryState
+            query={recommendations}
+            empty={t.nearby.empty}
+            emptyWhen={recommendations.data?.items.length === 0}
+            errorMessage={t.common.loadFailed}
+            retryLabel={t.common.retry}
+            skeleton={<SkeletonList count={2} className="h-24 rounded-xl" />}
+          >
+            {(result) => (
+              <div className="space-y-2">
+                {result.items.map((item) => (
+                  <BusinessCard key={item.businessId} item={item} label={t.nearby.sponsoredBadge} />
+                ))}
+              </div>
+            )}
+          </QueryState>
         )}
       </section>
 
-      {recommendations.data && recommendations.data.sponsored_items.length > 0 && (
+      {recommendations.data && recommendations.data.sponsoredItems.length > 0 && (
         <section className="mt-6">
           <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-foreground">
             <Megaphone className="size-4" /> {t.nearby.sponsoredTitle}
           </h2>
           <p className="mb-2 text-[11px] text-muted-foreground">{t.nearby.sponsoredNotice}</p>
           <div className="space-y-2">
-            {recommendations.data.sponsored_items.map((item) => (
-              <BusinessCard key={item.business_id} item={item} sponsored label={t.nearby.sponsoredBadge} />
+            {recommendations.data.sponsoredItems.map((item) => (
+              <BusinessCard key={item.businessId} item={item} sponsored label={t.nearby.sponsoredBadge} />
             ))}
           </div>
         </section>
@@ -140,27 +148,33 @@ export default function VisitorNearbyPage() {
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">
           <MapPin className="size-4" /> {t.nearby.allBusinessTitle}
         </h2>
-        {businesses.isLoading ? (
-          <Skeleton className="h-24 rounded-xl" />
-        ) : (
-          <div className="space-y-2">
-            {(businesses.data ?? []).map((business) => (
-              <div key={business.id} className="rounded-xl border border-border bg-card p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-semibold text-foreground">{business.name}</p>
-                  <div className="flex shrink-0 items-center gap-1">
-                    {business.accessibility?.wheelchair && <Accessibility className="size-3.5 text-primary" />}
-                    <Badge variant="outline" className="text-[10px]">{business.category}</Badge>
+        <QueryState
+          query={businesses}
+          empty={t.common.empty}
+          errorMessage={t.common.loadFailed}
+          retryLabel={t.common.retry}
+          skeleton={<Skeleton className="h-24 rounded-xl" />}
+        >
+          {(rows) => (
+            <div className="space-y-2">
+              {rows.map((business) => (
+                <div key={business.id} className="rounded-xl border border-border bg-card p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-foreground">{business.name}</p>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {business.accessibility?.wheelchair && <Accessibility className="size-3.5 text-primary" />}
+                      <Badge variant="outline" className="text-[10px]">{business.category}</Badge>
+                    </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    {business.areaName ?? t.nearby.noBooth}{business.boothNo && ` · ${business.boothNo}`}
+                  </p>
+                  {business.description && <p className="mt-1 text-xs text-muted-foreground">{business.description}</p>}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {business.area_name ?? t.nearby.noBooth}{business.booth_no && ` · ${business.booth_no}`}
-                </p>
-                {business.description && <p className="mt-1 text-xs text-muted-foreground">{business.description}</p>}
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </QueryState>
       </section>
     </div>
   );

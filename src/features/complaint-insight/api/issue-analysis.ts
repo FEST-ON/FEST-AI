@@ -29,7 +29,7 @@ export interface IssueAnalysisRow {
   description: string;
   priority: string;
   status: string;
-  updated_at: string | null;
+  updatedAt: string | null;
   analysis: {
     topic: IssueTopic;
     sentiment: IssueSentiment;
@@ -42,6 +42,9 @@ export interface IssueAnalysisRow {
 export async function fetchIssueAnalysis() {
   return festivalApi<IssueAnalysisRow[]>(`/issue-analysis`);
 }
+
+/** 페이지 헤더의 새로고침과 분석 패널이 같은 키를 쓰므로 두 곳에서 불러도 요청은 한 번이다. */
+export const issueAnalysisQuery = { queryKey: ["issue-analysis"], queryFn: fetchIssueAnalysis };
 
 export interface IssueOverride {
   ticketId: string;

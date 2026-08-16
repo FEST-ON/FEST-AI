@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Clock, MapPin, Route, Sparkles } from "lucide-react";
-import { createCoursePlan } from "@/features/course-plan/api/course-plan";
+import { createCoursePlan } from "@/features/course-plan";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
@@ -79,15 +79,15 @@ export default function VisitorCoursePage() {
             {plan.data.items.map((item) => (
               <li key={item.id} className="flex gap-3 rounded-xl border border-border bg-card p-3">
                 <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                  {item.sequence_no}
+                  {item.sequenceNo}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-foreground">{item.program.title}</p>
                   <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="size-3" /> {time(item.program.starts_at)} - {time(item.program.ends_at)}</span>
-                    <span className="flex items-center gap-1"><MapPin className="size-3" /> {item.program.area_name}</span>
+                    <span className="flex items-center gap-1"><Clock className="size-3" /> {time(item.program.startsAt)} - {time(item.program.endsAt)}</span>
+                    <span className="flex items-center gap-1"><MapPin className="size-3" /> {item.program.areaName}</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-primary">{item.recommendation_reason}</p>
+                  <p className="mt-1 text-[11px] text-primary">{item.recommendationReason}</p>
                 </div>
               </li>
             ))}

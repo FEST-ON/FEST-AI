@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Star, CheckCircle2 } from "lucide-react";
 import { fetchSurveyQuestions, hasSurveyAnswer, submitSurvey } from "@/entities/visitor";
-import type { SurveyAnswer } from "@/entities/visitor";
+import type { SurveyAnswer, SurveyQuestion } from "@/entities/visitor";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Button } from "@/shared/ui/button";
-import { QueryState } from "@/shared/ui/query-state";
+import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
@@ -15,11 +15,13 @@ export default function SurveyPage() {
   const { t } = useTranslation();
   const survey = useQuery({ queryKey: ["survey-questions"], queryFn: fetchSurveyQuestions });
   const [answers, setAnswers] = useState<Record<string, SurveyAnswer>>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  // 오류는 제출 버튼 위에 그대로 그리므로 전역 토스트는 끈다.
+  const submit = useMutation({
+    mutationFn: (questions: SurveyQuestion[]) => submitSurvey(questions, answers),
+    meta: { silent: true },
+  });
 
-  if (submitted) {
+  if (submit.isSuccess) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
         <span className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950">
@@ -47,18 +49,9 @@ export default function SurveyPage() {
         {(questions) => (
           <form
             className="mt-4 space-y-5"
-            onSubmit={async (e) => {
+            onSubmit={(e) => {
               e.preventDefault();
-              setSubmitting(true);
-              setError("");
-              try {
-                await submitSurvey(questions, answers);
-                setSubmitted(true);
-              } catch (caught) {
-                setError(caught instanceof Error ? caught.message : t.survey.submitError);
-              } finally {
-                setSubmitting(false);
-              }
+              submit.mutate(questions);
             }}
           >
             {questions.map((q) => (
@@ -143,13 +136,13 @@ export default function SurveyPage() {
                 )}
               </div>
             ))}
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {submit.error && <p className="text-sm text-destructive">{queryErrorMessage(submit.error, t.survey.submitError)}</p>}
             <Button
               type="submit"
               className="w-full"
-              disabled={submitting || questions.some((question) => question.required && !hasSurveyAnswer(answers[question.id]))}
+              disabled={submit.isPending || questions.some((question) => question.required && !hasSurveyAnswer(answers[question.id]))}
             >
-              {submitting ? t.survey.submitting : t.survey.submit}
+              {submit.isPending ? t.survey.submitting : t.survey.submit}
             </Button>
           </form>
         )}

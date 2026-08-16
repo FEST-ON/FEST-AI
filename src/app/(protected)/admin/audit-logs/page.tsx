@@ -1,20 +1,21 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Download, History, Search } from "lucide-react";
-import { AUDIT_LOG_MAX_LIMIT, fetchAuditLogs, type AuditLogEntry, type AuditLogFilter } from "@/entities/audit-log";
-import { createExport, fetchJob } from "@/features/festival-admin/api/festival-admin";
+import { fetchAuditLogs, type AuditLogEntry, type AuditLogFilter } from "@/entities/audit-log";
+import { createExport, fetchJob } from "@/features/festival-admin";
 import { useAdminSessionStore, type AdminUser } from "@/features/admin-auth/model/store";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { seoulDateTime } from "@/shared/lib/utils";
+import { artifactOf, downloadArtifact, formatBytes, type JobResult } from "@/shared/lib/download-artifact";
 
 // 백엔드 스펙에 action enum이 없어, audit() 호출부를 전수 조사해 정리한 값입니다.
 // 고정 문자열뿐 아니라 body.decision·body.status를 그대로 넘기는 호출부가 있어
@@ -92,12 +93,24 @@ export default function AuditLogsPage() {
   const [resourceTypeInput, setResourceTypeInput] = useState("");
   const [limit, setLimit] = useState(50);
 
-  const { data: logs = [], isLoading, error, refetch } = useQuery({
+  // 서버가 (created_at, id) 키셋 커서를 내려주므로 100건 천장 없이 이어서 받는다.
+  const logsQuery = useInfiniteQuery({
     queryKey: ["audit-logs", filter, limit],
-    queryFn: () => fetchAuditLogs(filter, limit),
+    queryFn: ({ pageParam }) => fetchAuditLogs(filter, limit, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
+  const logs = logsQuery.data?.pages.flatMap((page) => page.entries) ?? [];
+  // QueryState는 단일 목록을 기대한다. 무한 쿼리의 페이지들을 하나로 펴서 넘긴다.
+  const listQuery = {
+    isLoading: logsQuery.isLoading,
+    isError: logsQuery.isError,
+    error: logsQuery.error,
+    data: logsQuery.data ? logs : undefined,
+    refetch: logsQuery.refetch,
+  };
 
-  const exportJob = useMutation({ mutationFn: createExport, onSuccess: () => refetch() });
+  const exportJob = useMutation({ mutationFn: createExport });
   // 내보내기는 job으로 기록된다. 아직 진행 중일 때만 상태를 다시 확인한다.
   const job = useQuery({
     queryKey: ["export-job", exportJob.data?.jobId],
@@ -105,6 +118,8 @@ export default function AuditLogsPage() {
     enabled: Boolean(exportJob.data?.jobId),
     refetchInterval: (query) => (query.state.data?.status === "COMPLETED" || query.state.data?.status === "FAILED" ? false : 2000),
   });
+
+  const exportArtifact = artifactOf(job.data?.result as JobResult | null | undefined);
 
   function applyFilter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -162,8 +177,14 @@ export default function AuditLogsPage() {
         </Button>
         <div className="ml-auto flex items-center gap-2">
           {exportJob.data && (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-2 text-[11px] text-muted-foreground">
               작업 {exportJob.data.jobId.slice(0, 8)}… · {job.data?.status ?? exportJob.data.status}
+              {exportArtifact && (
+                <Button type="button" size="sm" variant="secondary"
+                        onClick={() => downloadArtifact(exportArtifact)}>
+                  <Download className="size-3.5" /> {exportArtifact.fileName} 내려받기 ({formatBytes(exportArtifact.byteSize)})
+                </Button>
+              )}
             </span>
           )}
           {exportJob.error && <span className="text-[11px] text-destructive">{queryErrorMessage(exportJob.error)}</span>}
@@ -177,60 +198,54 @@ export default function AuditLogsPage() {
       </form>
 
       <div className="rounded-2xl border border-border bg-card">
-        {isLoading ? (
-          <SkeletonList count={5} className="h-10 w-full" wrapperClassName="p-4" />
-        ) : error ? (
-          <ErrorState className="m-4" message={queryErrorMessage(error)} onRetry={() => refetch()} />
-        ) : logs.length === 0 ? (
-          <EmptyState className="m-4 p-10" message="기록된 감사 로그가 없어요." />
-        ) : (
-          <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>시각</TableHead>
-                <TableHead>사용자</TableHead>
-                <TableHead>행위</TableHead>
-                <TableHead>대상</TableHead>
-                <TableHead>변경 내용</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {seoulDateTime(log.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-sm">{describeActor(log, currentUser)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-[10px]" title={describeAction(log.action)}>{log.action}</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {log.resourceType ?? "-"}{log.resourceId ? ` · ${log.resourceId}` : ""}
-                  </TableCell>
-                  <TableCell className="text-xs whitespace-normal text-muted-foreground">{describeChange(log)}</TableCell>
+        <QueryState
+          query={listQuery}
+          className="m-4"
+          empty="기록된 감사 로그가 없어요."
+          skeleton={<SkeletonList count={5} className="h-10 w-full" wrapperClassName="p-4" />}
+        >
+          {(rows) => (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>시각</TableHead>
+                  <TableHead>사용자</TableHead>
+                  <TableHead>행위</TableHead>
+                  <TableHead>대상</TableHead>
+                  <TableHead>변경 내용</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </div>
-        )}
+              </TableHeader>
+              <TableBody>
+                {rows.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {seoulDateTime(log.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-sm">{describeActor(log, currentUser)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]" title={describeAction(log.action)}>{log.action}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {log.resourceType ?? "-"}{log.resourceId ? ` · ${log.resourceId}` : ""}
+                    </TableCell>
+                    <TableCell className="text-xs whitespace-normal text-muted-foreground">{describeChange(log)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </QueryState>
       </div>
 
-      {logs.length >= limit && (
-        <div className="flex flex-col items-center gap-1.5">
-          {limit < AUDIT_LOG_MAX_LIMIT ? (
-            // ponytail: 백엔드가 커서를 안 내려줘서 limit 상향이 전부다. 100건 넘게 보려면 audit_logs에 커서 페이징이 필요하다.
-            <Button size="sm" variant="outline" onClick={() => setLimit(AUDIT_LOG_MAX_LIMIT)}>
-              최근 {AUDIT_LOG_MAX_LIMIT}건까지 더 보기
-            </Button>
-          ) : (
-            <p className="text-[11px] text-muted-foreground">
-              최근 {AUDIT_LOG_MAX_LIMIT}건까지만 볼 수 있어요. 더 필요하면 CSV로 내보내세요.
-            </p>
-          )}
+      {logsQuery.hasNextPage && (
+        <div className="flex justify-center">
+          <Button size="sm" variant="outline" disabled={logsQuery.isFetchingNextPage}
+                  onClick={() => logsQuery.fetchNextPage()}>
+            {logsQuery.isFetchingNextPage ? "불러오는 중…" : `${limit}건 더 보기`}
+          </Button>
         </div>
       )}
+
     </div>
   );
 }

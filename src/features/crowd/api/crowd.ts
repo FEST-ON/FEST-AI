@@ -20,24 +20,33 @@ export const CROWD_TONE: Record<CrowdLevel, Tone> = {
 };
 
 export interface PublicCrowd {
-  area_id: string;
-  area_name: string;
-  crowd_level: CrowdLevel;
-  estimated_wait_min: number | null;
-  captured_at: string;
+  areaId: string;
+  areaName: string;
+  crowdLevel: CrowdLevel;
+  estimatedWaitMin: number | null;
+  capturedAt: string;
   stale: boolean;
 }
 
-export function fetchPublicCrowd() {
-  return publicApi<PublicCrowd[]>(`/public/festivals/${FESTIVAL_CODE}/crowd`);
+/**
+ * 공개 혼잡도는 배열이 아니라 구역 목록을 updatedAt·stale로 감싼 객체다.
+ * 구역 이름도 운영자 API의 areaName이 아니라 name으로 온다 — 화면이 쓰는 모양으로 맞춰서 돌려준다.
+ */
+export async function fetchPublicCrowd(): Promise<PublicCrowd[]> {
+  const { zones } = await publicApi<{
+    updatedAt: string;
+    stale: boolean;
+    zones: (Omit<PublicCrowd, "areaName"> & { name: string })[];
+  }>(`/public/festivals/${FESTIVAL_CODE}/crowd`);
+  return zones.map(({ name, ...zone }) => ({ ...zone, areaName: name }));
 }
 
 export interface AdminCrowdSnapshot extends PublicCrowd {
   id: string;
-  source_type: string;
-  people_count: number | null;
-  expires_at: string;
-  program_title: string | null;
+  sourceType: string;
+  peopleCount: number | null;
+  expiresAt: string;
+  programTitle: string | null;
 }
 
 export async function fetchCrowdSnapshots() {

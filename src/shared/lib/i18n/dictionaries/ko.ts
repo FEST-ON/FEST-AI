@@ -4,6 +4,8 @@ export const ko = {
     retry: "다시 시도",
     empty: "표시할 내용이 없어요.",
     close: "닫기",
+    cancel: "취소",
+    translationUnavailable: "번역 서비스에 연결하지 못해 원문(한국어)으로 표시하고 있어요.",
     timeAgo: {
       justNow: "방금 전",
       minutesAgo: (n: number) => `${n}분 전`,
@@ -49,6 +51,9 @@ export const ko = {
     transportNotice: "교통 정보는 외부 교통 API 연동 전이라 참고용 안내입니다.",
     facilityOpen: "운영 중",
     facilityClosed: "운영 종료",
+    facilityHoursUnknown: "운영시간 확인 필요",
+    filterAll: "전체",
+    wheelchairLabel: "휠체어 접근 가능",
   },
   crowd: {
     empty: "아직 등록된 혼잡도 정보가 없어요.",
@@ -143,6 +148,9 @@ export const ko = {
     spotsTitle: "스탬프 지점",
     doneButton: "완료",
     stampButton: "스탬프 찍기",
+    scanButton: "QR 스캔하기",
+    scanHint: "현장 안내판의 QR을 비추면 스탬프가 찍혀요. 카메라를 쓸 수 없으면 안내판의 코드를 직접 입력해 주세요.",
+    codeLabel: "스탬프 코드 직접 입력",
     pointsTitle: "적립 포인트",
     pointsBalance: "현재 잔액",
     pointsEmpty: "아직 적립 내역이 없어요.",
@@ -294,6 +302,7 @@ export const ko = {
   coupon: {
     benefitLabel: (type: string, value: number) => (type === "PERCENT" ? `${value}% 할인` : type === "FIXED" ? `${value.toLocaleString()}원 할인` : "사은품 증정"),
     tokenMissing: "이 기기에 사용 코드가 없어요. 쿠폰을 발행받은 기기에서 열거나, 안내데스크에 문의해 주세요.",
+    reissueButton: "사용 코드 다시 받기",
     usedLine: "사용 완료된 쿠폰이에요.",
     remainingLabel: (count: number) => `${count}장 남음`,
     soldOut: "모두 소진됐어요",

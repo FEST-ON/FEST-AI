@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Search, ShieldCheck } from "lucide-react";
 import {
+  archiveInternalDocument,
   createInternalDocument,
   DOCUMENT_ROLES,
   fetchInternalDocuments,
   searchOperations,
+  updateInternalDocument,
   type NewInternalDocument,
-} from "@/features/ops-documents/api/documents";
+} from "@/features/ops-documents";
 import { ADMIN_ROLE_LABEL } from "@/shared/lib/permissions";
 import { Badge } from "@/shared/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
@@ -19,6 +21,8 @@ import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { ConfirmButton } from "@/shared/ui/confirm-button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { useForm } from "@/shared/lib/use-form";
 import { seoulDateTime } from "@/shared/lib/utils";
 
@@ -50,6 +54,18 @@ export default function DocumentsPage() {
     },
   });
   const search = useMutation({ mutationFn: searchOperations, meta: { silent: true } });
+  const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
+  const refreshDocuments = () => queryClient.invalidateQueries({ queryKey: ["internal-documents"] });
+  const update = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) => updateInternalDocument(id, { title }),
+    meta: { success: "문서를 수정했어요." },
+    onSuccess: () => { setEditing(null); refreshDocuments(); },
+  });
+  const archive = useMutation({
+    mutationFn: archiveInternalDocument,
+    meta: { success: "문서를 보관했어요." },
+    onSuccess: refreshDocuments,
+  });
 
   function toggleRole(role: string) {
     setForm((previous) => ({
@@ -171,19 +187,35 @@ export default function DocumentsPage() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">{document.title}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {document.document_type}
-                        {document.updated_at && ` · ${seoulDateTime(document.updated_at)}`}
+                        {document.documentType}
+                        {document.updatedAt && ` · ${seoulDateTime(document.updatedAt)}`}
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
-                      {document.allowed_roles.map((role) => (
+                      {document.allowedRoles.map((role) => (
                         <Badge key={role} variant="outline" className="text-[10px]">{ADMIN_ROLE_LABEL[role] ?? role}</Badge>
                       ))}
-                      {document.source_url && (
-                        <a href={document.source_url} target="_blank" rel="noreferrer" className="text-[11px] font-medium text-primary hover:underline">
+                      {document.sourceUrl && (
+                        <a href={document.sourceUrl} target="_blank" rel="noreferrer" className="text-[11px] font-medium text-primary hover:underline">
                           원문
                         </a>
                       )}
+                      {/* 등록만 되고 고칠 수 없어서 오타 하나도 수정하지 못했다. */}
+                      <Button size="sm" variant="ghost" className="text-[11px]"
+                              onClick={() => setEditing({ id: document.id, title: document.title })}>
+                        수정
+                      </Button>
+                      <ConfirmButton
+                        size="sm"
+                        variant="ghost"
+                        className="text-[11px] text-destructive"
+                        title="문서를 보관할까요?"
+                        description="보관하면 목록과 AI 운영 검색에서 빠져요. 기록은 남습니다."
+                        confirmLabel="보관"
+                        onConfirm={() => archive.mutate(document.id)}
+                      >
+                        보관
+                      </ConfirmButton>
                     </div>
                   </li>
                 ))}
@@ -192,6 +224,22 @@ export default function DocumentsPage() {
           </QueryState>
         </div>
       </section>
+
+      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>문서 제목 수정</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); if (editing) update.mutate(editing); }}>
+            <Input value={editing?.title ?? ""} required
+                   onChange={(event) => setEditing(editing && { ...editing, title: event.target.value })} />
+            {update.error && <p className="text-xs text-destructive">{queryErrorMessage(update.error)}</p>}
+            <Button type="submit" size="sm" className="w-full" disabled={update.isPending}>
+              {update.isPending ? "저장 중..." : "저장"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -12,7 +12,8 @@ import {
   type CrowdLevel,
   type NewCrowdSnapshot,
 } from "@/features/crowd/api/crowd";
-import { fetchAdminBookings, updateBookingStatus, type BookingAction } from "@/features/reservation/api/bookings";
+import { fetchAdminBookings, updateBookingStatus } from "@/features/reservation";
+import { bookingActionsFor, type BookingAction } from "@/shared/lib/booking-policy";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import { Badge } from "@/shared/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
@@ -31,12 +32,13 @@ const BOOKING_STATUS_LABEL: Record<string, string> = {
   CONFIRMED: "예약 확정", WAITING: "대기 중", CALLED: "호출됨", COMPLETED: "입장 완료", CANCELLED: "취소", NO_SHOW: "미입장",
 };
 
-// 예약 상태별로 가능한 다음 조치만 보여준다 — 취소·완료된 건에 버튼이 남아 있으면 오조작이 난다.
-const BOOKING_ACTIONS: { status: BookingAction; label: string; icon: typeof BellRing; from: string[] }[] = [
-  { status: "CALLED", label: "호출", icon: BellRing, from: ["CONFIRMED", "WAITING"] },
-  { status: "COMPLETED", label: "이용 완료", icon: CheckCircle2, from: ["CONFIRMED", "WAITING", "CALLED"] },
-  { status: "NO_SHOW", label: "미방문", icon: UserX, from: ["CALLED"] },
-];
+// 라벨과 아이콘만 화면이 정하고, 어떤 상태에서 어떤 조치가 가능한지는
+// shared/lib/booking-policy가 서버 규칙과 같은 표로 들고 있다.
+const BOOKING_ACTION_META: Record<BookingAction, { label: string; icon: typeof BellRing }> = {
+  CALLED: { label: "호출", icon: BellRing },
+  COMPLETED: { label: "이용 완료", icon: CheckCircle2 },
+  NO_SHOW: { label: "미방문", icon: UserX },
+};
 
 const BOOKING_FILTERS = ["대기·호출", "완료", "전체"] as const;
 type BookingFilter = (typeof BOOKING_FILTERS)[number];
@@ -78,7 +80,7 @@ export default function FieldOperationsPage() {
   // 구역별 최신 스냅샷만 현황으로 쓴다 — 목록은 시간 역순이라 첫 등장이 최신이다.
   const latestByArea = new Map<string, NonNullable<typeof snapshots.data>[number]>();
   (snapshots.data ?? []).forEach((row) => {
-    if (!latestByArea.has(row.area_id)) latestByArea.set(row.area_id, row);
+    if (!latestByArea.has(row.areaId)) latestByArea.set(row.areaId, row);
   });
 
   return (
@@ -90,7 +92,7 @@ export default function FieldOperationsPage() {
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Activity className="size-4 text-primary" /> 혼잡도 등록</h2>
         <form
-          className="mt-3 grid gap-3 sm:grid-cols-5"
+          className="mt-3 grid gap-3 sm:grid-cols-6"
           onSubmit={(event) => {
             event.preventDefault();
             submitSnapshot.mutate(form);
@@ -114,6 +116,11 @@ export default function FieldOperationsPage() {
               </SelectContent>
             </Select>
           </div>
+          {/* 인원 수는 타입에만 있고 입력란이 없어서 늘 비어 있었다 — 혼잡도 근거 수치다. */}
+          <div className="space-y-1">
+            <Label htmlFor="people">현재 인원(명)</Label>
+            <Input id="people" type="number" min={0} value={form.peopleCount ?? ""} onChange={(event) => set("peopleCount")(event.target.value === "" ? null : Number(event.target.value))} />
+          </div>
           <div className="space-y-1">
             <Label htmlFor="wait">예상 대기(분)</Label>
             <Input id="wait" type="number" min={0} value={form.estimatedWaitMin ?? ""} onChange={(event) => set("estimatedWaitMin")(event.target.value === "" ? null : Number(event.target.value))} />
@@ -122,7 +129,7 @@ export default function FieldOperationsPage() {
             <Label htmlFor="valid">유효시간(분)</Label>
             <Input id="valid" type="number" min={5} value={form.validMinutes} onChange={(event) => set("validMinutes")(Number(event.target.value))} required />
           </div>
-          <div className="sm:col-span-5 flex items-center justify-end gap-3">
+          <div className="sm:col-span-6 flex items-center justify-end gap-3">
             {submitSnapshot.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(submitSnapshot.error)}</p>}
             <Button type="submit" size="sm" disabled={!form.areaId || submitSnapshot.isPending}>
               {submitSnapshot.isPending ? "등록 중..." : "혼잡도 등록"}
@@ -139,14 +146,14 @@ export default function FieldOperationsPage() {
               {[...latestByArea.values()].map((row) => (
                 <div key={row.id} className="rounded-xl border border-border p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-foreground">{row.area_name}</p>
-                    <StatusPill tone={row.stale ? "muted" : CROWD_TONE[row.crowd_level]} className="shrink-0">
-                      {CROWD_LABEL[row.crowd_level]}
+                    <p className="truncate text-sm font-semibold text-foreground">{row.areaName}</p>
+                    <StatusPill tone={row.stale ? "muted" : CROWD_TONE[row.crowdLevel]} className="shrink-0">
+                      {CROWD_LABEL[row.crowdLevel]}
                     </StatusPill>
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    {row.estimated_wait_min !== null ? `예상 대기 ${row.estimated_wait_min}분 · ` : ""}
-                    {seoulTime(row.captured_at)} 기준
+                    {row.estimatedWaitMin !== null ? `예상 대기 ${row.estimatedWaitMin}분 · ` : ""}
+                    {seoulTime(row.capturedAt)} 기준
                     {row.stale && " · 오래된 값"}
                   </p>
                 </div>
@@ -179,25 +186,28 @@ export default function FieldOperationsPage() {
                 <div key={booking.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">
-                      {booking.queue_number ? `${booking.queue_number}번 · ` : ""}{booking.program_title}
+                      {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}{booking.programTitle}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      {seoulDateTime(booking.starts_at)} · {booking.party_size}명
+                      {seoulDateTime(booking.startsAt)} · {booking.partySize}명
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className="text-[10px]">{BOOKING_STATUS_LABEL[booking.status] ?? booking.status}</Badge>
-                    {BOOKING_ACTIONS.filter(({ from }) => from.includes(booking.status)).map(({ status, label, icon: Icon }) => (
-                      <Button
-                        key={status}
-                        size="sm"
-                        variant="outline"
-                        disabled={changeBooking.isPending && changeBooking.variables?.bookingId === booking.id}
-                        onClick={() => changeBooking.mutate({ bookingId: booking.id, status })}
-                      >
-                        <Icon className="size-3.5" /> {label}
-                      </Button>
-                    ))}
+                    {bookingActionsFor(booking.status).map((status) => {
+                      const { label, icon: Icon } = BOOKING_ACTION_META[status];
+                      return (
+                        <Button
+                          key={status}
+                          size="sm"
+                          variant="outline"
+                          disabled={changeBooking.isPending && changeBooking.variables?.bookingId === booking.id}
+                          onClick={() => changeBooking.mutate({ bookingId: booking.id, status })}
+                        >
+                          <Icon className="size-3.5" /> {label}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

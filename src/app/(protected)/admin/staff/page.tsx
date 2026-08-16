@@ -9,7 +9,7 @@ import {
   fetchMemberships,
   fetchStaffAssignments,
   type NewStaffAssignment,
-} from "@/features/staff/api/staff";
+} from "@/features/staff";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import { ADMIN_ROLE_LABEL } from "@/shared/lib/permissions";
 import { useForm } from "@/shared/lib/use-form";
@@ -54,7 +54,7 @@ export default function StaffPage() {
   });
   const acknowledge = useMutation({ mutationFn: acknowledgeAssignment, meta: { success: "배정을 확인 처리했어요." }, onSuccess: invalidate });
 
-  const visible = (assignments.data ?? []).filter((row) => areaFilter === ALL_AREAS || row.area_id === areaFilter);
+  const visible = (assignments.data ?? []).filter((row) => areaFilter === ALL_AREAS || row.areaId === areaFilter);
 
   return (
     <div className="space-y-4">
@@ -149,17 +149,17 @@ export default function StaffPage() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <UserCog className="size-4 text-muted-foreground" />
-                    <p className="text-sm font-semibold text-foreground">{assignment.staff_name}</p>
+                    <p className="text-sm font-semibold text-foreground">{assignment.staffName}</p>
                     <Badge variant="outline" className="text-[10px]">{ADMIN_ROLE_LABEL[assignment.role] ?? assignment.role}</Badge>
-                    <span className="text-xs text-muted-foreground">{assignment.duty_role}</span>
+                    <span className="text-xs text-muted-foreground">{assignment.dutyRole}</span>
                   </div>
                   <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
                     <Clock className="size-3" />
-                    {seoulDateTime(assignment.starts_at)} ~ {seoulTime(assignment.ends_at)}
+                    {seoulDateTime(assignment.startsAt)} ~ {seoulTime(assignment.endsAt)}
                     {assignment.task && ` · ${assignment.task}`}
                   </p>
                 </div>
-                {assignment.acknowledged_at ? (
+                {assignment.acknowledgedAt ? (
                   <Badge className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
                     <CheckCircle2 className="size-3" /> 확인 완료
                   </Badge>

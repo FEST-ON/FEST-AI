@@ -1,15 +1,15 @@
 import { FESTIVAL_CODE, publicApi } from "@/shared/lib/api";
-import { fetchVisitorBookings } from "@/features/reservation/api/bookings";
+import { fetchVisitorBookings } from "@/features/reservation";
 
 export interface PublicAnnouncement {
   id: string;
   title: string;
   severity: "INFO" | "WARNING" | "EMERGENCY";
   body: { text?: string; content?: string } | string;
-  starts_at: string;
+  startsAt: string;
   // 운영자가 지정한 자동 해제 시각. 지정하지 않으면 내려오지 않거나 null이다.
-  ends_at?: string | null;
-  updated_at: string;
+  endsAt?: string | null;
+  updatedAt: string;
 }
 
 export function fetchAnnouncements() {
@@ -36,10 +36,10 @@ export function isEmergency(announcement: PublicAnnouncement) {
 }
 
 function withinWindow(announcement: PublicAnnouncement, now: number) {
-  const startsAt = new Date(announcement.starts_at).getTime();
+  const startsAt = new Date(announcement.startsAt).getTime();
   if (Number.isFinite(startsAt) && startsAt > now) return false;
-  if (!announcement.ends_at) return true;
-  const endsAt = new Date(announcement.ends_at).getTime();
+  if (!announcement.endsAt) return true;
+  const endsAt = new Date(announcement.endsAt).getTime();
   return !Number.isFinite(endsAt) || endsAt > now;
 }
 
@@ -53,5 +53,5 @@ export function visibleAnnouncements(list: PublicAnnouncement[] | undefined, now
     .filter((announcement) => withinWindow(announcement, now))
     .sort((a, b) =>
       SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
-      b.updated_at.localeCompare(a.updated_at));
+      b.updatedAt.localeCompare(a.updatedAt));
 }

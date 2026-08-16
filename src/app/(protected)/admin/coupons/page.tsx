@@ -4,7 +4,7 @@ import { useCallback, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { BadgeCheck, ScanLine } from "lucide-react";
 import { isCouponToken, redeemCouponOnSite, type CouponRedemption } from "@/features/coupon-redemption/api/redeem";
-import { CouponQrScanner } from "@/features/coupon-redemption/ui/qr-scanner";
+import { QrScanner } from "@/shared/ui/qr-scanner";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -49,7 +49,7 @@ export default function AdminCouponsPage() {
           <h2 className="text-base font-bold text-foreground">쿠폰 사용 처리</h2>
         </div>
 
-        <CouponQrScanner onScan={submitToken} />
+        <QrScanner onScan={submitToken} label="카메라로 쿠폰 QR 스캔" />
 
         <form onSubmit={handleSubmit} className="space-y-2">
           <Label htmlFor="coupon-token">쿠폰 코드</Label>

@@ -3,21 +3,87 @@ import { ApiError, FESTIVAL_CODE, json, visitorApi, visitorSessionGeneration } f
 import { BCP47_BY_LOCALE } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
 
+// 대화 ID는 새로고침해도 살아남아야 한다 — 메모리에만 두면 화면을 다시 열 때마다 새
+// 대화가 열려서, 서버에 남아 있는 이전 대화 내용을 다시 볼 방법이 없었다.
+const CONVERSATION_KEY = "festai-ai-conversation";
+
 let conversationId: string | undefined;
 let conversationLocale: Locale | undefined;
 let conversationSession: number | undefined;
+
+function restore(): { id: string; locale: Locale } | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem(CONVERSATION_KEY);
+    return raw ? (JSON.parse(raw) as { id: string; locale: Locale }) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function remember(id: string, locale: Locale) {
+  try {
+    window.localStorage.setItem(CONVERSATION_KEY, JSON.stringify({ id, locale }));
+  } catch {
+    // 저장 공간이 없어도 대화 자체는 이어진다 — 새로고침 시 복원만 안 될 뿐이다.
+  }
+}
 
 async function openConversation(locale: Locale) {
   // 대화 세션은 생성 시점의 언어로 고정되고 방문자 세션에 매여 있다.
   // 언어가 바뀌거나 방문자 세션이 재발급되면 이전 대화는 못 쓰므로 새로 연다.
   if (conversationLocale !== locale || conversationSession !== visitorSessionGeneration()) resetConversation();
   if (!conversationId) {
-    conversationId = (await visitorApi<{ id: string }>("/visitor/ai/conversations", json("POST", { festivalCode: FESTIVAL_CODE, language: locale }))).id;
+    const stored = restore();
+    if (stored?.locale === locale) {
+      conversationId = stored.id;
+    } else {
+      conversationId = (await visitorApi<{ id: string }>("/visitor/ai/conversations", json("POST", { festivalCode: FESTIVAL_CODE, language: locale }))).id;
+      remember(conversationId, locale);
+    }
     conversationLocale = locale;
     // 생성 요청 중에 세션이 갱신됐을 수 있으므로 응답 이후 값을 기록한다.
     conversationSession = visitorSessionGeneration();
   }
   return conversationId;
+}
+
+interface HistoryRow {
+  id: string;
+  question: string;
+  answer: string;
+  freshnessAt?: string | null;
+  fallback?: unknown;
+  sources: Array<{ contentVersionId: string }>;
+}
+
+/**
+ * 이전 대화 복원. 서버에 남아 있는 기록을 화면이 한 번도 읽지 않아서, 새로고침하면
+ * 대화가 통째로 사라진 것처럼 보였다.
+ */
+export async function loadHistory(locale: Locale): Promise<Array<{ role: "user" | "assistant"; content: string; messageId: string; freshnessAt?: string; needsFallbackChannel: boolean }>> {
+  const stored = restore();
+  if (!stored || stored.locale !== locale) return [];
+  try {
+    const rows = await visitorApi<HistoryRow[]>(`/visitor/ai/conversations/${stored.id}/messages`);
+    conversationId = stored.id;
+    conversationLocale = locale;
+    conversationSession = visitorSessionGeneration();
+    return rows.flatMap((row) => [
+      { role: "user" as const, content: row.question, messageId: `${row.id}-q`, needsFallbackChannel: false },
+      {
+        role: "assistant" as const,
+        content: row.answer,
+        messageId: row.id,
+        freshnessAt: row.freshnessAt ?? undefined,
+        needsFallbackChannel: Boolean(row.fallback) || row.sources.length === 0,
+      },
+    ]);
+  } catch {
+    // 세션이 만료됐거나 대화가 사라졌으면 빈 화면으로 시작한다.
+    resetConversation();
+    return [];
+  }
 }
 
 function sendMessage(id: string, question: string) {
@@ -58,6 +124,13 @@ export function resetConversation() {
   conversationId = undefined;
   conversationLocale = undefined;
   conversationSession = undefined;
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem(CONVERSATION_KEY);
+    } catch {
+      // 지우지 못해도 위 메모리 상태가 이미 비었으므로 새 대화가 열린다.
+    }
+  }
 }
 
 export function reportAiMessage(messageId: string) {

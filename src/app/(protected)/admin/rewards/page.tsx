@@ -9,7 +9,7 @@ import {
   fetchRewardCampaigns,
   type NewRewardAction,
   type NewRewardCampaign,
-} from "@/features/rewards/api/rewards";
+} from "@/features/rewards";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -113,7 +113,7 @@ export default function RewardsPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-foreground">{item.name}</p>
                       <span className="text-[11px] text-muted-foreground">
-                        {seoulShort(item.starts_at)} ~ {seoulShort(item.ends_at)} · 일일 {item.daily_point_limit}P
+                        {seoulShort(item.startsAt)} ~ {seoulShort(item.endsAt)} · 일일 {item.dailyPointLimit}P
                       </span>
                     </div>
                     {item.actions.length === 0 ? (
@@ -122,11 +122,11 @@ export default function RewardsPage() {
                       <ul className="mt-2 space-y-1">
                         {item.actions.map((row) => (
                           <li key={row.id} className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <Badge variant="outline" className="text-[10px]">{row.action_type}</Badge>
+                            <Badge variant="outline" className="text-[10px]">{row.actionType}</Badge>
                             <span className="text-foreground">{row.rule.name ?? "-"}</span>
                             <span>{row.rule.location ?? ""}</span>
-                            <span>· {VERIFICATION_LABEL[row.verification_type] ?? row.verification_type}</span>
-                            <span>· {row.points}P · 1인 {row.per_user_limit}회</span>
+                            <span>· {VERIFICATION_LABEL[row.verificationType] ?? row.verificationType}</span>
+                            <span>· {row.points}P · 1인 {row.perUserLimit}회</span>
                           </li>
                         ))}
                       </ul>
@@ -141,69 +141,73 @@ export default function RewardsPage() {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Sparkles className="size-4 text-primary" /> 적립 행동</h2>
-        {campaignsQuery.isLoading ? (
-          <Skeleton className="mt-3 h-10 w-full rounded-lg" />
-        ) : campaigns.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">먼저 캠페인을 만들면 적립 행동을 추가할 수 있어요.</p>
-        ) : (
-          <form
-            className="mt-3 grid gap-3 sm:grid-cols-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              action.mutate({ ...actionForm, campaignId: selectedCampaign });
-            }}
-          >
-            <div className="space-y-1">
-              <Label>캠페인</Label>
-              <Select value={selectedCampaign} onValueChange={(value) => setSelectedCampaign(String(value ?? ""))}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="캠페인 선택" /></SelectTrigger>
-                <SelectContent>
-                  {campaigns.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="action-type">행동 코드</Label>
-              <Input id="action-type" list="reward-action-types" value={actionForm.actionType} onChange={(event) => actionFormSet("actionType")(event.target.value.toUpperCase())} required placeholder="예: REUSABLE_CUP" />
-              <datalist id="reward-action-types">
-                {ACTION_TYPES.map((type) => <option key={type} value={type} />)}
-              </datalist>
-            </div>
-            <div className="space-y-1">
-              <Label>인증 방식</Label>
-              <Select value={actionForm.verificationType} onValueChange={(value) => actionFormSet("verificationType")(value as NewRewardAction["verificationType"])}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SELF">자가 인증 (방문객 화면 노출)</SelectItem>
-                  <SelectItem value="QR">QR 인증</SelectItem>
-                  <SelectItem value="STAFF">현장 직원 확인</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="action-name">방문객 표시 이름</Label>
-              <Input id="action-name" {...actionFormField("name")} required placeholder="예: 다회용기 사용" />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="action-location">위치</Label>
-              <Input id="action-location" {...actionFormField("location")} required placeholder="예: 푸드존 F-2" />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+        <QueryState
+          query={campaignsQuery}
+          className="mt-2"
+          empty="먼저 캠페인을 만들면 적립 행동을 추가할 수 있어요."
+          emptyWhen={campaigns.length === 0}
+          skeleton={<Skeleton className="mt-3 h-10 w-full rounded-lg" />}
+        >
+          {() => (
+            <form
+              className="mt-3 grid gap-3 sm:grid-cols-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                action.mutate({ ...actionForm, campaignId: selectedCampaign });
+              }}
+            >
               <div className="space-y-1">
-                <Label htmlFor="points">포인트</Label>
-                <Input id="points" type="number" min={1} value={actionForm.points} onChange={(event) => actionFormSet("points")(Number(event.target.value))} required />
+                <Label>캠페인</Label>
+                <Select value={selectedCampaign} onValueChange={(value) => setSelectedCampaign(String(value ?? ""))}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="캠페인 선택" /></SelectTrigger>
+                  <SelectContent>
+                    {campaigns.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="per-user">1인 한도</Label>
-                <Input id="per-user" type="number" min={1} value={actionForm.perUserLimit} onChange={(event) => actionFormSet("perUserLimit")(Number(event.target.value))} required />
+                <Label htmlFor="action-type">행동 코드</Label>
+                <Input id="action-type" list="reward-action-types" value={actionForm.actionType} onChange={(event) => actionFormSet("actionType")(event.target.value.toUpperCase())} required placeholder="예: REUSABLE_CUP" />
+                <datalist id="reward-action-types">
+                  {ACTION_TYPES.map((type) => <option key={type} value={type} />)}
+                </datalist>
               </div>
-            </div>
-            <div className="sm:col-span-3 flex items-center justify-end gap-3">
-              {action.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(action.error)}</p>}
-              <Button type="submit" size="sm" disabled={!selectedCampaign || action.isPending}>{action.isPending ? "추가 중..." : "행동 추가"}</Button>
-            </div>
-          </form>
-        )}
+              <div className="space-y-1">
+                <Label>인증 방식</Label>
+                <Select value={actionForm.verificationType} onValueChange={(value) => actionFormSet("verificationType")(value as NewRewardAction["verificationType"])}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SELF">자가 인증 (방문객 화면 노출)</SelectItem>
+                    <SelectItem value="QR">QR 인증</SelectItem>
+                    <SelectItem value="STAFF">현장 직원 확인</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="action-name">방문객 표시 이름</Label>
+                <Input id="action-name" {...actionFormField("name")} required placeholder="예: 다회용기 사용" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="action-location">위치</Label>
+                <Input id="action-location" {...actionFormField("location")} required placeholder="예: 푸드존 F-2" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label htmlFor="points">포인트</Label>
+                  <Input id="points" type="number" min={1} value={actionForm.points} onChange={(event) => actionFormSet("points")(Number(event.target.value))} required />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="per-user">1인 한도</Label>
+                  <Input id="per-user" type="number" min={1} value={actionForm.perUserLimit} onChange={(event) => actionFormSet("perUserLimit")(Number(event.target.value))} required />
+                </div>
+              </div>
+              <div className="sm:col-span-3 flex items-center justify-end gap-3">
+                {action.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(action.error)}</p>}
+                <Button type="submit" size="sm" disabled={!selectedCampaign || action.isPending}>{action.isPending ? "추가 중..." : "행동 추가"}</Button>
+              </div>
+            </form>
+          )}
+        </QueryState>
       </section>
     </div>
   );

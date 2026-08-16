@@ -10,3 +10,26 @@ export function isNoShowDue(calledAt: string | null, now = Date.now()) {
   if (Number.isNaN(called)) return false;
   return now - called >= BOOKING_NO_SHOW_GRACE_MINUTES * 60_000;
 }
+
+export type BookingAction = "CALLED" | "NO_SHOW" | "COMPLETED";
+
+/**
+ * 상태별로 운영자가 할 수 있는 조치. 서버의 전이 규칙(app/domain.py BOOKING_TRANSITIONS)과
+ * 같은 표를 둔다.
+ *
+ * 예약 조작 화면이 둘(현장 운영·예약 관리)이라 각자 규칙을 들고 있었고, 한쪽이 서버가
+ * 거부하는 전이(CONFIRMED→호출, WAITING→이용 완료)를 버튼으로 열어 두고 있었다.
+ * 두 화면이 이 표만 보게 해서 다시 어긋나지 않게 한다.
+ */
+export const BOOKING_ACTIONS_BY_STATUS: Record<string, BookingAction[]> = {
+  WAITING: ["CALLED"],
+  CALLED: ["COMPLETED", "NO_SHOW"],
+  CONFIRMED: ["COMPLETED", "NO_SHOW"],
+  COMPLETED: [],
+  CANCELLED: [],
+  NO_SHOW: [],
+};
+
+export function bookingActionsFor(status: string): BookingAction[] {
+  return BOOKING_ACTIONS_BY_STATUS[status] ?? [];
+}

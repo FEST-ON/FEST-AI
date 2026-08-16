@@ -4,17 +4,17 @@ import { festivalApi } from "@/shared/lib/api";
 export interface LanguageUsage {
   language: string;
   sessions: number;
-  auto_switched: number;
-  kiosk_sessions: number;
+  autoSwitched: number;
+  kioskSessions: number;
 }
 
 export interface OpsSnapshot {
   visitors: number;
-  active_bookings: number;
-  open_tickets: number;
-  approved_businesses: number;
-  coupon_issues: number;
-  points_issued: number;
+  activeBookings: number;
+  openTickets: number;
+  approvedBusinesses: number;
+  couponIssues: number;
+  pointsIssued: number;
   languages: LanguageUsage[];
   updatedAt: string | null;
   sources: string[];

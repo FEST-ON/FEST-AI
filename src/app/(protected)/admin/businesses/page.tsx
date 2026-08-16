@@ -11,10 +11,11 @@ import {
   PARTICIPATION_LABEL,
   PARTICIPATION_TONE,
   reviewBusiness,
+  updateAdminBusiness,
   type AdminBusiness,
   type NewBusiness,
   type NewCoupon,
-} from "@/features/business-admin/api/businesses";
+} from "@/features/business-admin";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import { Badge } from "@/shared/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
@@ -27,6 +28,7 @@ import { Textarea } from "@/shared/ui/textarea";
 import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill } from "@/shared/ui/status-pill";
+import { Switch } from "@/shared/ui/switch";
 import { datetimeLocal } from "@/shared/lib/utils";
 import { useForm } from "@/shared/lib/use-form";
 
@@ -58,24 +60,27 @@ function CouponPanel({ business }: { business: AdminBusiness }) {
     <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
       <p className="flex items-center gap-1.5 text-xs font-bold text-foreground"><BadgePercent className="size-3.5" /> 쿠폰 발행</p>
 
-      {coupons.isLoading ? (
-        <Skeleton className="mt-2 h-10 w-full rounded-lg" />
-      ) : coupons.data?.length ? (
-        <ul className="mt-2 space-y-1">
-          {coupons.data.map((coupon) => (
-            <li key={coupon.id} className="flex items-center justify-between gap-2 text-[11px]">
-              <span className="truncate text-foreground">{coupon.name}</span>
-              <span className="shrink-0 text-muted-foreground">
-                {coupon.issued_count}/{coupon.issue_limit}장 발급 · {coupon.status}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 text-[11px] text-muted-foreground">발행한 쿠폰이 없습니다.</p>
-      )}
+      <QueryState
+        query={coupons}
+        className="mt-2"
+        empty="발행한 쿠폰이 없습니다."
+        skeleton={<Skeleton className="mt-2 h-10 w-full rounded-lg" />}
+      >
+        {(rows) => (
+          <ul className="mt-2 space-y-1">
+            {rows.map((coupon) => (
+              <li key={coupon.id} className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="truncate text-foreground">{coupon.name}</span>
+                <span className="shrink-0 text-muted-foreground">
+                  {coupon.issuedCount}/{coupon.issueLimit}장 발급 · {coupon.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </QueryState>
 
-      {business.participation_status !== "APPROVED" ? (
+      {business.participationStatus !== "APPROVED" ? (
         <p className="mt-2 text-[11px] text-muted-foreground">승인된 업체만 쿠폰을 발행할 수 있어요.</p>
       ) : (
         <form
@@ -140,8 +145,9 @@ export default function BusinessesPage() {
   };
   const register = useMutation({ mutationFn: createBusiness, meta: { success: "참여업체를 등록했어요." }, onSuccess: () => { invalidate(); reset(); setCreating(false); } });
   const review = useMutation({ mutationFn: reviewBusiness, meta: { success: "심사 결과를 반영했어요." }, onSuccess: invalidate });
+  const flags = useMutation({ mutationFn: updateAdminBusiness, meta: { success: "노출 설정을 변경했어요." }, onSuccess: invalidate });
 
-  const visible = (businesses.data ?? []).filter((row) => matchesStatus(row.participation_status, statusFilter));
+  const visible = (businesses.data ?? []).filter((row) => matchesStatus(row.participationStatus, statusFilter));
   // 업종은 백엔드가 자유 문자열로 받는다 — 이미 쓰인 값을 제안해 표기가 갈라지는 걸 막는다.
   const categories = [...new Set((businesses.data ?? []).map((row) => row.category).filter(Boolean))];
 
@@ -215,7 +221,7 @@ export default function BusinessesPage() {
             <TabsTrigger key={value} value={value} className="gap-1.5">
               {value}
               <span className="text-[10px] text-muted-foreground">
-                {(businesses.data ?? []).filter((row) => matchesStatus(row.participation_status, value)).length}
+                {(businesses.data ?? []).filter((row) => matchesStatus(row.participationStatus, value)).length}
               </span>
             </TabsTrigger>
           ))}
@@ -238,24 +244,50 @@ export default function BusinessesPage() {
                       <Store className="size-4 text-muted-foreground" />
                       <p className="text-sm font-bold text-foreground">{business.name}</p>
                       <Badge variant="outline" className="text-[10px]">{business.category}</Badge>
-                      <StatusPill tone={PARTICIPATION_TONE[business.participation_status]}>
-                        {PARTICIPATION_LABEL[business.participation_status]}
+                      <StatusPill tone={PARTICIPATION_TONE[business.participationStatus]}>
+                        {PARTICIPATION_LABEL[business.participationStatus]}
                       </StatusPill>
-                      {business.is_sponsored && <Badge className="bg-amber-500 text-[10px] text-white hover:bg-amber-500">광고</Badge>}
+                      {business.isSponsored && <Badge className="bg-amber-500 text-[10px] text-white hover:bg-amber-500">광고</Badge>}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      사업자 {business.registration_no}
-                      {business.booth_no && ` · 부스 ${business.booth_no}`}
+                      사업자 {business.registrationNo}
+                      {business.boothNo && ` · 부스 ${business.boothNo}`}
                     </p>
                     {business.description && <p className="mt-1 text-xs text-muted-foreground">{business.description}</p>}
-                    {business.review_comment && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">검토 의견: {business.review_comment}</p>}
+                    {business.reviewComment && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">검토 의견: {business.reviewComment}</p>}
                   </div>
                   <Button size="sm" variant="outline" onClick={() => setOpenCoupons(openCoupons === business.id ? null : business.id)}>
                     <BadgePercent className="size-3.5" /> 쿠폰
                   </Button>
                 </div>
 
-                {(business.participation_status === "SUBMITTED" || business.participation_status === "REJECTED") && (
+                {/* 광고 노출·ESG 참여는 방문객 추천 점수와 광고 영역 분리에 그대로 쓰인다.
+                    설정할 곳이 없어 DB를 직접 고쳐야 했던 값이다. */}
+                {business.participationStatus === "APPROVED" && (
+                  <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
+                    <label className="flex items-center gap-2 text-xs text-foreground">
+                      <Switch
+                        checked={business.isSponsored}
+                        disabled={flags.isPending && flags.variables?.businessId === business.id}
+                        onCheckedChange={(checked) => flags.mutate({ businessId: business.id, version: business.version, isSponsored: checked })}
+                      />
+                      광고 노출
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-foreground">
+                      <Switch
+                        checked={business.esgParticipating}
+                        disabled={flags.isPending && flags.variables?.businessId === business.id}
+                        onCheckedChange={(checked) => flags.mutate({ businessId: business.id, version: business.version, esgParticipating: checked })}
+                      />
+                      ESG·지역상생 참여
+                    </label>
+                    <p className="text-[11px] text-muted-foreground">
+                      광고는 방문객 추천에서 별도 영역으로 분리되고, ESG 참여는 추천 점수에 가산돼요.
+                    </p>
+                  </div>
+                )}
+
+                {(business.participationStatus === "SUBMITTED" || business.participationStatus === "REJECTED") && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
                     <Input
                       className="min-w-40 flex-1"

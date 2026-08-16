@@ -9,16 +9,17 @@ import {
   type BookingAction,
   type AdminBooking,
   type VisitorBooking,
-} from "@/features/reservation/api/bookings";
+} from "@/features/reservation";
 import {
   BOOKING_CANCEL_DEADLINE_MINUTES,
   BOOKING_NO_SHOW_GRACE_MINUTES,
+  bookingActionsFor,
   isNoShowDue,
 } from "@/shared/lib/booking-policy";
 import { useNow } from "@/shared/lib/use-now";
 import { Button } from "@/shared/ui/button";
-import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
-import { Skeleton } from "@/shared/ui/skeleton";
+import { QueryState } from "@/shared/ui/query-state";
+import { SkeletonList } from "@/shared/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 
 type StatusFilter = "전체" | VisitorBooking["status"];
@@ -79,7 +80,7 @@ export default function AdminBookingsPage() {
   }, [bookings.data]);
 
   const overdue = (bookings.data ?? []).filter(
-    (booking) => booking.status === "CALLED" && isNoShowDue(booking.called_at, now));
+    (booking) => booking.status === "CALLED" && isNoShowDue(booking.calledAt, now));
 
   return (
     <div className="space-y-4">
@@ -119,29 +120,26 @@ export default function AdminBookingsPage() {
         </TabsList>
       </Tabs>
 
-      {bookings.isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-16 w-full rounded-2xl" />
-          ))}
-        </div>
-      ) : bookings.isError ? (
-        <ErrorState message={queryErrorMessage(bookings.error)} onRetry={() => bookings.refetch()} />
-      ) : rows.length === 0 ? (
-        <EmptyState message="해당 상태의 예약이 없어요." />
-      ) : (
-        <div className="space-y-2">
-          {rows.map((booking) => (
-            <BookingRow
-              key={booking.id}
-              booking={booking}
-              noShowDue={booking.status === "CALLED" && isNoShowDue(booking.called_at, now)}
-              pending={mutate.isPending}
-              onUpdate={(status, note) => mutate.mutate({ bookingId: booking.id, status, note })}
-            />
-          ))}
-        </div>
-      )}
+      <QueryState
+        query={bookings}
+        empty="해당 상태의 예약이 없어요."
+        emptyWhen={rows.length === 0}
+        skeleton={<SkeletonList count={4} className="h-16 w-full rounded-2xl" />}
+      >
+        {() => (
+          <div className="space-y-2">
+            {rows.map((booking) => (
+              <BookingRow
+                key={booking.id}
+                booking={booking}
+                noShowDue={booking.status === "CALLED" && isNoShowDue(booking.calledAt, now)}
+                pending={mutate.isPending}
+                onUpdate={(status, note) => mutate.mutate({ bookingId: booking.id, status, note })}
+              />
+            ))}
+          </div>
+        )}
+      </QueryState>
 
       {mutate.error && <p className="text-xs text-destructive" role="alert">{mutate.error.message}</p>}
     </div>
@@ -171,37 +169,38 @@ function BookingRow({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-foreground">
-          {booking.queue_number ? `${booking.queue_number}번 · ` : ""}{booking.program_title}
+          {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}{booking.programTitle}
         </p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {formatMoment(booking.starts_at)} · {booking.party_size}명
-          {booking.called_at && ` · ${formatMoment(booking.called_at)} 호출`}
+          {formatMoment(booking.startsAt)} · {booking.partySize}명
+          {booking.calledAt && ` · ${formatMoment(booking.calledAt)} 호출`}
         </p>
       </div>
 
+      {/* 어떤 상태에서 어떤 조치가 가능한지는 서버 규칙과 같은 표(booking-policy)를 따른다. */}
       <div className="flex shrink-0 flex-wrap gap-2">
-        {booking.status === "WAITING" && (
+        {bookingActionsFor(booking.status).includes("CALLED") && (
           <Button size="sm" disabled={pending} onClick={() => onUpdate("CALLED", "FESTAI 운영 화면에서 호출")}>
             <BellRing className="size-3.5" /> 호출
           </Button>
         )}
-        {booking.status === "CALLED" && (
-          <>
-            <Button size="sm" variant="outline" disabled={pending} onClick={() => onUpdate("COMPLETED", "현장 입장 확인")}>
-              <UserCheck className="size-3.5" /> 입장 완료
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={pending}
-              onClick={() =>
-                window.confirm(`${booking.program_title} 예약을 노쇼로 처리할까요? 대기 순서가 사라져요.`) &&
-                onUpdate("NO_SHOW", `호출 후 ${BOOKING_NO_SHOW_GRACE_MINUTES}분 경과, 현장 미도착`)
-              }
-            >
-              <UserX className="size-3.5" /> 노쇼
-            </Button>
-          </>
+        {bookingActionsFor(booking.status).includes("COMPLETED") && (
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => onUpdate("COMPLETED", "현장 입장 확인")}>
+            <UserCheck className="size-3.5" /> 입장 완료
+          </Button>
+        )}
+        {bookingActionsFor(booking.status).includes("NO_SHOW") && (
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={pending}
+            onClick={() =>
+              window.confirm(`${booking.programTitle} 예약을 노쇼로 처리할까요? 대기 순서가 사라져요.`) &&
+              onUpdate("NO_SHOW", `호출 후 ${BOOKING_NO_SHOW_GRACE_MINUTES}분 경과, 현장 미도착`)
+            }
+          >
+            <UserX className="size-3.5" /> 노쇼
+          </Button>
         )}
       </div>
     </article>

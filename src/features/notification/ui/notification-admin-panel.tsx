@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellRing, CalendarClock, Megaphone, Send, ShieldAlert, X } from "lucide-react";
-import { callBooking, fetchAdminBookings } from "@/features/reservation/api/bookings";
+import { callBooking, fetchAdminBookings } from "@/features/reservation";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import {
   AUDIENCE_OPTIONS,
@@ -24,6 +23,8 @@ import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
+import { Textarea } from "@/shared/ui/textarea";
+import { useForm } from "@/shared/lib/use-form";
 import { datetimeLocal } from "@/shared/lib/utils";
 
 const SEVERITY_TONE: Record<AnnouncementSeverity, Tone> = {
@@ -72,12 +73,7 @@ export function NotificationAdminPanel() {
     meta: { success: "공지를 발행했어요." },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
-      setTitle("");
-      setSeverity("INFO");
-      setAudience([]);
-      setTargetAreaIds([]);
-      setEndsAt("");
-      setPublishMode("now");
+      reset();
     },
   });
   const closeMutation = useMutation({
@@ -86,13 +82,17 @@ export function NotificationAdminPanel() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
   });
 
-  const [title, setTitle] = useState("");
-  const [severity, setSeverity] = useState<AnnouncementSeverity>("INFO");
-  const [audience, setAudience] = useState<string[]>([]);
-  const [targetAreaIds, setTargetAreaIds] = useState<string[]>([]);
-  const [publishMode, setPublishMode] = useState<PublishMode>("now");
-  const [startsAt, setStartsAt] = useState(() => datetimeLocal());
-  const [endsAt, setEndsAt] = useState("");
+  const { form, set, field, reset } = useForm(() => ({
+    title: "",
+    body: "",
+    severity: "INFO" as AnnouncementSeverity,
+    audience: [] as string[],
+    targetAreaIds: [] as string[],
+    publishMode: "now" as PublishMode,
+    startsAt: datetimeLocal(),
+    endsAt: "",
+  }));
+  const { title, body, severity, audience, targetAreaIds, publishMode, startsAt, endsAt } = form;
 
   // 즉시 게시는 "발행 버튼을 누른 시각"이 노출 시작이므로 입력값을 검증에서 제외한다.
   const validationError = publishMode === "scheduled"
@@ -106,6 +106,7 @@ export function NotificationAdminPanel() {
     if (!canPublish) return;
     publishMutation.mutate({
       title: title.trim(),
+      body: body.trim(),
       severity,
       audience,
       targetAreaIds,
@@ -140,13 +141,25 @@ export function NotificationAdminPanel() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="notice-title">공지 내용</Label>
+            <Label htmlFor="notice-title">공지 제목</Label>
             <Input
               id="notice-title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              {...field("title")}
               placeholder="예: 메인스테이지 운영 안내"
               maxLength={200}
+            />
+          </div>
+
+          {/* 예전에는 제목만 보내서 방문객 알림에 본문이 없었고, 화면이 "자세한 내용은 운영
+              안내를 확인해 주세요"라는 기본 문구만 보여줬다. */}
+          <div className="space-y-1.5">
+            <Label htmlFor="notice-body">공지 본문</Label>
+            <Textarea
+              id="notice-body"
+              rows={3}
+              {...field("body")}
+              placeholder="방문객에게 보일 내용을 적어주세요. 비워두면 제목이 그대로 표시돼요."
+              maxLength={4000}
             />
           </div>
 
@@ -163,7 +176,7 @@ export function NotificationAdminPanel() {
                     variant={severity === option.value ? "default" : "outline"}
                     disabled={blocked}
                     title={blocked ? "긴급 공지는 최고 관리자만 발행할 수 있어요." : undefined}
-                    onClick={() => setSeverity(option.value)}
+                    onClick={() => set("severity")(option.value)}
                   >
                     {option.label}
                   </Button>
@@ -187,7 +200,7 @@ export function NotificationAdminPanel() {
                   type="button"
                   size="sm"
                   variant={audience.includes(option.value) ? "default" : "outline"}
-                  onClick={() => setAudience((current) => toggleValue(current, option.value))}
+                  onClick={() => set("audience")(toggleValue(audience, option.value))}
                 >
                   {option.label}
                 </Button>
@@ -205,7 +218,7 @@ export function NotificationAdminPanel() {
                     type="button"
                     size="sm"
                     variant={targetAreaIds.includes(area.id) ? "default" : "outline"}
-                    onClick={() => setTargetAreaIds((current) => toggleValue(current, area.id))}
+                    onClick={() => set("targetAreaIds")(toggleValue(targetAreaIds, area.id))}
                   >
                     {area.name}
                   </Button>
@@ -221,7 +234,7 @@ export function NotificationAdminPanel() {
                 type="button"
                 size="sm"
                 variant={publishMode === "now" ? "default" : "outline"}
-                onClick={() => setPublishMode("now")}
+                onClick={() => set("publishMode")("now")}
               >
                 <Send className="size-3.5" /> 즉시 게시
               </Button>
@@ -230,9 +243,9 @@ export function NotificationAdminPanel() {
                 size="sm"
                 variant={publishMode === "scheduled" ? "default" : "outline"}
                 onClick={() => {
-                  setPublishMode("scheduled");
+                  set("publishMode")("scheduled");
                   // 예약으로 바꾸는 시점의 현재 시각을 기본값으로 다시 채운다(폼을 오래 열어둔 경우 대비).
-                  setStartsAt(datetimeLocal());
+                  set("startsAt")(datetimeLocal());
                 }}
               >
                 <CalendarClock className="size-3.5" /> 예약 게시
@@ -247,8 +260,7 @@ export function NotificationAdminPanel() {
                 <Input
                   id="notice-starts-at"
                   type="datetime-local"
-                  value={startsAt}
-                  onChange={(event) => setStartsAt(event.target.value)}
+                  {...field("startsAt")}
                 />
               </div>
             )}
@@ -258,8 +270,7 @@ export function NotificationAdminPanel() {
                 id="notice-ends-at"
                 type="datetime-local"
                 min={publishMode === "scheduled" ? startsAt : undefined}
-                value={endsAt}
-                onChange={(event) => setEndsAt(event.target.value)}
+                {...field("endsAt")}
               />
             </div>
           </div>
@@ -325,10 +336,10 @@ export function NotificationAdminPanel() {
               <div key={booking.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">
-                    {booking.queue_number ? `${booking.queue_number}번 · ` : ""}{booking.program_title}
+                    {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}{booking.programTitle}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {formatMoment(booking.starts_at)} · {booking.party_size}명
+                    {formatMoment(booking.startsAt)} · {booking.partySize}명
                   </p>
                 </div>
                 <Button
@@ -394,10 +405,10 @@ export function NotificationAdminPanel() {
             {calledBookings.slice(0, 4).map((booking) => (
               <div key={booking.id} className="rounded-xl border border-border p-3">
                 <p className="truncate text-sm font-semibold">
-                  {booking.queue_number ? `${booking.queue_number}번 · ` : ""}{booking.program_title}
+                  {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}{booking.programTitle}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {booking.called_at ? `${formatMoment(booking.called_at)} 호출` : "호출됨"}
+                  {booking.calledAt ? `${formatMoment(booking.calledAt)} 호출` : "호출됨"}
                 </p>
               </div>
             ))}

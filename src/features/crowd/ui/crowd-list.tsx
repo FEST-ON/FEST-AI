@@ -25,16 +25,16 @@ export function CrowdList({ limit }: { limit?: number }) {
   return (
     <div className="space-y-2">
       {(limit ? data.slice(0, limit) : data).map((row) => (
-        <div key={row.area_id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
+        <div key={row.areaId} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">{row.area_name}</p>
+            <p className="truncate text-sm font-semibold text-foreground">{row.areaName}</p>
             <p className="text-[11px] text-muted-foreground">
-              {row.estimated_wait_min !== null ? t.crowd.waitMinutes(row.estimated_wait_min) : t.crowd.noWait}
+              {row.estimatedWaitMin !== null ? t.crowd.waitMinutes(row.estimatedWaitMin) : t.crowd.noWait}
               {row.stale && ` · ${t.crowd.stale}`}
             </p>
           </div>
-          <StatusPill tone={row.stale ? "muted" : CROWD_TONE[row.crowd_level]} className="shrink-0 px-2.5 py-1 text-[11px]">
-            {t.crowd.level[row.crowd_level] ?? CROWD_LABEL[row.crowd_level]}
+          <StatusPill tone={row.stale ? "muted" : CROWD_TONE[row.crowdLevel]} className="shrink-0 px-2.5 py-1 text-[11px]">
+            {t.crowd.level[row.crowdLevel] ?? CROWD_LABEL[row.crowdLevel]}
           </StatusPill>
         </div>
       ))}

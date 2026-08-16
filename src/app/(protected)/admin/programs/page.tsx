@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, Plus, Trash2 } from "lucide-react";
+import { CalendarPlus, FileCheck2, Plus, Trash2 } from "lucide-react";
 import {
   createProgram,
   createProgramSession,
@@ -11,6 +11,7 @@ import {
   fetchOperationResources,
   fetchProgramSessions,
   fetchPrograms,
+  submitProgramContent,
   updateProgram,
   PROGRAM_STATUSES,
   PROGRAM_STATUS_LABEL,
@@ -25,7 +26,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Textarea } from "@/shared/ui/textarea";
-import { EmptyState, ErrorState, QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import {
   Table,
@@ -74,35 +75,38 @@ function SessionPanel({ program }: { program: Program }) {
   return (
     <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
       <p className="flex items-center gap-1.5 text-xs font-bold text-foreground"><CalendarPlus className="size-3.5" /> 회차 관리</p>
-      {sessions.isLoading ? (
-        <Skeleton className="mt-2 h-10 w-full rounded-lg" />
-      ) : sessions.data?.length ? (
-        <ul className="mt-2 space-y-1">
-          {sessions.data.map((session) => (
-            <li key={session.id} className="flex items-center justify-between gap-2 text-[11px]">
-              <span className="text-foreground">
-                {seoulShort(session.starts_at)}
-                {" · "}{areaName(session.area_id)}{session.capacity !== null && ` · 정원 ${session.capacity}명`}
-              </span>
-              <ConfirmButton
-                variant="ghost"
-                size="icon-xs"
-                aria-label="회차 삭제"
-                className="text-muted-foreground hover:text-destructive"
-                disabled={remove.isPending && remove.variables === session.id}
-                title="회차를 삭제할까요?"
-                description={`${seoulShort(session.starts_at)} · ${areaName(session.area_id)} 회차가 삭제됩니다. 이미 잡힌 예약이 있으면 함께 사라져요.`}
-                confirmLabel="삭제"
-                onConfirm={() => remove.mutate(session.id)}
-              >
-                <Trash2 className="size-3.5" />
-              </ConfirmButton>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 text-[11px] text-muted-foreground">등록된 회차가 없습니다.</p>
-      )}
+      <QueryState
+        query={sessions}
+        className="mt-2"
+        empty="등록된 회차가 없습니다."
+        skeleton={<Skeleton className="mt-2 h-10 w-full rounded-lg" />}
+      >
+        {(rows) => (
+          <ul className="mt-2 space-y-1">
+            {rows.map((session) => (
+              <li key={session.id} className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="text-foreground">
+                  {seoulShort(session.startsAt)}
+                  {" · "}{areaName(session.areaId)}{session.capacity !== null && ` · 정원 ${session.capacity}명`}
+                </span>
+                <ConfirmButton
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="회차 삭제"
+                  className="text-muted-foreground hover:text-destructive"
+                  disabled={remove.isPending && remove.variables === session.id}
+                  title="회차를 삭제할까요?"
+                  description={`${seoulShort(session.startsAt)} · ${areaName(session.areaId)} 회차가 삭제됩니다. 이미 잡힌 예약이 있으면 함께 사라져요.`}
+                  confirmLabel="삭제"
+                  onConfirm={() => remove.mutate(session.id)}
+                >
+                  <Trash2 className="size-3.5" />
+                </ConfirmButton>
+              </li>
+            ))}
+          </ul>
+        )}
+      </QueryState>
 
       <form
         className="mt-3 grid gap-2 sm:grid-cols-5"
@@ -148,6 +152,11 @@ export default function ProgramsPage() {
   const create = useMutation({ mutationFn: createProgram, meta: { success: "프로그램을 등록했어요." }, onSuccess: () => { invalidate(); reset(); setCreating(false); } });
   const update = useMutation({ mutationFn: updateProgram, meta: { success: "프로그램을 수정했어요." }, onSuccess: invalidate });
   const remove = useMutation({ mutationFn: deleteProgram, meta: { success: "프로그램을 보관했어요." }, onSuccess: invalidate });
+  const submitContent = useMutation({
+    mutationFn: submitProgramContent,
+    meta: { success: "검수를 요청했어요. 검수·게시 관리 화면에서 승인하면 방문객에게 공개됩니다." },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-review"] }),
+  });
 
   const filtered = useMemo(() => {
     if (!resources.data) return [];
@@ -234,6 +243,16 @@ export default function ProgramsPage() {
                         </SelectContent>
                       </Select>
                       <Button size="sm" variant="outline" onClick={() => setOpenSessions(openSessions === program.id ? null : program.id)}>회차</Button>
+                      {/* 방문객 채널 노출은 콘텐츠 검수를 거친다. 내용을 고쳤으면 새 버전을 올려
+                          검수를 다시 요청해야 공개 화면에 반영된다. */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={submitContent.isPending && submitContent.variables?.id === program.id}
+                        onClick={() => submitContent.mutate(program)}
+                      >
+                        <FileCheck2 className="size-3.5" /> 검수 요청
+                      </Button>
                       <ConfirmButton
                         size="sm"
                         variant="outline"
@@ -268,14 +287,14 @@ export default function ProgramsPage() {
       </Tabs>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        {resources.isLoading ? (
-          <SkeletonList count={5} className="h-10 w-full" wrapperClassName="p-4" />
-        ) : resources.isError || !resources.data ? (
-          <ErrorState className="m-4" message={queryErrorMessage(resources.error)} onRetry={() => resources.refetch()} />
-        ) : filtered.length === 0 ? (
-          <EmptyState className="m-4" message="표시할 운영 자원이 없어요." />
-        ) : (
-          <div className="overflow-x-auto">
+        <QueryState
+          query={resources}
+          className="m-4"
+          empty="표시할 운영 자원이 없어요."
+          emptyWhen={filtered.length === 0}
+          skeleton={<SkeletonList count={5} className="h-10 w-full" wrapperClassName="p-4" />}
+        >
+          {() => (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -304,8 +323,8 @@ export default function ProgramsPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
-        )}
+          )}
+        </QueryState>
       </div>
     </div>
   );

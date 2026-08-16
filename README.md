@@ -25,10 +25,13 @@ src/
 │   ├── (public)/visitor/    # 방문객(30대) 화면 — QR 모바일 웹
 │   └── (protected)/admin/   # 축제 담당 주무관 화면 — 통합 운영 콘솔
 ├── shared/                  # 공용 UI(shadcn), 유틸, lib
-├── entities/                # 비즈니스 엔티티: festival, program, ticket, esg, visitor, coupon
-├── features/                # 유저 상호작용 기능: ai-guide, ticket-board, reservation, stamp-tour, accessibility, complaint-insight
+├── entities/                # 비즈니스 엔티티: festival.ts, program.ts, ticket.ts, esg.ts, visitor.ts, coupon.ts
+├── features/                # 유저 상호작용 기능: ai-guide/, accessibility/, complaint-insight/, reservation.ts, rewards.ts
 └── widgets/                 # 화면 조합 컴포넌트: site nav/topbar, sidebar, congestion-map, dashboard-stats
 ```
+
+엔티티는 타입·규칙과 조회를 한 파일에 둡니다. 기능은 파일이 여러 개일 때만 폴더를 씁니다
+(`features/reservation.ts` vs `features/ai-guide/{api,model,ui}`).
 
 ## 핵심 기능 & 대응 화면
 
@@ -84,6 +87,17 @@ npm run start
 ```bash
 npm run lint
 ```
+
+### 6) 다국어 사전 재생성
+
+UI 문구의 원본은 `src/shared/lib/i18n/dictionaries/ko.ts` 하나입니다. `en/zh/ja`는 생성물이라
+직접 고치지 말고 ko.ts를 고친 뒤 아래를 실행합니다.
+
+```bash
+GOOGLE_TRANSLATE_API_KEY=... npm run i18n
+```
+
+`npm test`가 ko.ts 해시를 대조하므로, 재생성을 잊으면 테스트가 먼저 깨집니다.
 
 ## 데이터 & 상태 관리 안내
 

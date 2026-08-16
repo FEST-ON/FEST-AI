@@ -1,17 +1,12 @@
-import type { AccessibilityLanguage } from "@/entities/visitor";
-
 export type Locale = "ko" | "en" | "zh" | "ja";
 
-export const LOCALE_BY_LANGUAGE: Record<AccessibilityLanguage, Locale> = {
-  한국어: "ko",
-  English: "en",
-  中文: "zh",
-  日本語: "ja",
+/** 언어 선택 버튼과 운영 대시보드 언어별 이용 로그에 그대로 노출되는 표시 이름. */
+export const LANGUAGE_BY_LOCALE: Record<Locale, string> = {
+  ko: "한국어",
+  en: "English",
+  zh: "中文",
+  ja: "日本語",
 };
-
-export const LANGUAGE_BY_LOCALE = Object.fromEntries(
-  Object.entries(LOCALE_BY_LANGUAGE).map(([language, locale]) => [locale, language as AccessibilityLanguage]),
-) as Record<Locale, AccessibilityLanguage>;
 
 export const BCP47_BY_LOCALE: Record<Locale, string> = {
   ko: "ko-KR",

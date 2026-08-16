@@ -26,7 +26,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
   });
 
   const sources = data?.sources ?? [];
-  const generatedAt = data?.generated_at ? new Date(data.generated_at) : null;
+  const generatedAt = data?.generatedAt ? new Date(data.generatedAt) : null;
   const generatedAtLabel =
     generatedAt && !Number.isNaN(generatedAt.getTime()) ? seoulDateTime(generatedAt) : null;
   const activeError = regenerate.error ?? error;
@@ -58,28 +58,40 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
 
           <div className="mt-4 grid gap-3 rounded-xl border border-border bg-background px-4 py-3 text-foreground">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
-              <p className="text-xs font-extrabold text-primary">{data?.alan_comment ? "Alan 한줄평" : "규칙 기반 요약"}</p>
+              <p className="text-xs font-extrabold text-primary">{data?.alanComment ? "Alan 한줄평" : "규칙 기반 요약"}</p>
               <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
                 {statusLabel}
               </span>
             </div>
 
-            {data?.metric_label && (
+            {data?.metricLabel && (
               <div className="flex w-fit items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                 <AlertTriangle className="size-4" />
                 <div>
-                  <p className="text-[10px] font-semibold">{data.metric_label}</p>
-                  <p className="text-lg font-extrabold">{data.metric_value}</p>
+                  <p className="text-[10px] font-semibold">{data.metricLabel}</p>
+                  <p className="text-lg font-extrabold">{data.metricValue}</p>
                 </div>
               </div>
             )}
 
+            {/* 급증 경보는 evidence에 묻히면 안 되는 신호라 서버가 alerts로 따로 뽑아 준다. */}
+            {(data?.alerts.length ?? 0) > 0 && (
+              <ul className="space-y-1 rounded-xl border border-red-300 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/40" role="alert">
+                {data?.alerts.map((alert) => (
+                  <li key={alert} className="flex items-start gap-1.5 text-xs font-semibold leading-5 text-red-800 dark:text-red-100">
+                    <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                    {alert}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             {data ? (
               <div className="space-y-2">
-                <blockquote className="text-sm font-semibold leading-6 text-foreground">“{data.alan_comment ?? data.summary}”</blockquote>
-                {data.recommended_actions.length > 0 && (
+                <blockquote className="text-sm font-semibold leading-6 text-foreground">“{data.alanComment ?? data.summary}”</blockquote>
+                {data.recommendedActions.length > 0 && (
                   <ul className="space-y-1 border-t border-border pt-2">
-                    {data.recommended_actions.map((action) => (
+                    {data.recommendedActions.map((action) => (
                       <li key={action} className="flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
                         <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
                         {action}

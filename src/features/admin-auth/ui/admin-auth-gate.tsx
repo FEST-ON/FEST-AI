@@ -1,14 +1,17 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import { currentAdmin, loginAdmin } from "@/shared/lib/api";
 import { useAdminSessionStore } from "@/features/admin-auth/model/store";
 import { ADMIN_ROLE_LABEL, canAccessPath } from "@/shared/lib/permissions";
+import { useForm } from "@/shared/lib/use-form";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Logo } from "@/shared/ui/logo";
+import { queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 
 export function AdminAuthGate({ children }: { children: React.ReactNode }) {
@@ -17,10 +20,7 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
   const setUser = useAdminSessionStore((s) => s.setUser);
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const { form, field } = useForm({ email: "", password: "" });
 
   useEffect(() => {
     currentAdmin()
@@ -32,19 +32,19 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
       .finally(() => setChecking(false));
   }, [setUser]);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError("");
-    try {
-      const admin = await loginAdmin(email, password);
+  // 오류는 폼 바로 아래에 그리므로 전역 토스트는 끈다.
+  const login = useMutation({
+    mutationFn: () => loginAdmin(form.email, form.password),
+    meta: { silent: true },
+    onSuccess: (admin) => {
       setUser(admin);
       setAuthenticated(true);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "로그인에 실패했습니다.");
-    } finally {
-      setSubmitting(false);
-    }
+    },
+  });
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    login.mutate();
   }
 
   if (checking) {
@@ -78,11 +78,11 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
           <h1 className="text-lg font-bold">운영자 로그인</h1>
           <p className="text-xs text-muted-foreground">백엔드 데모 계정으로 로그인하세요.</p>
         </div>
-        <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} aria-label="이메일" placeholder="이메일" autoComplete="username" required />
-        <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} aria-label="비밀번호" placeholder="비밀번호" autoComplete="current-password" required />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting ? "로그인 중..." : "로그인"}
+        <Input type="email" {...field("email")} aria-label="이메일" placeholder="이메일" autoComplete="username" required />
+        <Input type="password" {...field("password")} aria-label="비밀번호" placeholder="비밀번호" autoComplete="current-password" required />
+        {login.error && <p className="text-sm text-destructive">{queryErrorMessage(login.error, "로그인에 실패했습니다.")}</p>}
+        <Button type="submit" className="w-full" disabled={login.isPending}>
+          {login.isPending ? "로그인 중..." : "로그인"}
         </Button>
       </form>
     </main>

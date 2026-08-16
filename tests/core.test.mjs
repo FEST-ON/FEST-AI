@@ -25,13 +25,21 @@ const { generateReply } = await importTypeScript("../src/features/ai-guide/lib/g
   "@/shared/lib/api": apiUrl,
   "@/shared/lib/i18n": moduleUrl('export const BCP47_BY_LOCALE = { ko: "ko-KR" };'),
 });
-const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/entities/visitor/model.ts");
-const { nextTicketStatus } = await importTypeScript("../src/entities/ticket/model.ts");
-const { buildImprovementTasks, buildRecurringIssues, buildTopicBreakdown } = await importTypeScript(
-  "../src/features/complaint-insight/api/issue-analysis.ts",
-  { "@/shared/lib/api": apiUrl },
-);
-const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement/model.ts");
+const issueAnalysisUrl = await transpile("../src/features/complaint-insight/api/issue-analysis.ts", {
+  "@/shared/lib/api": apiUrl,
+});
+const { operatingStatus } = await importTypeScript("../src/features/map/lib/operating-status.ts");
+const { buildImprovementTasks, buildRecurringIssues, buildTopicBreakdown } = await import(issueAnalysisUrl);
+// 엔티티는 규칙(model)과 조회(data)가 한 파일이라 조회 쪽 의존성도 함께 연결해 준다.
+// 표시 서식은 규칙 테스트와 무관해서 스텁으로 끊는다.
+const entity = {
+  "@/shared/lib/api": apiUrl,
+  "@/features/complaint-insight/api/issue-analysis": issueAnalysisUrl,
+  "@/shared/lib/utils": moduleUrl("export const seoulDateTime = String, seoulShort = String, seoulTime = String;"),
+};
+const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/entities/visitor.ts", entity);
+const { nextTicketStatus } = await importTypeScript("../src/entities/ticket.ts", entity);
+const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement.ts", entity);
 const { contentAction, contentPreview } = await importTypeScript("../src/features/content-review/model/content.ts");
 const { canAccessPath, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
 const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
@@ -270,7 +278,7 @@ test("콘텐츠 버전 상태에 맞는 다음 검수·게시 동작을 고른�
 test("검수자는 검수가 필요한 화면에 모두 접근할 수 있다", () => {
   // 백엔드가 REVIEWER에게 열어둔 화면들 — 하나라도 막히면 검수자가 일을 못 한다
   // businesses/{id}/review와 ai/operations/search도 검수자에게 열려 있다.
-  for (const path of ["/admin/content", "/admin/ai-insights", "/admin/esg", "/admin/businesses", "/admin/documents"]) {
+  for (const path of ["/admin/content", "/admin/ai-insights", "/admin/esg", "/admin/businesses", "/admin/documents", "/admin/surveys"]) {
     assert.equal(canAccessPath("REVIEWER", path), true, path);
   }
   // 감사 로그·계정 관리·리워드는 검수자 권한 밖이다.
@@ -279,7 +287,7 @@ test("검수자는 검수가 필요한 화면에 모두 접근할 수 있다", (
   }
   assert.deepEqual(
     visibleNavItems("REVIEWER").map((item) => item.href),
-    ["/admin", "/admin/content", "/admin/ai-insights", "/admin/documents", "/admin/businesses", "/admin/esg"],
+    ["/admin", "/admin/content", "/admin/ai-insights", "/admin/documents", "/admin/surveys", "/admin/businesses", "/admin/esg"],
   );
   // 계정·권한 관리는 최고 관리자 전용이다.
   assert.equal(canAccessPath("SUPER_ADMIN", "/admin/members"), true);
@@ -360,6 +368,32 @@ test("역할이 없으면 관리자 화면에 접근할 수 없다", () => {
   assert.equal(canAccessPath("MERCHANT", "/admin/audit-logs"), false);
 });
 
+// 기준 시각은 UTC로 준다 — Asia/Seoul은 UTC+9라 KST 12:00은 같은 날 03:00Z다.
+const kst = (iso) => new Date(iso);
+
+test("운영시간은 축제 기준 시각(Asia/Seoul)으로 열림·닫힘을 판정한다", () => {
+  const hours = { daily: "09:00-20:00" };
+  assert.deepEqual(operatingStatus(hours, kst("2026-09-12T03:00:00Z")), { open: true, hours: "09:00-20:00" });
+  assert.equal(operatingStatus(hours, kst("2026-09-12T12:00:00Z")).open, false);
+  // 여는 시각 정각은 열림, 닫는 시각 정각은 닫힘.
+  assert.equal(operatingStatus(hours, kst("2026-09-12T00:00:00Z")).open, true);
+  assert.equal(operatingStatus(hours, kst("2026-09-12T11:00:00Z")).open, false);
+});
+
+test("자정을 넘기는 야간 운영도 열림으로 판정한다", () => {
+  const hours = { daily: "22:00-02:00" };
+  assert.equal(operatingStatus(hours, kst("2026-09-12T16:00:00Z")).open, true);
+  assert.equal(operatingStatus(hours, kst("2026-09-12T14:00:00Z")).open, true);
+  assert.equal(operatingStatus(hours, kst("2026-09-12T03:00:00Z")).open, false);
+});
+
+test("판정할 수 없는 운영시간은 닫힘으로 단정하지 않고 문자열만 남긴다", () => {
+  assert.deepEqual(operatingStatus({ daily: "상시 개방" }), { open: null, hours: "상시 개방" });
+  assert.deepEqual(operatingStatus(null), { open: null, hours: null });
+  assert.deepEqual(operatingStatus({}), { open: null, hours: null });
+  assert.deepEqual(operatingStatus({ daily: "  " }), { open: null, hours: null });
+});
+
 test("festivalApi는 현재 축제 경로를 붙이고 json()은 본문을 직렬화한다", async () => {
   localStorage.setItem("festai-admin-access", "access");
   const requests = [];
@@ -379,4 +413,98 @@ test("festivalApi는 현재 축제 경로를 붙이고 json()은 본문을 직�
     ["/api/backend/admin/festivals/festival-1/programs", undefined, undefined],
     ["/api/backend/admin/festivals/festival-1", "PATCH", JSON.stringify({ name: "새 이름" })],
   ]);
+});
+
+// --- 2차 감사에서 고친 것들 --------------------------------------------------
+
+test("예약 조치 목록은 서버 전이 규칙과 같다", async () => {
+  const { bookingActionsFor } = await importTypeScript("../src/shared/lib/booking-policy.ts");
+  // 서버 BOOKING_TRANSITIONS: WAITING→CALLED/CANCELLED, CONFIRMED·CALLED→COMPLETED/NO_SHOW/CANCELLED.
+  // 예전에는 현장 화면이 CONFIRMED에 호출을, WAITING에 이용 완료를 열어 둬서 누르면 400이었다.
+  assert.deepEqual(bookingActionsFor("WAITING"), ["CALLED"]);
+  assert.deepEqual(bookingActionsFor("CONFIRMED"), ["COMPLETED", "NO_SHOW"]);
+  assert.deepEqual(bookingActionsFor("CALLED"), ["COMPLETED", "NO_SHOW"]);
+  for (const terminal of ["COMPLETED", "CANCELLED", "NO_SHOW", "UNKNOWN"]) {
+    assert.deepEqual(bookingActionsFor(terminal), [], terminal);
+  }
+});
+
+test("프로그램 상태 선택지는 서버가 받는 값만 담는다", async () => {
+  const { PROGRAM_STATUSES, PROGRAM_STATUS_LABEL } = await importTypeScript("../src/entities/program.ts", {
+    ...entity,
+    // 통합 목록이 참여업체·인력 조회를 함께 쓰는데, 상태 표 검증에는 필요 없어 스텁으로 끊는다.
+    "@/features/business-admin": moduleUrl("export const fetchAdminBusinesses = async () => []; export const PARTICIPATION_LABEL = {};"),
+    "@/features/staff": moduleUrl("export const fetchStaffAssignments = async () => [];"),
+  });
+  // 서버 ProgramStatus·DB CHECK 제약이 받는 값. ENDED는 없어서 고르면 400이었다.
+  assert.deepEqual([...PROGRAM_STATUSES], ["DRAFT", "PUBLISHED", "UNPUBLISHED", "ARCHIVED"]);
+  for (const status of PROGRAM_STATUSES) assert.ok(PROGRAM_STATUS_LABEL[status], status);
+});
+
+test("설문 응답은 설문 단위로 나눠 보낸다", async () => {
+  const { submitSurvey } = await importTypeScript("../src/entities/visitor.ts", entity);
+  localStorage.setItem("festai-visitor-token", "vs_test");
+  const posted = [];
+  globalThis.fetch = async (input, init = {}) => {
+    posted.push({ url: String(input), body: JSON.parse(String(init.body)) });
+    return Response.json({ data: { id: "response" } });
+  };
+
+  // 설문이 두 개 열려 있으면 문항도 두 설문에서 온다 — 예전에는 첫 설문만 보였다.
+  await submitSurvey(
+    [
+      { id: "q1", surveyId: "s1", question: "만족?", type: "rating", required: true },
+      { id: "q2", surveyId: "s2", question: "의견?", type: "text", required: false },
+    ],
+    { q1: 5, q2: "좋았어요" },
+  );
+
+  assert.equal(posted.length, 2);
+  assert.ok(posted[0].url.endsWith("/visitor/surveys/s1/responses"));
+  assert.deepEqual(posted[0].body.answers, [{ questionId: "q1", value: 5 }]);
+  assert.ok(posted[1].url.endsWith("/visitor/surveys/s2/responses"));
+  assert.deepEqual(posted[1].body.answers, [{ questionId: "q2", value: "좋았어요" }]);
+});
+
+test("목록 조회는 커서를 끝까지 따라간다", async () => {
+  localStorage.setItem("festai-admin-access", "access");
+  const { festivalApiAll } = await import(apiUrl);
+  const requested = [];
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/admin/festivals")) return Response.json({ data: [{ id: "f1", code: "EST34-2026" }] });
+    requested.push(url);
+    // 첫 페이지만 다음 커서를 준다.
+    return url.includes("cursor=")
+      ? Response.json({ data: [{ id: "b" }], page: { nextCursor: null, hasNext: false, limit: 100 } })
+      : Response.json({ data: [{ id: "a" }], page: { nextCursor: "cur1", hasNext: true, limit: 100 } });
+  };
+
+  const rows = await festivalApiAll("/bookings");
+  assert.deepEqual(rows.map((row) => row.id), ["a", "b"]);
+  assert.equal(requested.length, 2);
+  assert.ok(requested[1].includes("cursor=cur1"));
+});
+
+test("번역이 실패하면 원문을 돌려주되 degraded로 알린다", async () => {
+  const client = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
+  globalThis.fetch = async () => Response.json({ error: "boom" }, { status: 503 });
+  const entries = { title: "축제 안내" };
+  assert.deepEqual(await client.translateEntries(entries, "en"), entries);
+  assert.equal(client.isTranslationDegraded(), true);
+
+  globalThis.fetch = async () => Response.json({ entries: { title: "Festival guide" }, degraded: false });
+  assert.deepEqual(await client.translateEntries(entries, "en"), { title: "Festival guide" });
+  assert.equal(client.isTranslationDegraded(), false);
+});
+
+test("사이드바 항목은 모두 아이콘이 등록돼 있다", async () => {
+  // 아이콘을 빠뜨리면 관리자 화면 전체가 렌더 중 죽는다(undefined 컴포넌트).
+  // 렌더 시에는 기본 아이콘으로 받아내지만, 등록 자체를 잊지 않도록 여기서 잡는다.
+  const source = await readFile(new URL("../src/widgets/admin-sidebar/admin-sidebar.tsx", import.meta.url), "utf8");
+  const registered = new Set([...source.matchAll(/"(\/admin[^"]*)":/g)].map((match) => match[1]));
+  const { ADMIN_NAV_ITEMS } = await importTypeScript("../src/shared/lib/permissions.ts");
+  for (const item of ADMIN_NAV_ITEMS) {
+    assert.ok(registered.has(item.href), `${item.href} 아이콘이 NAV_ICONS에 없습니다.`);
+  }
 });

@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Stamp, MapPin, Coins, Ticket, PartyPopper } from "lucide-react";
+import { ArrowRight, Stamp, MapPin, Coins, QrCode, Ticket, PartyPopper } from "lucide-react";
 import { Button } from "@/shared/ui/button";
+import { QrScanner } from "@/shared/ui/qr-scanner";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
 import { ProgressRing } from "@/shared/ui/progress-ring";
 import { collectStamp, fetchStampSpots, fetchMyCoupons, fetchPoints, isCouponUsable } from "@/entities/coupon";
@@ -14,6 +18,8 @@ import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-sta
 export default function StampTourPage() {
   const { t, locale, bcp47 } = useTranslation();
   const queryClient = useQueryClient();
+  const [scanningSpot, setScanningSpot] = useState<string | null>(null);
+  const [stampCode, setStampCode] = useState("");
   const { data: stampSpots = [], error: spotsError, refetch: refetchSpots } = useQuery({
     queryKey: ["stamp-spots", locale] as const,
     queryFn: () => fetchStampSpots(locale),
@@ -76,17 +82,70 @@ export default function StampTourPage() {
                     </p>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant={done ? "secondary" : "default"}
-                  disabled={done || collectMutation.isPending}
-                  onClick={() => collectMutation.mutate(spot.id)}
-                >
-                  {done ? t.stampTour.doneButton : t.stampTour.stampButton}
-                </Button>
+                {done || spot.verificationType === "SELF" ? (
+                  <Button
+                    size="sm"
+                    variant={done ? "secondary" : "default"}
+                    disabled={done || collectMutation.isPending}
+                    onClick={() => collectMutation.mutate({ actionId: spot.id, verificationKey: `stamp:${spot.id}` })}
+                  >
+                    {done ? t.stampTour.doneButton : t.stampTour.stampButton}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant={scanningSpot === spot.id ? "outline" : "default"}
+                    disabled={collectMutation.isPending}
+                    onClick={() => setScanningSpot(scanningSpot === spot.id ? null : spot.id)}
+                  >
+                    <QrCode className="size-3.5" />
+                    {scanningSpot === spot.id ? t.common.cancel : t.stampTour.stampButton}
+                  </Button>
+                )}
               </div>
             );
           })}
+          {/* 현장 QR 인증. 스캔한 값이 그대로 인증 키가 되고, 틀리면 서버가 막는다.
+              QrScanner는 BarcodeDetector가 없는 브라우저(사파리)에서 아무것도 그리지 않으므로
+              코드 직접 입력이 반드시 함께 있어야 한다 — 없으면 아이폰에서 스탬프를 못 찍는다. */}
+          {scanningSpot && (
+            <div className="rounded-xl border border-border bg-card p-3">
+              <QrScanner
+                label={t.stampTour.scanButton}
+                onScan={(value) => {
+                  setScanningSpot(null);
+                  collectMutation.mutate({ actionId: scanningSpot, verificationKey: value.trim() });
+                }}
+              />
+              <form
+                className="mt-2 space-y-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const key = stampCode.trim();
+                  if (!key) return;
+                  setScanningSpot(null);
+                  setStampCode("");
+                  collectMutation.mutate({ actionId: scanningSpot, verificationKey: key });
+                }}
+              >
+                <Label htmlFor="stamp-code">{t.stampTour.codeLabel}</Label>
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    id="stamp-code"
+                    value={stampCode}
+                    onChange={(event) => setStampCode(event.target.value)}
+                    placeholder="stamp:..."
+                    autoComplete="off"
+                    className="min-w-40 flex-1"
+                  />
+                  <Button type="submit" size="sm" disabled={!stampCode.trim() || collectMutation.isPending}>
+                    {t.stampTour.stampButton}
+                  </Button>
+                </div>
+              </form>
+              <p className="mt-2 text-[11px] text-muted-foreground">{t.stampTour.scanHint}</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -106,7 +165,7 @@ export default function StampTourPage() {
             {(points?.ledger ?? []).slice(0, 5).map((entry) => (
               <li key={entry.id} className="flex items-center justify-between text-xs">
                 <span className="truncate text-muted-foreground">{entry.reason}</span>
-                <span className="shrink-0 font-bold text-primary">+{entry.points_delta}P</span>
+                <span className="shrink-0 font-bold text-primary">+{entry.pointsDelta}P</span>
               </li>
             ))}
             {(points?.ledger.length ?? 0) === 0 && (

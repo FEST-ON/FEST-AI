@@ -29,7 +29,7 @@ import { useFestivalLanguages } from "@/features/accessibility/model/use-festiva
 import { useSpeechOutput } from "@/features/accessibility/model/use-speech-output";
 import { detectLocale, dictionaries, LANGUAGE_BY_LOCALE, useTranslation } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
-import { buildMessage, generateReply, reportAiMessage, resetConversation } from "../lib/generate-reply";
+import { buildMessage, generateReply, loadHistory, reportAiMessage, resetConversation } from "../lib/generate-reply";
 import { useChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
 import { useSpeechRecognition } from "../model/use-speech-recognition";
 
@@ -42,7 +42,7 @@ const QUESTION_ICON = {
 
 export function PersoAiGuide() {
   const { t, locale, bcp47 } = useTranslation();
-  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome } = useChatStore();
+  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome, restoreMessages } = useChatStore();
   const { largeText, voiceGuide, visitorMode, languageSource, setLanguage } = useAccessibilityStore();
   const { languages } = useFestivalLanguages();
   const [draft, setDraft] = useState("");
@@ -64,6 +64,27 @@ export function PersoAiGuide() {
   useEffect(() => {
     syncWelcome(welcomeMessage);
   }, [welcomeMessage, syncWelcome]);
+
+  // 새로고침하면 대화가 사라진 것처럼 보였다 — 서버에 남아 있는 이전 대화를 한 번 복원한다.
+  // 이미 대화가 오갔으면(환영 문구 외에 메시지가 있으면) 건드리지 않는다.
+  useEffect(() => {
+    let cancelled = false;
+    if (messages.some((message) => message.id !== WELCOME_MESSAGE_ID)) return;
+    loadHistory(locale).then((history) => {
+      if (cancelled || history.length === 0) return;
+      restoreMessages([
+        welcomeMessage,
+        ...history.map((entry) => buildMessage(entry.role, entry.content, locale, {
+          backendMessageId: entry.role === "assistant" ? entry.messageId : undefined,
+          freshnessAt: entry.freshnessAt,
+          needsFallbackChannel: entry.needsFallbackChannel,
+        })),
+      ]);
+    });
+    return () => { cancelled = true; };
+    // 최초 진입과 언어 전환 때만 복원한다. messages를 의존성에 넣으면 매 메시지마다 다시 돈다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale, welcomeMessage]);
 
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
   const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
@@ -106,7 +127,7 @@ export function PersoAiGuide() {
       ? detectLocale(transcript, languages)
       : null;
     if (autoLocale && autoLocale !== locale) {
-      setLanguage(LANGUAGE_BY_LOCALE[autoLocale], "AUTO");
+      setLanguage(autoLocale, "AUTO");
       setSwitchedFrom(locale);
       void handleAsk(transcript, autoLocale);
       return;
@@ -117,7 +138,7 @@ export function PersoAiGuide() {
   function revertLanguage() {
     if (!switchedFrom) return;
     // 되돌리면 방문객이 고른 언어가 되므로 다음 발화에서 다시 자동 전환되지 않는다.
-    setLanguage(LANGUAGE_BY_LOCALE[switchedFrom], "MANUAL");
+    setLanguage(switchedFrom, "MANUAL");
     setSwitchedFrom(null);
   }
 

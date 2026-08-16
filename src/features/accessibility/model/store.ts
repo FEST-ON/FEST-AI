@@ -2,22 +2,21 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { AccessibilityLanguage } from "@/entities/visitor";
 import { json, visitorApi } from "@/shared/lib/api";
-import { LOCALE_BY_LANGUAGE } from "@/shared/lib/i18n/locale";
+import type { Locale } from "@/shared/lib/i18n/locale";
 
 export type VisitorAccessMode = "qr" | "kiosk";
 /** 축제 기본값 그대로인지, 방문객이 직접 골랐는지, 첫 발화로 자동 전환됐는지(AI-05 언어별 이용 로그). */
 export type LanguageSource = "DEFAULT" | "MANUAL" | "AUTO";
 
 interface AccessibilityState {
-  language: AccessibilityLanguage;
+  language: Locale;
   languageSource: LanguageSource;
   largeText: boolean;
   highContrast: boolean;
   voiceGuide: boolean;
   visitorMode: VisitorAccessMode;
-  setLanguage: (language: AccessibilityLanguage, source?: LanguageSource) => void;
+  setLanguage: (language: Locale, source?: LanguageSource) => void;
   setVisitorMode: (visitorMode: VisitorAccessMode) => void;
   toggleLargeText: () => void;
   toggleHighContrast: () => void;
@@ -29,7 +28,7 @@ interface AccessibilityState {
 // ponytail: 저장된 설정은 값을 바꿀 때만 올린다. 재방문으로 새 세션이 발급되면 서버는 축제 기본 언어로 시작한다.
 function syncVisitorSession(state: AccessibilityState) {
   visitorApi("/visitor-sessions/current", json("PATCH", {
-    language: LOCALE_BY_LANGUAGE[state.language],
+    language: state.language,
     accessibilityPreferences: {
       largeText: state.largeText,
       highContrast: state.highContrast,
@@ -42,36 +41,41 @@ function syncVisitorSession(state: AccessibilityState) {
   });
 }
 
+type Patch = Partial<AccessibilityState> | ((state: AccessibilityState) => Partial<AccessibilityState>);
+
+// v0은 language를 "한국어" 같은 표시 이름으로 저장했다. 접근성 설정까지 같이 날아가지 않도록 코드로 옮긴다.
+const LEGACY_LOCALE: Record<string, Locale> = { 한국어: "ko", English: "en", 中文: "zh", 日本語: "ja" };
+
 export const useAccessibilityStore = create<AccessibilityState>()(
   persist(
-    (set, get) => ({
-      language: "한국어",
-      languageSource: "DEFAULT",
-      largeText: false,
-      highContrast: false,
-      voiceGuide: false,
-      visitorMode: "qr",
-      setLanguage: (language, source = "MANUAL") => {
-        set({ language, languageSource: source });
+    (set, get) => {
+      // 값을 바꾼 뒤 서버 세션에 올린다. persist 복원은 이 경로를 타지 않으므로 그대로 조용하다.
+      const sync = (patch: Patch) => {
+        set(patch);
         syncVisitorSession(get());
+      };
+      return {
+        language: "ko",
+        languageSource: "DEFAULT",
+        largeText: false,
+        highContrast: false,
+        voiceGuide: false,
+        visitorMode: "qr",
+        setLanguage: (language, source = "MANUAL") => sync({ language, languageSource: source }),
+        setVisitorMode: (visitorMode) => sync({ visitorMode }),
+        toggleLargeText: () => sync((state) => ({ largeText: !state.largeText })),
+        toggleHighContrast: () => sync((state) => ({ highContrast: !state.highContrast })),
+        toggleVoiceGuide: () => sync((state) => ({ voiceGuide: !state.voiceGuide })),
+      };
+    },
+    {
+      name: "festai-accessibility",
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as AccessibilityState;
+        if (version >= 1) return state;
+        return { ...state, language: LEGACY_LOCALE[state.language as string] ?? "ko" };
       },
-      setVisitorMode: (visitorMode) => {
-        set({ visitorMode });
-        syncVisitorSession(get());
-      },
-      toggleLargeText: () => {
-        set((state) => ({ largeText: !state.largeText }));
-        syncVisitorSession(get());
-      },
-      toggleHighContrast: () => {
-        set((state) => ({ highContrast: !state.highContrast }));
-        syncVisitorSession(get());
-      },
-      toggleVoiceGuide: () => {
-        set((state) => ({ voiceGuide: !state.voiceGuide }));
-        syncVisitorSession(get());
-      },
-    }),
-    { name: "festai-accessibility" },
+    },
   ),
 );

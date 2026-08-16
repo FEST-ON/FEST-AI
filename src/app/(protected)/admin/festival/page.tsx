@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Copy, SmartphoneNfc, Trash2 } from "lucide-react";
+import { Building2, Bus, Copy, Plus, SmartphoneNfc, Trash2 } from "lucide-react";
 import {
   cloneFestival,
   createFacility,
@@ -14,11 +15,14 @@ import {
   type AdminFestival,
   type CloneFestivalInput,
   type NewFacility,
-} from "@/features/festival-admin/api/festival-admin";
+  type TransportOption,
+  TRANSPORT_MODES,
+  TRANSPORT_STATUSES,
+} from "@/features/festival-admin";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import { useForm } from "@/shared/lib/use-form";
 import { datetimeLocal } from "@/shared/lib/utils";
-import { ALL_MENUS_ON, VISITOR_MENU_ITEMS } from "@/features/visitor-menu-settings/model/store";
+import { ALL_MENUS_ON, VISITOR_MENU_ITEMS } from "@/features/visitor-menu-settings";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
@@ -26,7 +30,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { Textarea } from "@/shared/ui/textarea";
-import { ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import { ErrorState, QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Switch } from "@/shared/ui/switch";
 
@@ -56,8 +60,8 @@ function FestivalSettings({ festival: data }: { festival: AdminFestival }) {
     name: data.name,
     description: data.description ?? "",
     status: data.status,
-    startsAt: datetimeLocal(data.starts_at),
-    endsAt: datetimeLocal(data.ends_at),
+    startsAt: datetimeLocal(data.startsAt),
+    endsAt: datetimeLocal(data.endsAt),
   });
   const { form: clone, field: cloneField } = useForm<CloneFestivalInput>({ code: "", name: "", startsAt: "", endsAt: "" });
   const { form: facility, set: facilitySet, field: facilityField, reset: resetFacility } = useForm<NewFacility>({ areaId: "", name: "", facilityType: "RESTROOM", status: "ACTIVE" });
@@ -80,7 +84,7 @@ function FestivalSettings({ festival: data }: { festival: AdminFestival }) {
   });
   const toggleFacility = useMutation({ mutationFn: updateFacility, meta: { success: "시설 운영 상태를 바꿨어요." }, onSuccess: invalidateFacilities });
 
-  const menus = { ...ALL_MENUS_ON, ...(data.visitor_menus ?? {}) };
+  const menus = { ...ALL_MENUS_ON, ...(data.visitorMenus ?? {}) };
   const saveMenus = useMutation({
     mutationFn: updateFestival,
     meta: { success: "방문객 메뉴 노출을 저장했어요." },
@@ -90,6 +94,13 @@ function FestivalSettings({ festival: data }: { festival: AdminFestival }) {
     },
   });
   const removeFacility = useMutation({ mutationFn: deleteFacility, meta: { success: "편의시설을 삭제했어요." }, onSuccess: invalidateFacilities });
+
+  const [transport, setTransport] = useState<TransportOption[]>(data.transport ?? []);
+  const saveTransport = useMutation({
+    mutationFn: updateFestival,
+    meta: { success: "교통 안내를 저장했어요." },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["current-festival"] }),
+  });
 
   const areaName = (id: string) => areas.data?.find((area) => area.id === id)?.name ?? "구역";
 
@@ -124,6 +135,63 @@ function FestivalSettings({ festival: data }: { festival: AdminFestival }) {
           ))}
         </div>
         {saveMenus.error && <p className="mt-2 text-xs text-destructive">{queryErrorMessage(saveMenus.error)}</p>}
+      </section>
+
+      {/* 교통 안내는 프론트 상수에 박혀 있어서 운영자가 고칠 수 없었고, 다른 축제를 올려도
+          여의도 데모 데이터가 그대로 나왔다. */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <Bus className="size-4 text-primary" /> 교통 안내
+        </h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          방문객 지도 화면의 오시는 길에 이 순서대로 나와요.
+        </p>
+        <div className="mt-3 space-y-2">
+          {transport.map((option, index) => (
+            <div key={index} className="grid gap-2 sm:grid-cols-[7rem_1fr_1fr_6rem_auto]">
+              <Select value={option.mode} onValueChange={(value) => setTransport(transport.map((row, position) => (position === index ? { ...row, mode: String(value) } : row)))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TRANSPORT_MODES.map((mode) => <SelectItem key={mode} value={mode}>{mode}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input
+                value={option.label}
+                onChange={(event) => setTransport(transport.map((row, position) => (position === index ? { ...row, label: event.target.value } : row)))}
+                placeholder="예: 5호선 여의나루역 2번 출구"
+                aria-label={`${index + 1}번 교통편 이름`}
+              />
+              <Input
+                value={option.detail}
+                onChange={(event) => setTransport(transport.map((row, position) => (position === index ? { ...row, detail: event.target.value } : row)))}
+                placeholder="예: 도보 5분, 엘리베이터 이용 가능"
+                aria-label={`${index + 1}번 교통편 설명`}
+              />
+              <Select value={option.status} onValueChange={(value) => setTransport(transport.map((row, position) => (position === index ? { ...row, status: String(value) } : row)))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TRANSPORT_STATUSES.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button type="button" size="sm" variant="outline" aria-label={`${index + 1}번 교통편 삭제`} onClick={() => setTransport(transport.filter((_, position) => position !== index))}>
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          ))}
+          <div className="flex items-center justify-end gap-3">
+            <Button type="button" size="sm" variant="outline" className="mr-auto" onClick={() => setTransport([...transport, { mode: "지하철", label: "", detail: "", status: "원활" }])}>
+              <Plus className="size-3.5" /> 교통편 추가
+            </Button>
+            {saveTransport.error && <p className="text-xs text-destructive">{queryErrorMessage(saveTransport.error)}</p>}
+            <Button
+              size="sm"
+              disabled={saveTransport.isPending || transport.some((option) => !option.label.trim())}
+              onClick={() => saveTransport.mutate({ version: data.version, transport })}
+            >
+              {saveTransport.isPending ? "저장 중..." : "교통 안내 저장"}
+            </Button>
+          </div>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">
@@ -161,7 +229,7 @@ function FestivalSettings({ festival: data }: { festival: AdminFestival }) {
           <div className="space-y-1">
             <Label>지원 언어</Label>
             <p className="flex flex-wrap gap-1 pt-1.5">
-              {data.supported_languages.map((language) => <Badge key={language} variant="outline" className="text-[10px]">{language}</Badge>)}
+              {data.supportedLanguages.map((language) => <Badge key={language} variant="outline" className="text-[10px]">{language}</Badge>)}
             </p>
           </div>
           <div className="space-y-1">
@@ -237,16 +305,12 @@ function FestivalSettings({ festival: data }: { festival: AdminFestival }) {
         </form>
 
         <div className="mt-3 space-y-2">
-          {facilities.isLoading ? (
-            <Skeleton className="h-20 w-full rounded-xl" />
-          ) : facilities.data?.length === 0 ? (
-            <p className="text-xs text-muted-foreground">등록된 편의시설이 없습니다.</p>
-          ) : (
-            facilities.data?.map((item) => (
+          <QueryState query={facilities} empty="등록된 편의시설이 없습니다." skeleton={<Skeleton className="h-20 w-full rounded-xl" />}>
+            {(rows) => rows.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{FACILITY_LABEL[item.facility_type] ?? item.facility_type} · {areaName(item.area_id)}</p>
+                  <p className="text-[11px] text-muted-foreground">{FACILITY_LABEL[item.facilityType] ?? item.facilityType} · {areaName(item.areaId)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -271,8 +335,8 @@ function FestivalSettings({ festival: data }: { festival: AdminFestival }) {
                   </ConfirmButton>
                 </div>
               </div>
-            ))
-          )}
+            ))}
+          </QueryState>
         </div>
       </section>
     </div>

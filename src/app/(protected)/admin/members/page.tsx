@@ -10,7 +10,7 @@ import {
   updateMembership,
   type Membership,
   type NewMembership,
-} from "@/features/staff/api/staff";
+} from "@/features/staff";
 import { ADMIN_ROLE_LABEL, type AdminRole } from "@/shared/lib/permissions";
 import { useForm } from "@/shared/lib/use-form";
 import { Badge } from "@/shared/ui/badge";
@@ -28,7 +28,7 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import { ErrorState, QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import {
   Table,
@@ -118,12 +118,13 @@ export default function MembersPage() {
       </Dialog>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        {memberships.isLoading ? (
-          <SkeletonList count={4} className="h-10 w-full" wrapperClassName="p-4" />
-        ) : memberships.data?.length === 0 ? (
-          <EmptyState className="m-4" message="등록된 계정이 없어요." />
-        ) : (
-          <div className="overflow-x-auto">
+        <QueryState
+          query={memberships}
+          className="m-4"
+          empty="등록된 계정이 없어요."
+          skeleton={<SkeletonList count={4} className="h-10 w-full" wrapperClassName="p-4" />}
+        >
+          {(rows) => (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -136,7 +137,7 @@ export default function MembersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {memberships.data?.map((member) => (
+                {rows.map((member) => (
                   <TableRow key={member.id}>
                     <TableCell className="font-medium text-foreground">{member.name}</TableCell>
                     <TableCell className="text-muted-foreground">{member.email}</TableCell>
@@ -150,7 +151,7 @@ export default function MembersPage() {
                       </Select>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {member.festival_scope?.includes("*") ? "전체 축제" : `${member.festival_scope?.length ?? 0}개 축제`}
+                      {member.festivalScope?.includes("*") ? "전체 축제" : `${member.festivalScope?.length ?? 0}개 축제`}
                     </TableCell>
                     <TableCell>
                       <Badge variant={member.status === "ACTIVE" ? "secondary" : "outline"} className="text-[10px]">{member.status}</Badge>
@@ -183,8 +184,8 @@ export default function MembersPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
-        )}
+          )}
+        </QueryState>
       </div>
 
       <Dialog open={roleChange !== null} onOpenChange={(open) => !open && setRoleChange(null)}>

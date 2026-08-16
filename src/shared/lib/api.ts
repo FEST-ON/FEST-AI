@@ -4,6 +4,14 @@ export const FESTIVAL_CODE = process.env.NEXT_PUBLIC_FESTIVAL_CODE ?? "EST34-202
 
 interface ApiEnvelope<T> {
   data: T;
+  page?: PageInfo;
+}
+
+/** 목록 응답의 커서 페이지네이션 정보. 커서는 서버가 만든 불투명한 값이다. */
+export interface PageInfo {
+  nextCursor: string | null;
+  hasNext: boolean;
+  limit: number;
 }
 
 interface ApiErrorEnvelope {
@@ -195,6 +203,65 @@ export function adminFestivalId() {
 /** `/admin/festivals/{현재 축제}` 하위 경로 호출. 축제 ID 조회를 호출부마다 반복하지 않는다. */
 export async function festivalApi<T>(path = "", init?: RequestInit): Promise<T> {
   return adminApi<T>(`/admin/festivals/${await adminFestivalId()}${path}`, init);
+}
+
+/**
+ * data와 함께 page(커서)까지 필요한 목록용. 일반 호출은 envelope의 data만 꺼내 쓰기 때문에
+ * nextCursor가 그대로 버려진다 — 다음 페이지를 요청하려면 이쪽을 써야 한다.
+ */
+export async function festivalApiPaged<T>(path: string, init?: RequestInit): Promise<{ data: T; page?: PageInfo }> {
+  const token = localStorage.getItem(ADMIN_ACCESS) ?? (await refreshAdminToken());
+  const request = async (accessToken: string) => {
+    const headers = new Headers(init?.headers);
+    if (init?.body) headers.set("Content-Type", "application/json");
+    headers.set("Authorization", `Bearer ${accessToken}`);
+    const response = await fetch(`${API_BASE}/admin/festivals/${await adminFestivalId()}${path}`, { ...init, headers });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as ApiErrorEnvelope;
+      throw new ApiError(body.error?.message ?? "서버 요청에 실패했습니다.", response.status);
+    }
+    return (await response.json()) as ApiEnvelope<T>;
+  };
+  try {
+    return await request(token);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 401) throw error;
+    return request(await refreshAdminToken());
+  }
+}
+
+/**
+ * 커서를 끝까지 따라가 목록 전체를 모은다.
+ *
+ * 운영 화면은 상태 탭·필터를 클라이언트에서 걸기 때문에 한 페이지만 받으면 뒤쪽 데이터가
+ * 조용히 사라진다(서버가 100건에서 자른다). 페이지 수에 상한을 둬서, 데이터가 예상보다
+ * 많을 때 브라우저가 무한정 요청하는 일은 막는다.
+ */
+export async function festivalApiAll<T>(path: string, { maxPages = 10, limit = 100 } = {}): Promise<T[]> {
+  const rows: T[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < maxPages; page += 1) {
+    const separator = path.includes("?") ? "&" : "?";
+    const query = `${separator}limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+    const result = await festivalApiPaged<T[]>(`${path}${query}`);
+    rows.push(...result.data);
+    if (!result.page?.hasNext || !result.page.nextCursor) break;
+    cursor = result.page.nextCursor;
+  }
+  return rows;
+}
+
+export interface PasswordChangeResult {
+  accessToken: string;
+  refreshToken: string;
+}
+
+/** 본인 비밀번호 변경. 서버가 기존 리프레시 토큰을 모두 폐기하므로 새 토큰 쌍을 받아 갈아끼운다. */
+export async function changeAdminPassword(currentPassword: string, newPassword: string) {
+  const result = await adminApi<PasswordChangeResult>("/me/password", json("POST", { currentPassword, newPassword }));
+  localStorage.setItem(ADMIN_ACCESS, result.accessToken);
+  localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
+  return result;
 }
 
 /** JSON 본문 요청 init. `{ method, body: JSON.stringify(...) }` 반복을 줄인다. */

@@ -48,6 +48,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/ai-insights", label: "AI 민원 인사이트", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
   // internal-documents 등록은 Manager, ai/operations/search는 로그인한 모든 역할
   { href: "/admin/documents", label: "운영 문서·검색", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR", "REVIEWER"], group: "콘텐츠·소통" },
+  // surveys 등록·상태 변경은 Manager, 결과 집계 조회는 축제 범위의 모든 역할
+  { href: "/admin/surveys", label: "설문 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
 
   // businesses/{id}/review → SUPER_ADMIN, FESTIVAL_MANAGER, REVIEWER / 쿠폰 발행은 Manager
   { href: "/admin/businesses", label: "참여업체·쿠폰", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "참여업체·ESG" },
@@ -76,12 +78,21 @@ export function canPublishEmergency(role: string | undefined) {
   return role !== undefined && (EMERGENCY_PUBLISH_ROLES as string[]).includes(role);
 }
 
+/**
+ * 사이드바에 없는 보호 화면. 참여업체 콘솔은 nav 항목이 아니라서 canAccessPath가
+ * "모르는 경로"로 보고 통과시켰고, 현장 운영자·검수자도 화면에 들어가 API 403만
+ * 잔뜩 보게 됐다. 여기에 적어 두면 나머지 화면과 같은 규칙으로 막힌다.
+ */
+const EXTRA_PROTECTED_PATHS: { href: string; roles: AdminRole[] }[] = [
+  { href: "/merchant", roles: ["MERCHANT", "SUPER_ADMIN"] },
+];
+
 export function findNavItem(pathname: string) {
   return ADMIN_NAV_ITEMS.find((item) => (item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href)));
 }
 
 export function canAccessPath(role: string | undefined, pathname: string) {
-  const item = findNavItem(pathname);
+  const item = findNavItem(pathname) ?? EXTRA_PROTECTED_PATHS.find((entry) => pathname.startsWith(entry.href));
   if (!item) return true;
   if (!role) return false;
   return (item.roles as string[]).includes(role);

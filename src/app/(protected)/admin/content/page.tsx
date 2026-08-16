@@ -8,7 +8,7 @@ import { Badge } from "@/shared/ui/badge";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
-import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { Textarea } from "@/shared/ui/textarea";
 import { contentAction, contentPreview, type ContentVersionStatus } from "@/features/content-review/model/content";
@@ -22,21 +22,21 @@ interface ContentReview {
 
 interface ContentVersion {
   id: string;
-  version_no: number;
+  versionNo: number;
   language: string;
   body: Record<string, unknown>;
-  change_note?: string;
+  changeNote?: string;
   status: ContentVersionStatus;
-  created_at: string;
+  createdAt: string;
   reviews: ContentReview[];
 }
 
 interface ContentItem {
   id: string;
-  content_type: string;
+  contentType: string;
   slug: string;
-  lifecycle_status: "DRAFT" | "PUBLISHED" | "UNPUBLISHED";
-  published_version_id?: string;
+  lifecycleStatus: "DRAFT" | "PUBLISHED" | "UNPUBLISHED";
+  publishedVersionId?: string;
   versions: ContentVersion[];
 }
 
@@ -72,7 +72,8 @@ async function changeContentState(input: {
 export default function ContentReviewPage() {
   const queryClient = useQueryClient();
   const [comments, setComments] = useState<Record<string, string>>({});
-  const { data = [], isLoading, error, refetch } = useQuery({ queryKey: ["content-review"], queryFn: fetchContentItems });
+  const items = useQuery({ queryKey: ["content-review"], queryFn: fetchContentItems });
+  const data = items.data ?? [];
   const mutation = useMutation({
     mutationFn: changeContentState,
     meta: { success: "콘텐츠 상태를 변경했어요." },
@@ -81,7 +82,7 @@ export default function ContentReviewPage() {
 
   const versions = data.flatMap((item) => item.versions.map((version) => ({ item, version })));
   const reviewCount = versions.filter(({ version }) => version.status === "IN_REVIEW").length;
-  const publishedCount = data.filter((item) => item.lifecycle_status === "PUBLISHED").length;
+  const publishedCount = data.filter((item) => item.lifecycleStatus === "PUBLISHED").length;
 
   return (
     <div className="space-y-5">
@@ -93,16 +94,16 @@ export default function ContentReviewPage() {
         <Badge variant="outline" className="gap-1.5"><FileCheck2 className="size-3.5" /> 승인·게시 이력 추적</Badge>
       </div>
 
-      {isLoading ? (
-        <SkeletonList count={3} className="h-48 rounded-2xl" wrapperClassName="space-y-3" />
-      ) : error ? (
-        <ErrorState message={queryErrorMessage(error)} onRetry={() => refetch()} />
-      ) : versions.length === 0 ? (
-        <EmptyState className="p-10" message="등록된 콘텐츠 버전이 없습니다." />
-      ) : (
-        <div className="space-y-3">
+      <QueryState
+        query={items}
+        empty="등록된 콘텐츠 버전이 없습니다."
+        emptyWhen={versions.length === 0}
+        skeleton={<SkeletonList count={3} className="h-48 rounded-2xl" wrapperClassName="space-y-3" />}
+      >
+        {() => (
+          <div className="space-y-3">
           {versions.map(({ item, version }) => {
-            const isPublished = item.lifecycle_status === "PUBLISHED" && item.published_version_id === version.id;
+            const isPublished = item.lifecycleStatus === "PUBLISHED" && item.publishedVersionId === version.id;
             const action = contentAction(version.status, isPublished);
             const status = STATUS[version.status];
             return (
@@ -115,9 +116,9 @@ export default function ContentReviewPage() {
                       {isPublished && <Badge className="gap-1 text-[10px]"><Upload className="size-3" /> 게시 중</Badge>}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {item.content_type} · {item.slug} · v{version.version_no} · {version.language.toUpperCase()}
+                      {item.contentType} · {item.slug} · v{version.versionNo} · {version.language.toUpperCase()}
                     </p>
-                    {version.change_note && <p className="mt-2 text-sm text-foreground/80">변경 메모: {version.change_note}</p>}
+                    {version.changeNote && <p className="mt-2 text-sm text-foreground/80">변경 메모: {version.changeNote}</p>}
                     {version.reviews.length > 0 && (
                       <div className="mt-3 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
                         최근 검수: {version.reviews.at(-1)?.decision === "APPROVED" ? "승인" : "반려"}
@@ -178,8 +179,9 @@ export default function ContentReviewPage() {
               </article>
             );
           })}
-        </div>
-      )}
+          </div>
+        )}
+      </QueryState>
     </div>
   );
 }

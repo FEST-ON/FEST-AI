@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Users2, MapPinned, FileCheck2, Ticket, TicketCheck, TicketPercent, Megaphone, Sparkles, Leaf, History, LogOut, Activity, UserCog, Store, Gift, FileSearch, Building2, KeyRound, ChevronDown, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users2, MapPinned, FileCheck2, Ticket, TicketCheck, TicketPercent, Megaphone, Sparkles, Leaf, History, LogOut, Activity, UserCog, Store, Gift, FileSearch, Building2, KeyRound, ChevronDown, ClipboardList, type LucideIcon } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
 import { logoutAdmin } from "@/shared/lib/api";
 import { useAdminSessionStore } from "@/features/admin-auth/model/store";
+import { ChangePasswordDialog } from "@/features/admin-auth/ui/change-password-dialog";
 import { ADMIN_ROLE_LABEL, visibleNavItems, type AdminNavItem } from "@/shared/lib/permissions";
 
 // 권한 정의(shared/lib/permissions)는 아이콘을 모르므로 여기서 href로 이어붙입니다.
@@ -27,6 +28,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/coupons": TicketPercent,
   "/admin/announcements": Megaphone,
   "/admin/ai-insights": Sparkles,
+  "/admin/surveys": ClipboardList,
   "/admin/esg": Leaf,
   "/admin/audit-logs": History,
   "/admin/festival": Building2,
@@ -69,7 +71,8 @@ export function AdminNavLinks({ role }: { role: string | undefined }) {
   }
 
   const renderLink = ({ href, label }: AdminNavItem) => {
-    const Icon = NAV_ICONS[href];
+    // 아이콘을 등록하지 않은 새 항목이 있으면 렌더가 통째로 죽는다 — 기본 아이콘으로 받아둔다.
+    const Icon = NAV_ICONS[href] ?? LayoutDashboard;
     return (
       <Link
         key={href}
@@ -130,6 +133,7 @@ export function AdminSidebar() {
             {user?.role ? (ADMIN_ROLE_LABEL[user.role] ?? user.role) : ""}
           </p>
         </div>
+        <ChangePasswordDialog className="text-sidebar-foreground/50 hover:text-sidebar-foreground" />
         <AdminLogoutButton className="text-sidebar-foreground/50 hover:text-sidebar-foreground" />
       </div>
     </aside>

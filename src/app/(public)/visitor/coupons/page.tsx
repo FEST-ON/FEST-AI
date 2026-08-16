@@ -8,6 +8,7 @@ import {
   fetchPoints,
   isCouponUsable,
   issueCoupon,
+  reissueCouponToken,
 } from "@/entities/coupon";
 import { useTranslation } from "@/shared/lib/i18n";
 import { useNow } from "@/shared/lib/use-now";
@@ -29,6 +30,12 @@ export default function CouponsPage() {
 
   const issue = useMutation({
     mutationFn: issueCoupon,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-coupons"] }),
+  });
+  // 사용 토큰은 발급 응답에서만 내려오고 기기에만 남는다. 기기를 바꾸면 QR을 만들 수
+  // 없어 쿠폰이 죽어 있었다 — 재발급하면 예전 토큰은 즉시 무효가 된다.
+  const reissue = useMutation({
+    mutationFn: reissueCouponToken,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-coupons"] }),
   });
 
@@ -94,10 +101,19 @@ export default function CouponsPage() {
                 )}
 
                 {usable && !coupon.issueToken && (
-                  <p className="mt-3 flex items-start gap-1.5 rounded-xl border border-amber-300 bg-amber-50 p-3 text-[11px] leading-4 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-                    <AlertTriangle className="mt-px size-3.5 shrink-0" />
-                    {t.coupon.tokenMissing}
-                  </p>
+                  <div className="mt-3 space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+                    <p className="flex items-start gap-1.5 text-[11px] leading-4 text-amber-900 dark:text-amber-100">
+                      <AlertTriangle className="mt-px size-3.5 shrink-0" />
+                      {t.coupon.tokenMissing}
+                    </p>
+                    <Button size="sm" variant="outline" className="w-full" disabled={reissue.isPending}
+                            onClick={() => reissue.mutate(coupon.id)}>
+                      <QrCodeIcon className="size-3.5" /> {t.coupon.reissueButton}
+                    </Button>
+                    {reissue.error && (
+                      <p className="text-[11px] text-destructive">{queryErrorMessage(reissue.error)}</p>
+                    )}
+                  </div>
                 )}
 
                 {!usable && (

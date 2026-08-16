@@ -57,9 +57,9 @@ function TicketHistory({ ticketId }: { ticketId: string }) {
       {(data ?? []).map((event) => (
         <li key={event.id} className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
           <Badge variant="outline" className="text-[10px]">
-            {event.from_status ? `${event.from_status} → ${event.to_status}` : event.to_status}
+            {event.fromStatus ? `${event.fromStatus} → ${event.toStatus}` : event.toStatus}
           </Badge>
-          <span>{seoulDateTime(event.created_at)}</span>
+          <span>{seoulDateTime(event.createdAt)}</span>
           {event.note && <span className="text-foreground">{event.note}</span>}
         </li>
       ))}

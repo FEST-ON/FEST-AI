@@ -12,6 +12,8 @@ interface ChatState {
   setTyping: (typing: boolean) => void;
   reset: (welcome: ChatMessage) => void;
   syncWelcome: (welcome: ChatMessage) => void;
+  /** 서버에 남아 있던 이전 대화로 화면을 채운다(새로고침 복원). */
+  restoreMessages: (messages: ChatMessage[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -20,6 +22,7 @@ export const useChatStore = create<ChatState>((set) => ({
   addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
   setTyping: (isTyping) => set({ isTyping }),
   reset: (welcome) => set({ messages: [welcome], isTyping: false }),
+  restoreMessages: (messages) => set({ messages, isTyping: false }),
   syncWelcome: (welcome) =>
     set((state) => ({
       messages:
