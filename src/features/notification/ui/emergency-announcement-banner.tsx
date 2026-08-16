@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, X } from "lucide-react";
-import { announcementText, fetchAnnouncements } from "@/features/notification/api/notifications";
+import { announcementText, fetchAnnouncements, isEmergency, visibleAnnouncements } from "@/features/notification/api/notifications";
 import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
+import { useNow } from "@/shared/lib/use-now";
 
 // 방문객은 종 아이콘 시트를 직접 열어야만 공지를 봤다 — 긴급(EMERGENCY) 공지는 그걸로 부족해서
 // 시트를 열지 않아도, AI 안내(immersive) 화면에서도 바로 보이는 배너로 별도 노출한다.
@@ -12,10 +13,11 @@ export function EmergencyAnnouncementBanner() {
   const { t, locale } = useTranslation();
   const notices = useQuery({ queryKey: ["public-announcements"], queryFn: fetchAnnouncements, refetchInterval: 30_000 });
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  // 자동 해제 시각이 지나면 재조회를 기다리지 않고 배너를 내린다.
+  const now = useNow(30_000);
 
-  const emergencyNotices = (notices.data ?? [])
-    .filter((notice) => notice.severity === "EMERGENCY" && !dismissedIds.includes(notice.id))
-    .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  const emergencyNotices = visibleAnnouncements(notices.data, now)
+    .filter((notice) => isEmergency(notice) && !dismissedIds.includes(notice.id));
 
   const { translated } = useAutoTranslate(
     Object.fromEntries(emergencyNotices.flatMap((notice) => [

@@ -12,11 +12,13 @@
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@tanstack/react-query": "^5.101.4",
+    "@types/qrcode": "^1.5.5",
     "@vercel/functions": "^3.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
+    "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "^4.16.2",

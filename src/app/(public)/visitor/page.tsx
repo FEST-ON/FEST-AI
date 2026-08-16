@@ -12,6 +12,7 @@ import type { VisitorMenuKey } from "@/features/visitor-menu-settings/model/stor
 import { useTranslation } from "@/shared/lib/i18n";
 import type { Dictionary } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
+import { LastUpdated } from "@/shared/ui/last-updated";
 import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
 
@@ -90,6 +91,12 @@ export default function VisitorHomePage() {
           {festival?.name ?? (festivalQuery.isError ? t.common.loadFailed : t.home.festivalLoading)}
         </h2>
         <p className="mt-1 text-xs text-primary-foreground/75">{festival?.location}</p>
+        <LastUpdated
+          value={festival?.updatedAt}
+          bcp47={bcp47}
+          label={t.common.lastUpdated}
+          className="mt-1.5 text-primary-foreground/75"
+        />
         <Link
           href="/visitor/ai-guide"
           className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-background px-3.5 py-1.5 text-xs font-bold text-primary"

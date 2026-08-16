@@ -1,37 +1,41 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BadgePercent, Coins, Ticket } from "lucide-react";
-import { benefitLabel, fetchAvailableCoupons, fetchMyCoupons, fetchPoints, issueCoupon } from "@/entities/coupon";
+import { AlertTriangle, Coins, QrCode as QrCodeIcon, Store, Ticket } from "lucide-react";
+import {
+  fetchCouponOffers,
+  fetchMyCoupons,
+  fetchPoints,
+  isCouponUsable,
+  issueCoupon,
+} from "@/entities/coupon";
+import { useTranslation } from "@/shared/lib/i18n";
+import { useNow } from "@/shared/lib/use-now";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { QrCode } from "@/shared/ui/qr-code";
+import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { useTranslation } from "@/shared/lib/i18n";
 
-export default function VisitorCouponsPage() {
+export default function CouponsPage() {
   const { t, locale, bcp47 } = useTranslation();
   const queryClient = useQueryClient();
+  // 만료 시각이 지난 쿠폰은 재조회를 기다리지 않고 사용 불가로 바뀌어야 한다.
+  const now = useNow(60_000);
 
-  const available = useQuery({ queryKey: ["available-coupons", locale] as const, queryFn: () => fetchAvailableCoupons(locale) });
-  const mine = useQuery({ queryKey: ["my-coupons", locale] as const, queryFn: () => fetchMyCoupons(locale) });
+  const myCoupons = useQuery({ queryKey: ["my-coupons", locale] as const, queryFn: () => fetchMyCoupons(locale) });
+  const offers = useQuery({ queryKey: ["coupon-offers", locale] as const, queryFn: () => fetchCouponOffers(locale) });
   const points = useQuery({ queryKey: ["visitor-points"], queryFn: fetchPoints });
 
   const issue = useMutation({
     mutationFn: issueCoupon,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-coupons"] });
-      queryClient.invalidateQueries({ queryKey: ["available-coupons"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-coupons"] }),
   });
 
-  // 쿠폰 유효기간은 해를 넘기는 경우가 있어 연도까지 보여준다.
-  const date = (value: string) => new Date(value).toLocaleDateString(bcp47, { year: "2-digit", month: "numeric", day: "numeric" });
-
   return (
-    <div className="px-4 pt-4 pb-6">
-      <h1 className="text-lg font-extrabold text-foreground">{t.coupons.title}</h1>
-      <p className="text-xs text-muted-foreground">{t.coupons.subtitle}</p>
+    <div className="px-4 pb-6 pt-4">
+      <h1 className="text-lg font-extrabold text-foreground">{t.coupon.title}</h1>
+      <p className="text-xs text-muted-foreground">{t.coupon.subtitle}</p>
 
       <section className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-primary/6 p-4 dark:bg-primary/15">
         <div className="flex items-center gap-2.5">
@@ -46,66 +50,129 @@ export default function VisitorCouponsPage() {
 
       <section className="mt-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">
-          <BadgePercent className="size-4" /> {t.coupons.availableTitle}
+          <Ticket className="size-4" /> {t.coupon.myCouponsTitle}
         </h2>
-        <QueryState query={available} empty={t.coupons.availableEmpty} retryLabel={t.common.retry} skeleton={
-            <div className="space-y-2"><Skeleton className="h-24 rounded-xl" /><Skeleton className="h-24 rounded-xl" /></div>
-          }>
-          {(rows) => (
-            <div className="space-y-2">
-              {rows.map((coupon) => (
-                <div key={coupon.id} className="rounded-xl border border-primary/30 bg-primary/6 p-3 dark:bg-primary/15">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-foreground">{coupon.name}</p>
-                      <p className="text-xs text-muted-foreground">{coupon.business_name}</p>
-                    </div>
-                    <Badge variant="outline" className="shrink-0 text-[10px]">{t.coupons.remaining(coupon.remaining)}</Badge>
+
+        {myCoupons.isLoading && <Skeleton className="h-40 rounded-2xl" />}
+        {myCoupons.isError && (
+          <ErrorState
+            message={queryErrorMessage(myCoupons.error, t.common.loadFailed)}
+            retryLabel={t.common.retry}
+            onRetry={() => myCoupons.refetch()}
+          />
+        )}
+        {myCoupons.data?.length === 0 && <EmptyState message={t.coupon.emptyMyCoupons} />}
+
+        <div className="space-y-3">
+          {myCoupons.data?.map((coupon) => {
+            const usable = isCouponUsable(coupon, now);
+            return (
+              <article
+                key={coupon.id}
+                className={`rounded-2xl border p-4 ${usable ? "border-primary/30 bg-primary/5" : "border-border bg-muted/40"}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-foreground">{coupon.businessName}</p>
+                    <p className="mt-0.5 text-sm font-semibold text-primary">
+                      {coupon.couponName} · {t.coupon.benefitLabel(coupon.benefitType, coupon.benefitValue)}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-primary">{benefitLabel(coupon.benefit_type, coupon.benefit_value)}</p>
-                  {coupon.description && <p className="mt-1 text-xs text-muted-foreground">{coupon.description}</p>}
-                  <div className="mt-2.5 flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-muted-foreground">{t.coupons.validUntil(date(coupon.valid_until))}</span>
-                    <Button size="sm" disabled={issue.isPending || coupon.remaining <= 0} onClick={() => issue.mutate(coupon.id)}>
-                      <Ticket className="size-3.5" /> {t.coupons.issueButton}
-                    </Button>
-                  </div>
+                  <Badge variant={usable ? "default" : "outline"} className="shrink-0 text-[10px]">
+                    {t.coupon.status[coupon.status]}
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          )}
-        </QueryState>
-        {issue.error && <p className="mt-2 text-xs text-destructive" role="alert">{queryErrorMessage(issue.error)}</p>}
+
+                {usable && coupon.issueToken && (
+                  <div className="mt-3 flex flex-col items-center gap-2 rounded-xl border border-border bg-background p-3">
+                    <QrCode value={coupon.issueToken} alt={t.coupon.qrAlt(coupon.businessName)} size={160} />
+                    <p className="font-mono text-xs font-bold tracking-wider break-all text-center text-foreground">
+                      {coupon.issueToken}
+                    </p>
+                    <p className="text-center text-[11px] leading-4 text-muted-foreground">{t.coupon.qrHelper}</p>
+                  </div>
+                )}
+
+                {usable && !coupon.issueToken && (
+                  <p className="mt-3 flex items-start gap-1.5 rounded-xl border border-amber-300 bg-amber-50 p-3 text-[11px] leading-4 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                    <AlertTriangle className="mt-px size-3.5 shrink-0" />
+                    {t.coupon.tokenMissing}
+                  </p>
+                )}
+
+                {!usable && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {coupon.status === "REDEEMED" ? t.coupon.usedLine : t.coupon.expiredLine}
+                  </p>
+                )}
+
+                {coupon.expiresAt && (
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {t.coupon.expiresLine(new Date(coupon.expiresAt).toLocaleDateString(bcp47))}
+                  </p>
+                )}
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <section className="mt-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">
-          <Ticket className="size-4" /> {t.coupons.myTitle}
+          <Store className="size-4" /> {t.coupon.offersTitle}
         </h2>
-        <QueryState query={mine} empty={t.coupons.myEmpty} retryLabel={t.common.retry} skeleton={<Skeleton className="h-20 rounded-xl" />}>
-          {(rows) => (
-            <div className="space-y-2">
-              {rows.map((coupon) => {
-                const used = coupon.status !== "ISSUED";
-                return (
-                  <div key={coupon.id} className={`rounded-xl border p-3 ${used ? "border-border bg-muted/50 opacity-60" : "border-border bg-card"}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-bold text-foreground">{coupon.name}</p>
-                      <Badge variant={used ? "secondary" : "default"} className="shrink-0 text-[10px]">
-                        {t.coupons.status[coupon.status] ?? coupon.status}
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm font-semibold text-primary">{benefitLabel(coupon.benefit_type, coupon.benefit_value)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{coupon.business_name} · {t.coupons.validUntil(date(coupon.expires_at))}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </QueryState>
-        <p className="mt-3 rounded-xl border border-dashed border-border p-3 text-center text-[11px] text-muted-foreground">
-          {t.coupons.redeemNotice}
-        </p>
+
+        {offers.isLoading && <Skeleton className="h-24 rounded-2xl" />}
+        {offers.isError && (
+          <ErrorState
+            message={queryErrorMessage(offers.error, t.common.loadFailed)}
+            retryLabel={t.common.retry}
+            onRetry={() => offers.refetch()}
+          />
+        )}
+        {offers.data?.length === 0 && <EmptyState message={t.coupon.emptyOffers} />}
+
+        <div className="space-y-2">
+          {offers.data?.map((offer) => {
+            // 서버가 발행 쿠폰에 원본 쿠폰 ID를 내려주지 않아, 같은 업체·쿠폰명으로 보유 여부를 본다.
+            const owned = myCoupons.data?.some(
+              (coupon) => coupon.couponName === offer.couponName && coupon.businessName === offer.businessName) ?? false;
+            const soldOut = offer.remaining <= 0;
+            return (
+              <div key={offer.id} className="rounded-xl border border-border bg-card p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-bold text-foreground">{offer.businessName}</p>
+                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                    {t.coupon.remainingLabel(Math.max(0, offer.remaining))}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm font-semibold text-primary">
+                  {offer.couponName} · {t.coupon.benefitLabel(offer.benefitType, offer.benefitValue)}
+                </p>
+                {offer.description && (
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{offer.description}</p>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t.coupon.expiresLine(new Date(offer.validUntil).toLocaleDateString(bcp47))}
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-2 w-full"
+                  disabled={owned || soldOut || issue.isPending}
+                  onClick={() => issue.mutate(offer.id)}
+                >
+                  <QrCodeIcon className="size-3.5" />
+                  {owned ? t.coupon.alreadyIssued : soldOut ? t.coupon.soldOut : t.coupon.issueAction}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+        {issue.isError && (
+          <p className="mt-2 text-xs text-destructive" role="alert">
+            {queryErrorMessage(issue.error, t.coupon.issueFailed)}
+          </p>
+        )}
       </section>
     </div>
   );

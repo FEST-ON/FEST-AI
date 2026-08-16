@@ -76,11 +76,12 @@ const ACTION_NOTE: Record<BookingAction, string> = {
   COMPLETED: "이용 완료 처리",
 };
 
-// 대기(WAITING) 예약만 호출할 수 있다 — 확정(CONFIRMED) 예약은 자리가 이미 보장돼 호출 대상이 아니다.
-export async function updateBookingStatus({ bookingId, status }: { bookingId: string; status: BookingAction }) {
-  return festivalApi(`/bookings/${bookingId}/status`, json("POST", { status, note: ACTION_NOTE[status] }));
+// note를 주면 감사 로그에 그대로 남는다(예: "호출 후 15분 경과, 현장 미도착").
+export async function updateBookingStatus({ bookingId, status, note }: { bookingId: string; status: BookingAction; note?: string }) {
+  return festivalApi(`/bookings/${bookingId}/status`, json("POST", { status, note: note ?? ACTION_NOTE[status] }));
 }
 
+// 대기(WAITING) 예약만 호출할 수 있다 — 확정(CONFIRMED) 예약은 자리가 이미 보장돼 호출 대상이 아니다.
 export function callBooking(bookingId: string) {
   return updateBookingStatus({ bookingId, status: "CALLED" });
 }

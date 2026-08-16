@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Megaphone, Send, X } from "lucide-react";
+import { BellRing, CalendarClock, Megaphone, Send, ShieldAlert, X } from "lucide-react";
 import { callBooking, fetchAdminBookings } from "@/features/reservation/api/bookings";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import {
@@ -16,6 +16,8 @@ import {
   validatePublishInput,
   type AnnouncementSeverity,
 } from "@/entities/announcement";
+import { useAdminSessionStore } from "@/features/admin-auth/model/store";
+import { canPublishEmergency } from "@/shared/lib/permissions";
 import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
@@ -38,8 +40,12 @@ function formatMoment(value: string) {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ko-KR");
 }
 
+type PublishMode = "now" | "scheduled";
+
 export function NotificationAdminPanel() {
   const queryClient = useQueryClient();
+  const role = useAdminSessionStore((state) => state.user?.role);
+  const emergencyAllowed = canPublishEmergency(role);
 
   const { data: bookings = [], isLoading: bookingsLoading, error: bookingsError, refetch: refetchBookings } = useQuery({
     queryKey: ["admin-bookings"],
@@ -71,6 +77,7 @@ export function NotificationAdminPanel() {
       setAudience([]);
       setTargetAreaIds([]);
       setEndsAt("");
+      setPublishMode("now");
     },
   });
   const closeMutation = useMutation({
@@ -83,11 +90,17 @@ export function NotificationAdminPanel() {
   const [severity, setSeverity] = useState<AnnouncementSeverity>("INFO");
   const [audience, setAudience] = useState<string[]>([]);
   const [targetAreaIds, setTargetAreaIds] = useState<string[]>([]);
+  const [publishMode, setPublishMode] = useState<PublishMode>("now");
   const [startsAt, setStartsAt] = useState(() => datetimeLocal());
   const [endsAt, setEndsAt] = useState("");
 
-  const validationError = validatePublishInput({ title, audience, startsAt, endsAt });
-  const canPublish = !validationError && !publishMutation.isPending;
+  // 즉시 게시는 "발행 버튼을 누른 시각"이 노출 시작이므로 입력값을 검증에서 제외한다.
+  const validationError = publishMode === "scheduled"
+    ? validatePublishInput({ title, audience, startsAt, endsAt })
+    : validatePublishInput({ title, audience, startsAt: datetimeLocal(), endsAt: "" }) ??
+      (endsAt && new Date(endsAt) <= new Date() ? "자동 해제 시각은 현재 시각 이후여야 해요." : null);
+  const severityBlocked = severity === "EMERGENCY" && !emergencyAllowed;
+  const canPublish = !validationError && !severityBlocked && !publishMutation.isPending;
 
   function publishNotice() {
     if (!canPublish) return;
@@ -96,7 +109,7 @@ export function NotificationAdminPanel() {
       severity,
       audience,
       targetAreaIds,
-      startsAt: new Date(startsAt).toISOString(),
+      startsAt: publishMode === "now" ? new Date().toISOString() : new Date(startsAt).toISOString(),
       endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
     });
   }
@@ -140,18 +153,29 @@ export function NotificationAdminPanel() {
           <div className="space-y-1.5">
             <Label>긴급도</Label>
             <div className="flex flex-wrap gap-2">
-              {SEVERITY_OPTIONS.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  size="sm"
-                  variant={severity === option.value ? "default" : "outline"}
-                  onClick={() => setSeverity(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
+              {SEVERITY_OPTIONS.map((option) => {
+                const blocked = option.value === "EMERGENCY" && !emergencyAllowed;
+                return (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={severity === option.value ? "default" : "outline"}
+                    disabled={blocked}
+                    title={blocked ? "긴급 공지는 최고 관리자만 발행할 수 있어요." : undefined}
+                    onClick={() => setSeverity(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                );
+              })}
             </div>
+            {!emergencyAllowed && (
+              <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <ShieldAlert className="size-3" />
+                긴급 공지는 최고 관리자 권한이 필요해요. 긴급 상황이면 최고 관리자에게 발행을 요청하세요.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -190,29 +214,60 @@ export function NotificationAdminPanel() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="notice-starts-at">노출 시작</Label>
-              <Input
-                id="notice-starts-at"
-                type="datetime-local"
-                value={startsAt}
-                onChange={(event) => setStartsAt(event.target.value)}
-              />
+          <div className="space-y-1.5">
+            <Label>게시 방식</Label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={publishMode === "now" ? "default" : "outline"}
+                onClick={() => setPublishMode("now")}
+              >
+                <Send className="size-3.5" /> 즉시 게시
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={publishMode === "scheduled" ? "default" : "outline"}
+                onClick={() => {
+                  setPublishMode("scheduled");
+                  // 예약으로 바꾸는 시점의 현재 시각을 기본값으로 다시 채운다(폼을 오래 열어둔 경우 대비).
+                  setStartsAt(datetimeLocal());
+                }}
+              >
+                <CalendarClock className="size-3.5" /> 예약 게시
+              </Button>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {publishMode === "scheduled" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="notice-starts-at">노출 시작</Label>
+                <Input
+                  id="notice-starts-at"
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(event) => setStartsAt(event.target.value)}
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="notice-ends-at">자동 해제 시각 (선택)</Label>
               <Input
                 id="notice-ends-at"
                 type="datetime-local"
-                min={startsAt}
+                min={publishMode === "scheduled" ? startsAt : undefined}
                 value={endsAt}
                 onChange={(event) => setEndsAt(event.target.value)}
               />
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            비워두면 직접 종료할 때까지 노출돼요. 설정하면 해당 시각 이후 자동으로 노출이 해제돼요.
+            {publishMode === "now"
+              ? "발행 버튼을 누른 시각부터 방문객 화면에 노출돼요."
+              : "지정한 시각이 되면 방문객 화면에 노출돼요. 그 전까지는 '노출 예정' 상태로 남아요."}
+            {" "}자동 해제 시각을 비워두면 직접 종료할 때까지 노출돼요.
           </p>
 
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">

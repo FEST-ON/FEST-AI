@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, CalendarClock, Check, Info, Megaphone } from "lucide-react";
-import { announcementText, fetchAnnouncements, fetchCalledBookings } from "@/features/notification/api/notifications";
+import { Bell, CalendarClock, Check, Info, Megaphone, Pin } from "lucide-react";
+import { announcementText, fetchAnnouncements, fetchCalledBookings, isEmergency, visibleAnnouncements } from "@/features/notification/api/notifications";
 import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
+import { useNow } from "@/shared/lib/use-now";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";
 
@@ -14,7 +16,10 @@ export function NotificationSheet() {
   const notices = useQuery({ queryKey: ["public-announcements"], queryFn: fetchAnnouncements, refetchInterval: 30_000 });
   const calls = useQuery({ queryKey: ["called-bookings"], queryFn: fetchCalledBookings, refetchInterval: 10_000 });
   const [readIds, setReadIds] = useState<string[]>([]);
-  const notificationIds = [...(calls.data ?? []).map((item) => item.id), ...(notices.data ?? []).map((item) => item.id)];
+  // 긴급 공지를 맨 위에 고정하고, 자동 해제 시각이 지난 공지는 목록에서 뺀다.
+  const now = useNow(30_000);
+  const noticeList = visibleAnnouncements(notices.data, now);
+  const notificationIds = [...(calls.data ?? []).map((item) => item.id), ...noticeList.map((item) => item.id)];
   const unreadCount = notificationIds.filter((id) => !readIds.includes(id)).length;
   const markRead = (id: string) => setReadIds((current) => [...new Set([...current, id])]);
 
@@ -27,7 +32,7 @@ export function NotificationSheet() {
     locale,
   );
   const { translated: noticeText } = useAutoTranslate(
-    Object.fromEntries((notices.data ?? []).flatMap((notice) => [
+    Object.fromEntries(noticeList.flatMap((notice) => [
       [`${notice.id}.title`, notice.title],
       [`${notice.id}.body`, announcementText(notice.body)],
     ])),
@@ -45,8 +50,8 @@ export function NotificationSheet() {
           {calls.data?.length ? <div className="space-y-2">{calls.data.map((call) => <Link key={call.id} href="/visitor/reservation" onClick={() => markRead(call.id)} className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-3"><span className="grid size-9 place-items-center rounded-full bg-primary text-primary-foreground"><CalendarClock className="size-4" /></span><span><span className="text-sm font-bold">{call.queue_number ? t.notification.ticketCall(call.queue_number) : t.notification.fallbackTicketLabel}</span><span className="mt-1 block text-xs text-muted-foreground">{callText[`${call.id}.program`] ?? call.program_title} · {callText[`${call.id}.area`] ?? call.area_name}</span>{call.called_at && <span className="mt-1.5 block text-[11px] font-medium text-primary">{new Date(call.called_at).toLocaleString(bcp47)}</span>}</span></Link>)}</div> : <div className="flex items-center gap-3 rounded-2xl border border-dashed p-4 text-xs text-muted-foreground"><Info className="size-4" />{t.notification.emptyReservationCalls}</div>}
         </section>
         <section className="pt-5"><h3 className="mb-2 text-sm font-bold">{t.notification.noticesTitle}</h3><div className="divide-y divide-border overflow-hidden rounded-2xl border bg-card">
-          {notices.data?.map((notice) => <button key={notice.id} type="button" onClick={() => markRead(notice.id)} className="flex w-full items-start gap-3 p-3 text-left hover:bg-muted/60"><span className={`grid size-9 shrink-0 place-items-center rounded-full ${notice.severity === "INFO" ? "bg-secondary" : "bg-destructive/10 text-destructive"}`}><Megaphone className="size-4" /></span><span><span className="text-sm font-semibold">{noticeText[`${notice.id}.title`] ?? notice.title}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{noticeText[`${notice.id}.body`] ?? announcementText(notice.body)}</span><span className="mt-1 block text-[11px] text-muted-foreground">{new Date(notice.updated_at).toLocaleString(bcp47)}</span></span></button>)}
-          {!notices.isLoading && !notices.data?.length && <p className="p-4 text-xs text-muted-foreground">{t.notification.emptyNotices}</p>}
+          {noticeList.map((notice) => <button key={notice.id} type="button" onClick={() => markRead(notice.id)} className={cn("flex w-full items-start gap-3 p-3 text-left hover:bg-muted/60", isEmergency(notice) && "border-l-4 border-destructive bg-destructive/5")}><span className={`grid size-9 shrink-0 place-items-center rounded-full ${notice.severity === "INFO" ? "bg-secondary" : "bg-destructive/10 text-destructive"}`}><Megaphone className="size-4" /></span><span>{isEmergency(notice) && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-white"><Pin className="size-2.5" />{t.notification.pinnedBadge}</span>}<span className="block text-sm font-semibold">{noticeText[`${notice.id}.title`] ?? notice.title}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{noticeText[`${notice.id}.body`] ?? announcementText(notice.body)}</span><span className="mt-1 block text-[11px] text-muted-foreground">{t.common.lastUpdated(new Date(notice.updated_at).toLocaleString(bcp47))}</span>{notice.ends_at && <span className="mt-0.5 block text-[11px] text-muted-foreground">{t.notification.autoCloseAt(new Date(notice.ends_at).toLocaleString(bcp47))}</span>}</span></button>)}
+          {!notices.isLoading && !noticeList.length && <p className="p-4 text-xs text-muted-foreground">{t.notification.emptyNotices}</p>}
         </div></section>
       </div>
     </SheetContent>
