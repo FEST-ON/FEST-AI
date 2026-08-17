@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Users2, MapPinned, FileCheck2, Ticket, TicketCheck, TicketPercent, Megaphone, Sparkles, Leaf, History, LogOut, Activity, UserCog, Store, Gift, FileSearch, Building2, KeyRound, ChevronDown, ClipboardList, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Users2, MapPinned, FileCheck2, Ticket, TicketCheck, TicketPercent, Megaphone, Sparkles, Leaf, History, LogOut, Activity, UserCog, Store, Gift, FileSearch, Building2, KeyRound, ChevronDown, ClipboardList, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
 import { logoutAdmin } from "@/shared/lib/api";
@@ -33,6 +33,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/audit-logs": History,
   "/admin/festival": Building2,
   "/admin/members": KeyRound,
+  "/admin/privacy": ShieldCheck,
 };
 
 export function AdminLogoutButton({ showLabel = false, className }: { showLabel?: boolean; className?: string }) {

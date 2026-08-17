@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 14eda6014c4dd8db
+// ko.ts sha256: ca3412d10928fdf8
 import type { ko } from "./ko";
 
 export const en: typeof ko = {
@@ -160,6 +160,7 @@ export const en: typeof ko = {
     pointsEmpty: "No points earned yet.",
   },
   survey: {
+    anonymousNotice: "Answers are stored anonymously and never shown individually. Once submitted they cannot be traced back to you, so they are excluded from access and deletion requests.",
     submitError: "Failed to submit the survey.",
     thanksTitle: "Thank you for your feedback!",
     thanksSubtitle: "It really helps us make the festival even better.",
@@ -169,6 +170,37 @@ export const en: typeof ko = {
     textPlaceholder: "Type your comments here",
     submitting: "Submitting...",
     submit: "Submit",
+  },
+  area: {
+    ariaLabel: "Set current zone",
+    title: "Current zone",
+    description: "Pick a zone to also receive notices targeted at it.",
+    unknown: "No zone set",
+    privacyNotice: "We do not use location data. Only the entry QR point or the zone you pick is stored.",
+    validity: (hours: number) => `The selected zone is cleared automatically after ${hours} hours.`,
+    sourceQr: "Set from entry QR",
+    sourceManual: "Chosen manually",
+    clear: "No zone",
+    clearHint: "You will only receive festival-wide notices. Emergency safety notices always arrive.",
+  },
+  privacy: {
+    title: "Privacy",
+    subtitle: "See what we collect and why, how long we keep it, and how to have it deleted.",
+    consentTitle: "Collected items and consent",
+    retentionLabel: "Retention",
+    required: "Required",
+    purgedNotice: "Records for the item you withdrew were deleted right away.",
+    retentionTitle: "Retention by item",
+    notCollected: "not collected",
+    requestTitle: "Access & deletion requests",
+    requestDescription: "Requests are filed against this device's visitor identifier. Track the status below.",
+    requestExcluded: "Anonymous survey answers cannot be traced back to you, so they are excluded from access and deletion requests.",
+    requestPlaceholder: "Add a note (optional)",
+    requestAccess: "Request access",
+    requestDelete: "Request deletion",
+    requestFailed: "Could not file the request.",
+    noRequests: "No requests yet.",
+    status: { RECEIVED: "Received", IN_PROGRESS: "In progress", COMPLETED: "Completed", REJECTED: "Rejected" },
   },
   accessibility: {
     ariaLabel: "Accessibility settings",

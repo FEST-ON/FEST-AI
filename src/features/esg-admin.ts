@@ -72,6 +72,8 @@ export interface EsgReport {
   periodFrom: string;
   periodTo: string;
   createdAt: string;
+  /** 운영자가 편집한 서술부(제목·머리말·비고). 산출물의 본문에 그대로 반영된다. */
+  editMetadata?: { title?: string; intro?: string; note?: string } | null;
   snapshot?: { metrics?: Array<{ name: string; category: string; value: number; unit: string }> } | null;
 }
 
@@ -102,6 +104,61 @@ export interface EsgDashboard {
 /** 데이터 품질 경고와 외부 AI 브리핑. 서버가 내려주는데 화면이 쓰지 않고 있었다. */
 export function fetchEsgDashboard() {
   return festivalApi<EsgDashboard>(`/esg/dashboard`);
+}
+
+/** ESG-01 지표 정의. 산식·단위·목표·증빙 요건이 없는 지표는 실적 승인 대상이 아니다. */
+export interface MetricVersion {
+  id: string;
+  versionNo: number;
+  formula: string;
+  unit: string;
+  target: number | null;
+  sourceRequirements: Record<string, unknown>;
+  evidenceRequired: boolean;
+  createdAt: string;
+}
+
+export interface MetricDefinition {
+  id: string;
+  name: string;
+  category: "E" | "S" | "G";
+  status: string;
+  createdAt: string;
+  versions: MetricVersion[];
+}
+
+export function fetchMetricDefinitions() {
+  return festivalApi<MetricDefinition[]>(`/esg/metrics`);
+}
+
+export function createMetric(input: { name: string; category: "E" | "S" | "G" }) {
+  return festivalApi<MetricDefinition>(`/esg/metrics`, json("POST", input));
+}
+
+/**
+ * 지표 정의는 수정하지 않고 새 버전을 쌓는다 — 이미 승인된 실적이 어떤 산식으로 집계됐는지
+ * 추적할 수 있어야 하기 때문이다(서버가 version_no를 매긴다).
+ */
+export function createMetricVersion({ metricId, ...body }: {
+  metricId: string;
+  formula: string;
+  unit: string;
+  target?: number | null;
+  sourceRequirements: Record<string, unknown>;
+  evidenceRequired: boolean;
+}) {
+  return festivalApi<MetricVersion>(`/esg/metrics/${metricId}/versions`, json("POST", body));
+}
+
+/** ESG-06 보고서 서술부 편집. 수치는 승인 실적 스냅샷이라 편집 대상이 아니다. */
+export interface ReportEdit {
+  title?: string;
+  intro?: string;
+  note?: string;
+}
+
+export function updateReport({ reportId, editMetadata }: { reportId: string; editMetadata: ReportEdit }) {
+  return festivalApi<EsgReport>(`/esg/reports/${reportId}`, json("PATCH", { editMetadata }));
 }
 
 export interface MetricVersionOption {

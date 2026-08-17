@@ -30,8 +30,11 @@ export interface AdminBusiness {
   reviewComment: string | null;
   isSponsored: boolean;
   esgParticipating: boolean;
+  /** BIZ-04 매출 데이터 수집 동의. 끄면 파기 배치가 해당 업체 매출 이벤트를 즉시 지운다. */
+  salesConsent: boolean;
   boothNo: string | null;
   areaId: string | null;
+  ownerMembershipId: string | null;
   version: number;
 }
 
@@ -54,8 +57,76 @@ export function updateAdminBusiness({ businessId, version, ...body }: {
   description?: string;
   isSponsored?: boolean;
   esgParticipating?: boolean;
+  salesConsent?: boolean;
 }) {
   return festivalApi<AdminBusiness>(`/businesses/${businessId}`, json("PATCH", { ...body, version }));
+}
+
+/** BIZ-05 상인 계정 초대. 계정은 업체를 지정한 이 링크로만 발급되고 자율 가입은 없다. */
+export interface MerchantInvitation {
+  id: string;
+  email: string;
+  status: "PENDING" | "ACCEPTED" | "REVOKED";
+  expiresAt: string;
+  acceptedAt: string | null;
+  createdAt: string;
+  expired: boolean;
+  acceptedName: string | null;
+}
+
+export interface MerchantInvitationList {
+  invitations: MerchantInvitation[];
+  owner: { membershipId: string; status: string; name: string; email: string } | null;
+}
+
+export function fetchMerchantInvitations(businessId: string) {
+  return festivalApi<MerchantInvitationList>(`/businesses/${businessId}/invitations`);
+}
+
+export function createMerchantInvitation({ businessId, email, name }: { businessId: string; email: string; name: string }) {
+  return festivalApi<MerchantInvitation & { inviteToken: string; expiresInHours: number }>(
+    `/businesses/${businessId}/invitations`,
+    json("POST", { email, name }),
+  );
+}
+
+export function revokeMerchantInvitation({ businessId, invitationId }: { businessId: string; invitationId: string }) {
+  return festivalApi(`/businesses/${businessId}/invitations/${invitationId}/revoke`, { method: "POST" });
+}
+
+/** 축제 종료 후 정리. 계정을 지우지 않고 비활성화하고 업체 연결만 끊는다(보유기간은 OPS-11). */
+export function deactivateBusinessMerchant(businessId: string) {
+  return festivalApi<void>(`/businesses/${businessId}/merchant`, { method: "DELETE" });
+}
+
+export interface BusinessPerformanceRow {
+  id: string;
+  name: string;
+  category: string;
+  isSponsored: boolean;
+  esgParticipating: boolean;
+  salesConsent: boolean;
+  impressions: number;
+  visits: number;
+  couponsIssued: number;
+  couponsRedeemed: number;
+  salesAmount: number | null;
+  redemptionRate: number | null;
+  visitRate: number | null;
+}
+
+export interface BusinessPerformance {
+  items: BusinessPerformanceRow[];
+  totals: { impressions: number; visits: number; couponsIssued: number; couponsRedeemed: number; businesses: number; salesConsented: number };
+  comparison: { averageRedemptionRate: number | null; medianRedemptionRate: number | null; averageCouponsIssued: number } | null;
+  comparisonSuppressed: boolean;
+  minComparisonSample: number;
+  salesNotice: string;
+}
+
+/** BIZ-04 운영자용 전체 참여 성과. 표본이 적으면 서버가 비교 통계를 내려주지 않는다. */
+export function fetchBusinessPerformance() {
+  return festivalApi<BusinessPerformance>(`/business-performance`);
 }
 
 export interface NewBusiness {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, X } from "lucide-react";
-import { announcementText, fetchAnnouncements, isEmergency, visibleAnnouncements } from "@/features/notification/api/notifications";
+import { announcementText, fetchAnnouncementFeed, isEmergency, visibleAnnouncements } from "@/features/notification/api/notifications";
 import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
 import { useNow } from "@/shared/lib/use-now";
 
@@ -11,12 +11,12 @@ import { useNow } from "@/shared/lib/use-now";
 // 시트를 열지 않아도, AI 안내(immersive) 화면에서도 바로 보이는 배너로 별도 노출한다.
 export function EmergencyAnnouncementBanner() {
   const { t, locale } = useTranslation();
-  const notices = useQuery({ queryKey: ["public-announcements"], queryFn: fetchAnnouncements, refetchInterval: 30_000 });
+  const notices = useQuery({ queryKey: ["public-announcements"], queryFn: fetchAnnouncementFeed, refetchInterval: 30_000 });
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   // 자동 해제 시각이 지나면 재조회를 기다리지 않고 배너를 내린다.
   const now = useNow(30_000);
 
-  const emergencyNotices = visibleAnnouncements(notices.data, now)
+  const emergencyNotices = visibleAnnouncements(notices.data?.items, now)
     .filter((notice) => isEmergency(notice) && !dismissedIds.includes(notice.id));
 
   const { translated } = useAutoTranslate(

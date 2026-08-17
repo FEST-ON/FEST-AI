@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ComplaintSheet } from "@/features/complaint";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { NotificationSheet } from "@/features/notification/ui/notification-sheet";
+import { AreaSheet } from "@/features/visitor-area/ui/area-sheet";
 import { Logo } from "@/shared/ui/logo";
 
 export function VisitorTopbar() {
@@ -15,6 +16,7 @@ export function VisitorTopbar() {
         </Link>
 
         <div className="flex items-center gap-2">
+          <AreaSheet />
           <AccessibilitySheet />
           <ComplaintSheet />
           <NotificationSheet />

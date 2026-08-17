@@ -1,5 +1,6 @@
-import { FESTIVAL_CODE, publicApi } from "@/shared/lib/api";
+import { visitorApi } from "@/shared/lib/api";
 import { fetchVisitorBookings } from "@/features/reservation";
+import type { VisitorArea } from "@/features/visitor-area/api/area";
 
 export interface PublicAnnouncement {
   id: string;
@@ -12,8 +13,28 @@ export interface PublicAnnouncement {
   updatedAt: string;
 }
 
-export function fetchAnnouncements() {
-  return publicApi<PublicAnnouncement[]>(`/public/festivals/${FESTIVAL_CODE}/announcements`);
+/** OPS-10 웹 폴링 채널 안내. 화면을 열어 둔 동안에만 도달한다는 한계를 서버가 함께 내려준다. */
+export interface NoticeChannel {
+  type: string;
+  pollSeconds: number;
+  limitation: string;
+}
+
+export interface VisitorNoticeFeed {
+  items: PublicAnnouncement[];
+  area: VisitorArea;
+  channel: NoticeChannel;
+}
+
+/**
+ * 방문 세션으로 공지를 받는다.
+ *
+ * 공개 목록(`/public/.../announcements`)은 세션이 없어 구역을 알 수 없으므로 구역 대상
+ * 공지를 걸러낼 수 없고, 도달 결과도 남지 않는다. 세션 경로를 쓰면 VIS-12 구역 판정으로
+ * 대상 공지가 선별되고 노출 사실이 OPS-10 전달 이력에 기록된다.
+ */
+export function fetchAnnouncementFeed() {
+  return visitorApi<VisitorNoticeFeed>("/visitor/announcements");
 }
 
 export async function fetchCalledBookings() {

@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 14eda6014c4dd8db
+// ko.ts sha256: ca3412d10928fdf8
 import type { ko } from "./ko";
 
 export const zh: typeof ko = {
@@ -160,6 +160,7 @@ export const zh: typeof ko = {
     pointsEmpty: "还没有积分记录。",
   },
   survey: {
+    anonymousNotice: "回答将匿名保存，不会单独公开。提交后无法确定回答者，因此不在查阅与删除请求范围内。",
     submitError: "问卷提交失败。",
     thanksTitle: "感谢您的宝贵意见！",
     thanksSubtitle: "这将大力帮助我们打造更好的庆典。",
@@ -169,6 +170,37 @@ export const zh: typeof ko = {
     textPlaceholder: "请输入您的意见",
     submitting: "提交中...",
     submit: "提交",
+  },
+  area: {
+    ariaLabel: "设置当前区域",
+    title: "当前区域",
+    description: "选择区域后，也会收到面向该区域的通知。",
+    unknown: "未设置区域",
+    privacyNotice: "我们不使用定位信息，仅保存入口二维码所在区域或您手动选择的区域。",
+    validity: (hours: number) => `所选区域将在 ${hours} 小时后自动取消。`,
+    sourceQr: "由入口二维码设置",
+    sourceManual: "手动选择",
+    clear: "不设置区域",
+    clearHint: "仅接收面向全场的通知。紧急安全通知始终会送达。",
+  },
+  privacy: {
+    title: "个人信息说明",
+    subtitle: "了解我们收集什么、为何收集、保存多久，以及如何删除。",
+    consentTitle: "收集项目与同意",
+    retentionLabel: "保存期限",
+    required: "必需",
+    purgedNotice: "已立即删除您撤回项目的相关记录。",
+    retentionTitle: "各项目保存期限",
+    notCollected: "不收集",
+    requestTitle: "查阅与删除请求",
+    requestDescription: "请求以本设备的访客标识为准受理，处理状态可在下方查看。",
+    requestExcluded: "匿名提交的问卷回答无法确定回答者，因此不在查阅与删除范围内。",
+    requestPlaceholder: "请填写请求内容（选填）",
+    requestAccess: "申请查阅",
+    requestDelete: "申请删除",
+    requestFailed: "未能受理该请求。",
+    noRequests: "暂无已受理的请求。",
+    status: { RECEIVED: "已受理", IN_PROGRESS: "处理中", COMPLETED: "已完成", REJECTED: "已拒绝" },
   },
   accessibility: {
     ariaLabel: "无障碍设置",

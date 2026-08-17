@@ -1,9 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarCheck, Users, Store, Ticket as TicketIcon, ArrowRight, Leaf } from "lucide-react";
-import { fetchOpsSnapshot } from "@/widgets/dashboard-stats/data";
+import { fetchOpsSnapshot, type OpsFilters } from "@/widgets/dashboard-stats/data";
+import { CROWD_LABEL, CROWD_TONE } from "@/features/crowd/api/crowd";
+import { fetchAreas } from "@/features/map/api/map-locations";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
 import { fetchTickets, PRIORITY_TONE } from "@/entities/ticket";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { fetchOperationResources } from "@/entities/program";
@@ -15,9 +22,18 @@ import { FestivalBriefCard } from "@/features/festival-brief/ui/festival-brief-c
 import { LANGUAGE_BY_LOCALE } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
 
+const EMPTY_FILTERS: OpsFilters = { areaId: "", timeFrom: "", timeTo: "" };
+
 export default function AdminDashboardPage() {
-  const opsQuery = useQuery({ queryKey: ["ops-snapshot"], queryFn: fetchOpsSnapshot });
+  // OPS-03: 축제·구역·시간 필터. 서버가 같은 필터를 지표마다 적용하고 어떤 값을 썼는지 되돌려 준다.
+  const [filters, setFilters] = useState<OpsFilters>(EMPTY_FILTERS);
+  const areasQuery = useQuery({ queryKey: ["admin-areas"], queryFn: fetchAreas });
+  const opsQuery = useQuery({
+    queryKey: ["ops-snapshot", filters] as const,
+    queryFn: () => fetchOpsSnapshot(filters),
+  });
   const ops = opsQuery.data;
+  const filtered = Boolean(filters.areaId || filters.timeFrom || filters.timeTo);
   const ticketsQuery = useQuery({ queryKey: ["tickets"], queryFn: fetchTickets });
   const resourcesQuery = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
   const { data: tickets } = ticketsQuery;
@@ -29,6 +45,51 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <FestivalBriefCard />
+
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-40 space-y-1">
+            <Label>구역</Label>
+            <Select
+              value={filters.areaId || "all"}
+              onValueChange={(value) => setFilters((current) => ({ ...current, areaId: value === "all" ? "" : String(value) }))}
+            >
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 구역</SelectItem>
+                {(areasQuery.data ?? []).map((area) => <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="ops-from">시작</Label>
+            <Input
+              id="ops-from"
+              type="datetime-local"
+              value={filters.timeFrom ?? ""}
+              onChange={(event) => setFilters((current) => ({ ...current, timeFrom: event.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="ops-to">종료</Label>
+            <Input
+              id="ops-to"
+              type="datetime-local"
+              value={filters.timeTo ?? ""}
+              onChange={(event) => setFilters((current) => ({ ...current, timeTo: event.target.value }))}
+            />
+          </div>
+          {filtered && (
+            <Button size="sm" variant="outline" onClick={() => setFilters(EMPTY_FILTERS)}>필터 초기화</Button>
+          )}
+        </div>
+        {/* 숫자만 보여주면 어느 시점 어떤 원천인지 알 수 없어 현장 판단에 쓸 수 없다. */}
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          출처 {ops?.sources.join(", ") ?? "-"} · 혼잡 기준 시각{" "}
+          {ops?.updatedAt ? new Date(ops.updatedAt).toLocaleString("ko-KR") : "기록 없음"}
+          {filters.areaId && " · 방문 세션·포인트는 구역과 연결되지 않아 전체 값으로 표시돼요."}
+        </p>
+      </section>
 
       <QueryState
         query={opsQuery}
@@ -114,6 +175,39 @@ export default function AdminDashboardPage() {
             </QueryState>
           </div>
         </div>
+      </div>
+
+      {/* OPS-03 혼잡·대기: 현장 입력(OPS-07)이 원천이라 유효시간이 지난 값은 오래된 값으로 표시한다. */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-foreground">구역별 혼잡·대기</h2>
+          <Link href="/admin/field" className="inline-flex items-center gap-0.5 text-xs font-medium text-primary">
+            현장 입력 <ArrowRight className="size-3" />
+          </Link>
+        </div>
+        {!ops?.crowd.length ? (
+          <p className="text-xs text-muted-foreground">선택한 조건에 등록된 혼잡 정보가 없어요.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {ops.crowd.map((zone) => (
+              <div key={zone.areaId} className="rounded-xl border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold text-foreground">{zone.name}</p>
+                  <StatusPill tone={zone.stale ? "muted" : CROWD_TONE[zone.crowdLevel]}>
+                    {CROWD_LABEL[zone.crowdLevel]}
+                  </StatusPill>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {zone.peopleCount !== null && `${zone.peopleCount.toLocaleString()}명 · `}
+                  {zone.estimatedWaitMin !== null ? `예상 대기 ${zone.estimatedWaitMin}분` : "대기 정보 없음"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {new Date(zone.capturedAt).toLocaleString("ko-KR")} 기준{zone.stale && " · 오래된 값"}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* AI-05 언어별 이용 로그: 방문 세션 언어와 첫 발화 자동 전환 건수 */}

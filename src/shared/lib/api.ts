@@ -89,17 +89,45 @@ interface LoginResult {
   user: { id: string; email: string; name: string; role: string };
 }
 
-export async function loginAdmin(email: string, password: string) {
-  const result = await api<LoginResult>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
+function persistAdminSession(result: { accessToken: string; refreshToken: string }) {
   adminSessionGeneration += 1;
   adminFestival = undefined;
   adminOrganization = undefined;
   localStorage.setItem(ADMIN_ACCESS, result.accessToken);
   localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
+}
+
+export async function loginAdmin(email: string, password: string) {
+  const result = await api<LoginResult>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  persistAdminSession(result);
   return result.user;
+}
+
+/** BIZ-05 상인 계정 초대. 링크를 연 화면이 어떤 업체·이메일의 초대인지 보여주기 위한 조회. */
+export interface MerchantInvitePreview {
+  email: string;
+  businessName: string;
+  festivalName: string;
+  expiresAt: string;
+  /** 이미 계정이 있으면 비밀번호를 다시 받지 않고 업체 연결만 늘린다. */
+  hasAccount: boolean;
+}
+
+export function lookupMerchantInvitation(token: string) {
+  return api<MerchantInvitePreview>("/auth/merchant-invitations/lookup", json("POST", { token }));
+}
+
+/** 초대 수락 = 상인 계정 발급과 업체 연결. 수락 즉시 로그인 상태가 되도록 토큰을 보관한다. */
+export async function acceptMerchantInvitation(input: { token: string; password?: string; name?: string }) {
+  const result = await api<LoginResult & { businessName: string }>(
+    "/auth/merchant-invitations/accept",
+    json("POST", input),
+  );
+  persistAdminSession(result);
+  return result;
 }
 
 function clearAdminSession() {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Star, CheckCircle2 } from "lucide-react";
 import { fetchSurveyQuestions, hasSurveyAnswer, submitSurvey } from "@/entities/visitor";
@@ -37,6 +38,14 @@ export default function SurveyPage() {
     <div className="px-4 pt-4 pb-6">
       <h1 className="text-lg font-extrabold text-foreground">{t.survey.title}</h1>
       <p className="text-xs text-muted-foreground">{t.survey.subtitle}</p>
+
+      {/* VIS-10·OPS-11: 익명 처리와 열람·삭제 요구 제외 범위를 수집 시점에 고지한다. */}
+      <p className="mt-3 rounded-xl bg-muted/60 p-3 text-[11px] leading-5 text-muted-foreground">
+        {t.survey.anonymousNotice}{" "}
+        <Link href="/visitor/privacy" className="font-semibold text-primary underline">
+          {t.privacy.title}
+        </Link>
+      </p>
 
       <QueryState
         query={survey}

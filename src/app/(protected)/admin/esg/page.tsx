@@ -9,14 +9,19 @@ import {
   addEvidence,
   approveReport,
   createMeasurement,
+  createMetric,
+  createMetricVersion,
   exportReport,
   fetchEsgDashboard,
   fetchExportJob,
   fetchMeasurements,
+  fetchMetricDefinitions,
   fetchMetricVersions,
   fetchReports,
   MEASUREMENT_STATUS_LABEL,
   reviewMeasurement,
+  updateReport,
+  type EsgReport,
   type NewMeasurement,
 } from "@/features/esg-admin";
 import { Badge } from "@/shared/ui/badge";
@@ -26,6 +31,8 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Meter } from "@/shared/ui/meter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { Switch } from "@/shared/ui/switch";
+import { Textarea } from "@/shared/ui/textarea";
 import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
@@ -52,11 +59,188 @@ function emptyMeasurement(): NewMeasurement {
   return { metricVersionId: "", value: 0, sourceType: "MANUAL", sourceRef: "", measuredAt: datetimeLocal(new Date()) };
 }
 
+const CATEGORY_LABEL: Record<string, string> = { E: "환경", S: "사회", G: "거버넌스" };
+
+/**
+ * ESG-01 지표 정의.
+ *
+ * 산식·단위·목표·출처·증빙 요건이 없는 지표는 실적 승인 대상이 아니라서, 등록 화면이
+ * 없으면 ESG-02~06이 전부 시드 데이터에 묶입니다. 정의는 수정하지 않고 새 버전을 쌓아
+ * 어떤 산식으로 집계된 실적인지 추적할 수 있게 합니다.
+ */
+function MetricDefinitionPanel() {
+  const queryClient = useQueryClient();
+  const [openVersionFor, setOpenVersionFor] = useState<string | null>(null);
+  const definitions = useQuery({ queryKey: ["esg-metric-definitions"], queryFn: fetchMetricDefinitions });
+  const { form: metricForm, set: setMetric, field: metricField, reset: resetMetric } =
+    useForm({ name: "", category: "E" as "E" | "S" | "G" });
+  const { form: versionForm, set: setVersion, field: versionField, reset: resetVersion } =
+    useForm({ formula: "", unit: "", target: "", source: "", evidenceRequired: false });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["esg-metric-definitions"] });
+    queryClient.invalidateQueries({ queryKey: ["esg-metric-versions"] });
+    queryClient.invalidateQueries({ queryKey: ["esg-metrics"] });
+    queryClient.invalidateQueries({ queryKey: ["esg-dashboard"] });
+  };
+  const addMetric = useMutation({
+    mutationFn: createMetric,
+    meta: { success: "지표를 등록했어요. 산식·단위 버전을 이어서 등록해 주세요." },
+    onSuccess: (metric) => { invalidate(); resetMetric(); setOpenVersionFor(metric.id); },
+  });
+  const addVersion = useMutation({
+    mutationFn: createMetricVersion,
+    meta: { success: "지표 버전을 등록했어요." },
+    onSuccess: () => { invalidate(); resetVersion(); setOpenVersionFor(null); },
+  });
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <h2 className="text-sm font-bold text-foreground">지표 정의</h2>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        산식·단위·목표·증빙 요건을 등록해야 실적을 연결하고 승인할 수 있어요. 정의를 바꿀 때는 새 버전을 등록하면 변경 이력이 남아요.
+      </p>
+
+      <form
+        className="mt-3 flex flex-wrap items-end gap-2"
+        onSubmit={(event) => { event.preventDefault(); addMetric.mutate(metricForm); }}
+      >
+        <div className="min-w-44 flex-1 space-y-1">
+          <Label htmlFor="metric-name">지표명</Label>
+          <Input id="metric-name" {...metricField("name")} required placeholder="예: 다회용기 사용률" />
+        </div>
+        <div className="w-32 space-y-1">
+          <Label>구분</Label>
+          <Select value={metricForm.category} onValueChange={(value) => setMetric("category")(value as "E" | "S" | "G")}>
+            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(["E", "S", "G"] as const).map((value) => (
+                <SelectItem key={value} value={value}>{value} · {CATEGORY_LABEL[value]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" size="sm" disabled={addMetric.isPending}>{addMetric.isPending ? "등록 중..." : "지표 추가"}</Button>
+      </form>
+      {addMetric.error && <p className="mt-2 text-xs text-destructive">{queryErrorMessage(addMetric.error)}</p>}
+
+      <QueryState
+        query={definitions}
+        className="mt-3"
+        empty="등록된 지표가 없어요."
+        skeleton={<SkeletonList count={2} className="h-14 rounded-xl" wrapperClassName="mt-3 space-y-2" />}
+      >
+        {(rows) => (
+          <div className="mt-3 space-y-2">
+            {rows.map((metric) => {
+              const latest = metric.versions[0];
+              return (
+                <div key={metric.id} className="rounded-xl border border-border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                        {metric.name}
+                        <Badge variant="outline" className="text-[10px]">{CATEGORY_LABEL[metric.category] ?? metric.category}</Badge>
+                        {!latest && <StatusPill tone="warning">정의 미완료</StatusPill>}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {latest
+                          ? `v${latest.versionNo} · ${latest.formula} · 단위 ${latest.unit}${latest.target !== null ? ` · 목표 ${latest.target}` : ""}${latest.evidenceRequired ? " · 증빙 필수" : ""}`
+                          : "산식·단위가 없어 실적 승인 대상이 아니에요."}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setOpenVersionFor(openVersionFor === metric.id ? null : metric.id)}>
+                      {latest ? "새 버전" : "정의 등록"}
+                    </Button>
+                  </div>
+
+                  {openVersionFor === metric.id && (
+                    <form
+                      className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        addVersion.mutate({
+                          metricId: metric.id,
+                          formula: versionForm.formula,
+                          unit: versionForm.unit,
+                          target: versionForm.target === "" ? null : Number(versionForm.target),
+                          // 산식과 함께 출처를 남겨야 승인 근거가 성립한다(ESG-01 주요 규칙).
+                          sourceRequirements: { source: versionForm.source },
+                          evidenceRequired: versionForm.evidenceRequired,
+                        });
+                      }}
+                    >
+                      <Input className="sm:col-span-2" placeholder="산식 (예: 다회용기 반납 수 / 대여 수 × 100)" {...versionField("formula")} required />
+                      <Input placeholder="단위 (예: %)" {...versionField("unit")} required />
+                      <Input type="number" step="any" placeholder="목표값(선택)" {...versionField("target")} />
+                      <Input className="sm:col-span-3" placeholder="데이터 출처 (예: 반납 스테이션 집계표)" {...versionField("source")} required />
+                      <label className="flex items-center gap-2 text-xs text-foreground">
+                        <Switch checked={versionForm.evidenceRequired} onCheckedChange={setVersion("evidenceRequired")} />
+                        증빙 필수
+                      </label>
+                      <div className="sm:col-span-4 flex items-center justify-end gap-3">
+                        {addVersion.error && <p className="mr-auto text-[11px] text-destructive">{queryErrorMessage(addVersion.error)}</p>}
+                        <Button type="submit" size="sm" disabled={addVersion.isPending}>버전 등록</Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </QueryState>
+    </section>
+  );
+}
+
+/** ESG-06 보고서 서술부 편집. 수치는 승인 실적 스냅샷이라 편집 대상이 아니다. */
+function ReportEditor({ report, onSaved }: { report: EsgReport; onSaved: () => void }) {
+  const { form, field } = useForm({
+    title: report.editMetadata?.title ?? report.title,
+    intro: report.editMetadata?.intro ?? "",
+    note: report.editMetadata?.note ?? "",
+  });
+  const save = useMutation({
+    mutationFn: () => updateReport({ reportId: report.id, editMetadata: form }),
+    meta: { success: "보고서 본문을 저장했어요." },
+    onSuccess: onSaved,
+  });
+
+  return (
+    <form
+      className="mt-3 space-y-2 border-t border-border pt-3"
+      onSubmit={(event) => { event.preventDefault(); save.mutate(); }}
+    >
+      <div className="space-y-1">
+        <Label htmlFor={`report-title-${report.id}`}>보고서 제목</Label>
+        <Input id={`report-title-${report.id}`} {...field("title")} required />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor={`report-intro-${report.id}`}>머리말</Label>
+        <Textarea id={`report-intro-${report.id}`} rows={3} {...field("intro")} placeholder="보고 목적과 기간, 주요 성과 요약을 적어 주세요." />
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor={`report-note-${report.id}`}>개선 과제·비고</Label>
+        <Textarea id={`report-note-${report.id}`} rows={3} {...field("note")} placeholder="다음 회차 개선 과제와 데이터 한계를 적어 주세요." />
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        지표 수치와 근거는 승인된 실적 스냅샷이라 편집 대상이 아니에요. 저장한 서술부는 DOCX·PDF 산출물 본문에 그대로 들어갑니다.
+      </p>
+      <div className="flex items-center justify-end gap-3">
+        {save.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(save.error)}</p>}
+        <Button type="submit" size="sm" disabled={save.isPending}>{save.isPending ? "저장 중..." : "본문 저장"}</Button>
+      </div>
+    </form>
+  );
+}
+
 export default function EsgPage() {
   const queryClient = useQueryClient();
   const { form, set, field, setForm, reset } = useForm<NewMeasurement>(emptyMeasurement);
   const [correcting, setCorrecting] = useState<string | null>(null);
   const [evidenceFor, setEvidenceFor] = useState<string | null>(null);
+  const [editingReport, setEditingReport] = useState<string | null>(null);
   const { form: evidence, field: evidenceField, reset: resetEvidence } = useForm({ fileId: "", fileHash: "", evidenceType: "PHOTO" });
 
   const metrics = useQuery({ queryKey: ["esg-metrics"], queryFn: fetchEsgMetrics });
@@ -182,6 +366,8 @@ export default function EsgPage() {
           </section>
         );
       })}
+
+      <MetricDefinitionPanel />
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-bold text-foreground">{correcting ? "실적 정정 등록" : "실적 등록"}</h2>
@@ -363,7 +549,8 @@ export default function EsgPage() {
         <div className="mt-4 space-y-2">
           <QueryState query={reports} empty="생성된 보고서가 없습니다." skeleton={<Skeleton className="h-20 w-full rounded-xl" />}>
             {(rows) => rows.map((report) => (
-              <div key={report.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
+              <div key={report.id} className="rounded-xl border border-border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{report.title}</p>
                   <p className="text-[11px] text-muted-foreground">
@@ -388,7 +575,16 @@ export default function EsgPage() {
                       </Button>
                     </>
                   )}
+                  {report.status === "DRAFT" && (
+                    <Button size="sm" variant="outline" onClick={() => setEditingReport(editingReport === report.id ? null : report.id)}>
+                      본문 편집
+                    </Button>
+                  )}
                 </div>
+              </div>
+              {editingReport === report.id && report.status === "DRAFT" && (
+                <ReportEditor report={report} onSaved={() => { setEditingReport(null); void refreshReports(); }} />
+              )}
               </div>
             ))}
           </QueryState>

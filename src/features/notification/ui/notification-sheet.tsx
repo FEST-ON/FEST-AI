@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, CalendarClock, Check, Info, Megaphone, Pin } from "lucide-react";
-import { announcementText, fetchAnnouncements, fetchCalledBookings, isEmergency, visibleAnnouncements } from "@/features/notification/api/notifications";
+import { announcementText, fetchAnnouncementFeed, fetchCalledBookings, isEmergency, visibleAnnouncements } from "@/features/notification/api/notifications";
 import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
 import { useNow } from "@/shared/lib/use-now";
 import { cn } from "@/shared/lib/utils";
@@ -13,12 +13,12 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 
 export function NotificationSheet() {
   const { t, locale, bcp47 } = useTranslation();
-  const notices = useQuery({ queryKey: ["public-announcements"], queryFn: fetchAnnouncements, refetchInterval: 30_000 });
+  const notices = useQuery({ queryKey: ["public-announcements"], queryFn: fetchAnnouncementFeed, refetchInterval: 30_000 });
   const calls = useQuery({ queryKey: ["called-bookings"], queryFn: fetchCalledBookings, refetchInterval: 10_000 });
   const [readIds, setReadIds] = useState<string[]>([]);
   // 긴급 공지를 맨 위에 고정하고, 자동 해제 시각이 지난 공지는 목록에서 뺀다.
   const now = useNow(30_000);
-  const noticeList = visibleAnnouncements(notices.data, now);
+  const noticeList = visibleAnnouncements(notices.data?.items, now);
   const notificationIds = [...(calls.data ?? []).map((item) => item.id), ...noticeList.map((item) => item.id)];
   const unreadCount = notificationIds.filter((id) => !readIds.includes(id)).length;
   const markRead = (id: string) => setReadIds((current) => [...new Set([...current, id])]);
@@ -32,10 +32,13 @@ export function NotificationSheet() {
     locale,
   );
   const { translated: noticeText } = useAutoTranslate(
-    Object.fromEntries(noticeList.flatMap((notice) => [
-      [`${notice.id}.title`, notice.title],
-      [`${notice.id}.body`, announcementText(notice.body)],
-    ])),
+    Object.fromEntries([
+      ...noticeList.flatMap((notice) => [
+        [`${notice.id}.title`, notice.title],
+        [`${notice.id}.body`, announcementText(notice.body)],
+      ] as [string, string][]),
+      ...(notices.data?.channel ? [["channel.limitation", notices.data.channel.limitation] as [string, string]] : []),
+    ]),
     locale,
   );
 
@@ -52,7 +55,9 @@ export function NotificationSheet() {
         <section className="pt-5"><h3 className="mb-2 text-sm font-bold">{t.notification.noticesTitle}</h3><div className="divide-y divide-border overflow-hidden rounded-2xl border bg-card">
           {noticeList.map((notice) => <button key={notice.id} type="button" onClick={() => markRead(notice.id)} className={cn("flex w-full items-start gap-3 p-3 text-left hover:bg-muted/60", isEmergency(notice) && "border-l-4 border-destructive bg-destructive/5")}><span className={`grid size-9 shrink-0 place-items-center rounded-full ${notice.severity === "INFO" ? "bg-secondary" : "bg-destructive/10 text-destructive"}`}><Megaphone className="size-4" /></span><span>{isEmergency(notice) && <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-white"><Pin className="size-2.5" />{t.notification.pinnedBadge}</span>}<span className="block text-sm font-semibold">{noticeText[`${notice.id}.title`] ?? notice.title}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{noticeText[`${notice.id}.body`] ?? announcementText(notice.body)}</span><span className="mt-1 block text-[11px] text-muted-foreground">{t.common.lastUpdated(new Date(notice.updatedAt).toLocaleString(bcp47))}</span>{notice.endsAt && <span className="mt-0.5 block text-[11px] text-muted-foreground">{t.notification.autoCloseAt(new Date(notice.endsAt).toLocaleString(bcp47))}</span>}</span></button>)}
           {!notices.isLoading && !noticeList.length && <p className="p-4 text-xs text-muted-foreground">{t.notification.emptyNotices}</p>}
-        </div></section>
+        </div>
+        {notices.data?.channel && <p className="mt-2 rounded-xl bg-muted/60 p-3 text-[11px] leading-5 text-muted-foreground">{noticeText["channel.limitation"] ?? notices.data.channel.limitation}</p>}
+        </section>
       </div>
     </SheetContent>
   </Sheet>;

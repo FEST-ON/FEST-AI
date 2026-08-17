@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { BadgePercent, CalendarDays, MapPin, Route, Sparkles, Store, Ticket, Stamp, ClipboardList, ArrowRight } from "lucide-react";
+import { BadgePercent, CalendarDays, MapPin, Route, Sparkles, Store, Ticket, Stamp, ClipboardList, ArrowRight, ShieldCheck } from "lucide-react";
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { CrowdList } from "@/features/crowd/ui/crowd-list";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
@@ -158,6 +158,19 @@ export default function VisitorHomePage() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* OPS-11: 수집 항목·보유기간 고지와 열람·삭제 요구 창구는 방문객이 스스로 찾을 수 있어야 한다. */}
+      {visitorMode === "qr" && (
+        <Link
+          href="/visitor/privacy"
+          className="mb-2 flex items-center justify-between rounded-xl border border-border bg-card p-3 text-xs font-semibold text-muted-foreground"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck className="size-4 text-primary" /> {t.privacy.title}
+          </span>
+          <ArrowRight className="size-3.5" />
+        </Link>
       )}
     </div>
   );

@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BadgePercent, Plus, Store } from "lucide-react";
+import { BadgePercent, KeyRound, Plus, Store } from "lucide-react";
 import {
   createBusiness,
   createBusinessCoupon,
+  createMerchantInvitation,
+  deactivateBusinessMerchant,
   fetchAdminBusinesses,
   fetchBusinessCoupons,
+  fetchBusinessPerformance,
+  fetchMerchantInvitations,
+  revokeMerchantInvitation,
   PARTICIPATION_LABEL,
   PARTICIPATION_TONE,
   reviewBusiness,
@@ -18,6 +23,9 @@ import {
 } from "@/features/business-admin";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import { Badge } from "@/shared/ui/badge";
+import { ConfirmButton } from "@/shared/ui/confirm-button";
+import { StatCard } from "@/shared/ui/stat-card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
@@ -119,10 +127,204 @@ function CouponPanel({ business }: { business: AdminBusiness }) {
   );
 }
 
-const STATUS_FILTERS = ["심사 대기", "승인", "전체"] as const;
+/**
+ * BIZ-05 상인 계정 초대.
+ *
+ * 계정은 업체를 지정한 초대 링크로만 발급되고 자율 가입은 없습니다. 토큰 원문은 발급
+ * 응답에 한 번만 실리므로(서버에는 해시만 남습니다) 화면에서 바로 복사해 전달해야 합니다.
+ */
+function MerchantPanel({ business }: { business: AdminBusiness }) {
+  const queryClient = useQueryClient();
+  const [invite, setInvite] = useState({ email: "", name: "" });
+  const [issuedLink, setIssuedLink] = useState<string | null>(null);
+  const invitations = useQuery({
+    queryKey: ["merchant-invitations", business.id],
+    queryFn: () => fetchMerchantInvitations(business.id),
+  });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["merchant-invitations", business.id] });
+    queryClient.invalidateQueries({ queryKey: ["admin-businesses"] });
+  };
+  const create = useMutation({
+    mutationFn: createMerchantInvitation,
+    meta: { success: "초대 링크를 발급했어요." },
+    onSuccess: (result) => {
+      setIssuedLink(`${window.location.origin}/merchant-invite?token=${result.inviteToken}`);
+      setInvite({ email: "", name: "" });
+      invalidate();
+    },
+  });
+  const revoke = useMutation({ mutationFn: revokeMerchantInvitation, meta: { success: "초대를 회수했어요." }, onSuccess: invalidate });
+  const unlink = useMutation({
+    mutationFn: () => deactivateBusinessMerchant(business.id),
+    meta: { success: "상인 계정을 비활성화했어요." },
+    onSuccess: invalidate,
+  });
+
+  return (
+    <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
+      <p className="flex items-center gap-1.5 text-xs font-bold text-foreground"><KeyRound className="size-3.5" /> 상인 계정</p>
+
+      <QueryState query={invitations} className="mt-2" skeleton={<Skeleton className="mt-2 h-10 w-full rounded-lg" />}>
+        {(data) => (
+          <>
+            {data.owner ? (
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-background p-2 text-[11px]">
+                <span className="text-foreground">
+                  연결됨 · {data.owner.name} ({data.owner.email})
+                </span>
+                <ConfirmButton
+                  size="sm"
+                  variant="outline"
+                  title="상인 계정을 비활성화할까요?"
+                  description="계정을 삭제하지 않고 로그인만 막고 업체 연결을 끊습니다. 개인정보는 비활성화 후 1년이 지나면 파기 배치가 지웁니다."
+                  confirmLabel="비활성화"
+                  onConfirm={() => unlink.mutate()}
+                >
+                  연결 해제
+                </ConfirmButton>
+              </div>
+            ) : (
+              <p className="mt-2 text-[11px] text-muted-foreground">연결된 상인 계정이 없어요.</p>
+            )}
+
+            {data.invitations.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {data.invitations.map((invitation) => (
+                  <li key={invitation.id} className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="truncate text-foreground">{invitation.email}</span>
+                    <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                      {invitation.status === "PENDING" && invitation.expired
+                        ? "만료"
+                        : invitation.status === "PENDING"
+                          ? `${new Date(invitation.expiresAt).toLocaleString("ko-KR")} 만료`
+                          : invitation.status === "ACCEPTED"
+                            ? "수락됨"
+                            : "회수됨"}
+                      {invitation.status === "PENDING" && !invitation.expired && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => revoke.mutate({ businessId: business.id, invitationId: invitation.id })}
+                        >
+                          회수
+                        </Button>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </QueryState>
+
+      <form
+        className="mt-3 flex flex-wrap items-end gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          create.mutate({ businessId: business.id, ...invite });
+        }}
+      >
+        <Input
+          className="min-w-44 flex-1"
+          type="email"
+          placeholder="상인 이메일"
+          value={invite.email}
+          onChange={(event) => setInvite((current) => ({ ...current, email: event.target.value }))}
+          required
+        />
+        <Input
+          className="min-w-28"
+          placeholder="담당자 이름"
+          value={invite.name}
+          onChange={(event) => setInvite((current) => ({ ...current, name: event.target.value }))}
+          required
+        />
+        <Button type="submit" size="sm" disabled={create.isPending}>{create.isPending ? "발급 중..." : "초대 발급"}</Button>
+      </form>
+      {issuedLink && (
+        <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+          <p className="text-[11px] font-semibold text-primary">72시간 안에 전달해 주세요. 이 링크는 다시 볼 수 없어요.</p>
+          <code className="mt-1 block break-all text-[11px] text-foreground">{issuedLink}</code>
+        </div>
+      )}
+      {create.error && <p className="mt-2 text-[11px] text-destructive">{queryErrorMessage(create.error)}</p>}
+    </div>
+  );
+}
+
+/**
+ * BIZ-04 참여 성과.
+ *
+ * 업체별 전환 지표와 전체 집계를 같은 화면에서 보여줍니다. 표본이 적으면 평균에서 개별
+ * 업체 실적이 역산되므로 서버가 비교 통계를 아예 내려주지 않습니다.
+ */
+function PerformancePanel() {
+  const performance = useQuery({ queryKey: ["business-performance"], queryFn: fetchBusinessPerformance });
+
+  return (
+    <QueryState query={performance} skeleton={<SkeletonList count={3} className="h-12 w-full rounded-xl" />}>
+      {(data) => (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard label="참여업체" value={data.totals.businesses.toLocaleString()} helper="승인 완료" />
+            <StatCard label="노출" value={data.totals.impressions.toLocaleString()} helper="추천 노출 이벤트" />
+            <StatCard label="쿠폰 발급" value={data.totals.couponsIssued.toLocaleString()} helper="누적 발급" />
+            <StatCard label="쿠폰 사용" value={data.totals.couponsRedeemed.toLocaleString()} helper="사용 처리 완료" tone="primary" />
+          </div>
+
+          <p className="rounded-xl bg-muted/60 p-3 text-[11px] leading-5 text-muted-foreground">
+            {data.salesNotice} 매출 동의 업체 {data.totals.salesConsented}곳.{" "}
+            {data.comparisonSuppressed
+              ? `표본이 ${data.minComparisonSample}곳 미만이라 비교 통계는 개별 업체 실적이 역산될 수 있어 공개하지 않습니다.`
+              : `평균 사용률 ${data.comparison?.averageRedemptionRate ?? "-"}% · 중앙값 ${data.comparison?.medianRedemptionRate ?? "-"}% · 업체당 평균 발급 ${data.comparison?.averageCouponsIssued}장`}
+          </p>
+
+          <div className="rounded-2xl border border-border bg-card p-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>업체</TableHead>
+                  <TableHead>노출</TableHead>
+                  <TableHead>방문</TableHead>
+                  <TableHead>방문 전환</TableHead>
+                  <TableHead>쿠폰 발급</TableHead>
+                  <TableHead>사용률</TableHead>
+                  <TableHead>매출</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.items.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium">
+                      {row.name}
+                      {row.isSponsored && <Badge className="ml-1.5 bg-amber-500 text-[10px] text-white hover:bg-amber-500">광고</Badge>}
+                    </TableCell>
+                    <TableCell>{row.impressions.toLocaleString()}</TableCell>
+                    <TableCell>{row.visits.toLocaleString()}</TableCell>
+                    <TableCell>{row.visitRate === null ? "-" : `${row.visitRate}%`}</TableCell>
+                    <TableCell>{row.couponsIssued.toLocaleString()}</TableCell>
+                    <TableCell>{row.redemptionRate === null ? "-" : `${row.redemptionRate}%`}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.salesAmount === null ? "미동의" : `${Number(row.salesAmount).toLocaleString()}원`}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </QueryState>
+  );
+}
+
+const STATUS_FILTERS = ["심사 대기", "승인", "전체", "참여 성과"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function matchesStatus(status: string, filter: StatusFilter) {
+  if (filter === "참여 성과") return false;
   if (filter === "전체") return true;
   if (filter === "승인") return status === "APPROVED";
   return status === "SUBMITTED" || status === "REJECTED" || status === "DRAFT";
@@ -220,14 +422,17 @@ export default function BusinessesPage() {
           {STATUS_FILTERS.map((value) => (
             <TabsTrigger key={value} value={value} className="gap-1.5">
               {value}
-              <span className="text-[10px] text-muted-foreground">
-                {(businesses.data ?? []).filter((row) => matchesStatus(row.participationStatus, value)).length}
-              </span>
+              {value !== "참여 성과" && (
+                <span className="text-[10px] text-muted-foreground">
+                  {(businesses.data ?? []).filter((row) => matchesStatus(row.participationStatus, value)).length}
+                </span>
+              )}
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
 
+      {statusFilter === "참여 성과" ? <PerformancePanel /> : (
       <QueryState
         query={businesses}
         empty="표시할 참여업체가 없어요."
@@ -281,8 +486,18 @@ export default function BusinessesPage() {
                       />
                       ESG·지역상생 참여
                     </label>
+                    {/* BIZ-04: 매출은 업체 동의가 있을 때만 수집·표시한다. 끄면 파기 배치가 즉시 지운다. */}
+                    <label className="flex items-center gap-2 text-xs text-foreground">
+                      <Switch
+                        checked={business.salesConsent}
+                        disabled={flags.isPending && flags.variables?.businessId === business.id}
+                        onCheckedChange={(checked) => flags.mutate({ businessId: business.id, version: business.version, salesConsent: checked })}
+                      />
+                      매출 데이터 수집 동의
+                    </label>
                     <p className="text-[11px] text-muted-foreground">
                       광고는 방문객 추천에서 별도 영역으로 분리되고, ESG 참여는 추천 점수에 가산돼요.
+                      매출은 동의한 업체만 성과 집계에 포함되고, 동의를 끄면 기존 매출 기록도 파기돼요.
                     </p>
                   </div>
                 )}
@@ -304,13 +519,19 @@ export default function BusinessesPage() {
                   </div>
                 )}
 
-                {openCoupons === business.id && <CouponPanel business={business} />}
+                {openCoupons === business.id && (
+                  <>
+                    <CouponPanel business={business} />
+                    <MerchantPanel business={business} />
+                  </>
+                )}
               </article>
             ))}
             {review.error && <p className="text-sm text-destructive">{queryErrorMessage(review.error)}</p>}
           </div>
         )}
       </QueryState>
+      )}
     </div>
   );
 }

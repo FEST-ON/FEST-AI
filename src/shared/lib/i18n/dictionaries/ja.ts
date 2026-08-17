@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 14eda6014c4dd8db
+// ko.ts sha256: ca3412d10928fdf8
 import type { ko } from "./ko";
 
 export const ja: typeof ko = {
@@ -160,6 +160,7 @@ export const ja: typeof ko = {
     pointsEmpty: "まだ獲得履歴がありません。",
   },
   survey: {
+    anonymousNotice: "回答は匿名で保存され、個別の内容は公開されません。提出後は回答者を特定できないため、開示・削除の請求対象外です。",
     submitError: "アンケートの送信に失敗しました。",
     thanksTitle: "貴重なご意見ありがとうございます！",
     thanksSubtitle: "より良いフェスティバルづくりに大変役立ちます。",
@@ -169,6 +170,37 @@ export const ja: typeof ko = {
     textPlaceholder: "ご意見を入力してください",
     submitting: "送信中...",
     submit: "送信する",
+  },
+  area: {
+    ariaLabel: "現在のエリア設定",
+    title: "現在のエリア",
+    description: "エリアを選ぶと、そのエリア向けのお知らせも届きます。",
+    unknown: "エリア未設定",
+    privacyNotice: "位置情報は使用しません。入口QRまたはご自身で選んだエリアのみ保存されます。",
+    validity: (hours: number) => `設定したエリアは${hours}時間後に自動で解除されます。`,
+    sourceQr: "入口QRで設定",
+    sourceManual: "手動で選択",
+    clear: "エリア未設定",
+    clearHint: "全体向けのお知らせのみ届きます。緊急の安全情報は常に届きます。",
+  },
+  privacy: {
+    title: "個人情報のご案内",
+    subtitle: "何をなぜ収集し、どのくらい保管し、どう削除できるかをご確認ください。",
+    consentTitle: "収集項目と同意",
+    retentionLabel: "保管期間",
+    required: "必須",
+    purgedNotice: "撤回した項目の記録をすぐに削除しました。",
+    retentionTitle: "項目別の保管期間",
+    notCollected: "収集しません",
+    requestTitle: "開示・削除の請求",
+    requestDescription: "この端末の訪問者識別子を基準に受け付けます。処理状況は下で確認できます。",
+    requestExcluded: "匿名で提出したアンケート回答は回答者を特定できないため、開示・削除の対象外です。",
+    requestPlaceholder: "ご要望を入力してください（任意）",
+    requestAccess: "開示を請求",
+    requestDelete: "削除を請求",
+    requestFailed: "請求を受け付けられませんでした。",
+    noRequests: "受け付けた請求はありません。",
+    status: { RECEIVED: "受付", IN_PROGRESS: "処理中", COMPLETED: "完了", REJECTED: "却下" },
   },
   accessibility: {
     ariaLabel: "アクセシビリティ設定",

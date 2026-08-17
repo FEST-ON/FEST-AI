@@ -65,6 +65,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   // organizations/{id}/memberships → SUPER_ADMIN 전용
   { href: "/admin/members", label: "계정·권한", roles: ["SUPER_ADMIN"], group: "설정·관리" },
   { href: "/admin/audit-logs", label: "감사 로그", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
+  // privacy/policy·requests는 Manager, privacy/purge는 SUPER_ADMIN 전용(화면에서 버튼만 감춘다).
+  { href: "/admin/privacy", label: "개인정보·전달", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
 ];
 
 /**
