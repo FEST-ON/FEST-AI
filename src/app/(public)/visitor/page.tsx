@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { BadgePercent, CalendarDays, MapPin, Route, Sparkles, Store, Ticket, Stamp, ClipboardList, ArrowRight, ShieldCheck } from "lucide-react";
+import { BadgePercent, CalendarDays, MapPin, RefreshCw, Route, Sparkles, Store, Ticket, Stamp, ClipboardList, ArrowRight, ShieldCheck } from "lucide-react";
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { CrowdList } from "@/features/crowd/ui/crowd-list";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { LanguageBar } from "@/features/accessibility/ui/language-bar";
 import { useVisitorMenus } from "@/features/visitor-menu-settings";
 import type { VisitorMenuKey } from "@/features/visitor-menu-settings";
 import { useTranslation } from "@/shared/lib/i18n";
@@ -14,6 +13,7 @@ import type { Dictionary } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
 import { LastUpdated } from "@/shared/ui/last-updated";
 import { EmptyState, ErrorState } from "@/shared/ui/query-state";
+import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
 
 const QUICK_MENU: {
@@ -73,30 +73,38 @@ export default function VisitorHomePage() {
         </h1>
       </div>
 
-      {/* 키오스크 진입 화면에서는 축제 지원 언어를 바로 고를 수 있어야 한다(AI-05). */}
-      {visitorMode === "kiosk" && (
-        <section aria-labelledby="kiosk-language-label">
-          <h2 id="kiosk-language-label" className="mb-2 text-sm font-bold text-foreground">
-            {t.accessibility.languageLabel}
-          </h2>
-          <LanguageBar buttonClassName="py-3 text-sm" />
-        </section>
-      )}
-
       <div className="overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
-        <Badge className="bg-white/15 text-white hover:bg-white/15">
-          {festival?.period.start.slice(5).replace("-", "/")} ~ {festival?.period.end.slice(5).replace("-", "/")}
-        </Badge>
-        <h2 className="mt-2 text-lg font-bold leading-snug">
-          {festival?.name ?? (festivalQuery.isError ? t.common.loadFailed : t.home.festivalLoading)}
-        </h2>
-        <p className="mt-1 text-xs text-primary-foreground/75">{festival?.location}</p>
-        <LastUpdated
-          value={festival?.updatedAt}
-          bcp47={bcp47}
-          label={t.common.lastUpdated}
-          className="mt-1.5 text-primary-foreground/75"
-        />
+        {/* 값이 없을 때 배지에 " ~ "만 남아 깨져 보이던 자리 — 도착 전에는 자리표시자를 둔다. */}
+        {!festival ? (
+          <div className="space-y-2" aria-busy={festivalQuery.isLoading}>
+            <Skeleton className="h-5 w-28 rounded-full bg-white/25" />
+            <Skeleton className="h-6 w-48 rounded-md bg-white/25" />
+            <Skeleton className="h-4 w-32 rounded-md bg-white/20" />
+            {!festivalQuery.isLoading && (
+              <button
+                type="button"
+                onClick={() => festivalQuery.refetch()}
+                className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white"
+              >
+                <RefreshCw className="size-3.5" /> {t.common.loadFailed} · {t.common.retry}
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <Badge className="bg-white/15 text-white hover:bg-white/15">
+              {festival.period.start.slice(5).replace("-", "/")} ~ {festival.period.end.slice(5).replace("-", "/")}
+            </Badge>
+            <h2 className="mt-2 text-lg font-bold leading-snug">{festival.name}</h2>
+            <p className="mt-1 text-xs text-primary-foreground/75">{festival.location}</p>
+            <LastUpdated
+              value={festival.updatedAt}
+              bcp47={bcp47}
+              label={t.common.lastUpdated}
+              className="mt-1.5 text-primary-foreground/75"
+            />
+          </>
+        )}
         <Link
           href="/visitor/ai-guide"
           className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-background px-3.5 py-1.5 text-xs font-bold text-primary"
@@ -115,7 +123,7 @@ export default function VisitorHomePage() {
             <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Icon className="size-4.5" />
             </span>
-            <span className="text-[11px] font-semibold text-foreground">{t.home.quickMenu[labelKey]}</span>
+            <span className="text-[0.6875rem] font-semibold text-foreground">{t.home.quickMenu[labelKey]}</span>
           </Link>
         ))}
       </div>
@@ -139,9 +147,14 @@ export default function VisitorHomePage() {
             </Link>
           </div>
           <div className="space-y-2">
-            {scheduleQuery.isError ? (
-              <ErrorState message={t.common.loadFailed} retryLabel={t.common.retry} onRetry={() => scheduleQuery.refetch()} />
-            ) : !scheduleQuery.isLoading && !schedule?.length ? (
+            {/* 끝내 목록을 받지 못한 경우를 빈 목록으로 읽으면 장애가 "행사 없음"이 된다. */}
+            {!schedule ? (
+              scheduleQuery.isLoading ? (
+                <SkeletonList count={2} className="h-14 w-full rounded-xl" />
+              ) : (
+                <ErrorState message={t.common.loadFailed} retryLabel={t.common.retry} onRetry={() => scheduleQuery.refetch()} />
+              )
+            ) : schedule.length === 0 ? (
               <EmptyState message={t.common.empty} />
             ) : null}
             {(schedule ?? []).slice(0, 3).map((item) => (
@@ -153,7 +166,7 @@ export default function VisitorHomePage() {
                   <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
                   <p className="text-xs text-muted-foreground">{item.stage}</p>
                 </div>
-                <Badge variant="outline" className="shrink-0 text-[10px]">{item.category}</Badge>
+                <Badge variant="outline" className="shrink-0 text-[0.625rem]">{item.category}</Badge>
               </div>
             ))}
           </div>

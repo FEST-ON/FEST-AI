@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ListChecks, Sparkles, TrendingUp, UserCheck } from "lucide-react";
 import { PRIORITY_TONE } from "@/entities/ticket";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { SelectField } from "@/shared/ui/select-field";
+import { useWrite } from "@/shared/lib/use-write";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { Meter } from "@/shared/ui/meter";
@@ -27,6 +28,9 @@ import {
 
 const PAGE_SIZE = 20;
 
+const TOPIC_OPTIONS = ISSUE_TOPICS.map((value) => ({ value, label: TOPIC_LABEL[value] }));
+const SENTIMENT_OPTIONS = ISSUE_SENTIMENTS.map((value) => ({ value, label: SENTIMENT_LABEL[value] }));
+
 function OverrideRow({ row, onSave, saving }: {
   row: IssueAnalysisRow;
   onSave: (value: { topic: IssueTopic; sentiment: IssueSentiment; urgent: boolean }) => void;
@@ -42,26 +46,30 @@ function OverrideRow({ row, onSave, saving }: {
       <div className="flex flex-wrap items-center gap-1.5">
         <p className="mr-auto min-w-0 truncate text-sm font-semibold text-foreground">{row.title}</p>
         {row.analysis.humanReviewed ? (
-          <Badge variant="secondary" className="gap-1 text-[10px]"><UserCheck className="size-3" /> 담당자 수정</Badge>
+          <Badge variant="secondary" className="gap-1 text-[0.625rem]"><UserCheck className="size-3" /> 담당자 수정</Badge>
         ) : (
-          <Badge variant="outline" className="gap-1 text-[10px]"><Sparkles className="size-3" /> 자동 분류</Badge>
+          <Badge variant="outline" className="gap-1 text-[0.625rem]"><Sparkles className="size-3" /> 자동 분류</Badge>
         )}
-        {row.analysis.urgent && <Badge variant="destructive" className="text-[10px]">긴급</Badge>}
+        {row.analysis.urgent && <Badge variant="destructive" className="text-[0.625rem]">긴급</Badge>}
       </div>
       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{row.description}</p>
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <Select value={topic} onValueChange={(value) => setTopic(value as IssueTopic)}>
-          <SelectTrigger size="sm" className="w-32"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {ISSUE_TOPICS.map((value) => <SelectItem key={value} value={value}>{TOPIC_LABEL[value]}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={sentiment} onValueChange={(value) => setSentiment(value as IssueSentiment)}>
-          <SelectTrigger size="sm" className="w-24"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {ISSUE_SENTIMENTS.map((value) => <SelectItem key={value} value={value}>{SENTIMENT_LABEL[value]}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <SelectField
+          value={topic}
+          onValueChange={(value) => setTopic(value as IssueTopic)}
+          options={TOPIC_OPTIONS}
+          size="sm"
+          className="w-32"
+          aria-label="분류"
+        />
+        <SelectField
+          value={sentiment}
+          onValueChange={(value) => setSentiment(value as IssueSentiment)}
+          options={SENTIMENT_OPTIONS}
+          size="sm"
+          className="w-24"
+          aria-label="감성"
+        />
         <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} className="size-3.5 accent-red-600" />
           긴급
@@ -76,13 +84,10 @@ function OverrideRow({ row, onSave, saving }: {
 
 /** 민원·사고 티켓 자동 분류 결과와 담당자 수정. */
 export function IssueAnalysisPanel() {
-  const queryClient = useQueryClient();
   const [limit, setLimit] = useState(PAGE_SIZE);
   const issues = useQuery(issueAnalysisQuery);
-  const override = useMutation({
-    mutationFn: overrideIssueAnalysis,
-    meta: { success: "분류를 수정했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: issueAnalysisQuery.queryKey }),
+  const override = useWrite(overrideIssueAnalysis, {
+    success: "분류를 수정했어요.", invalidates: [issueAnalysisQuery.queryKey],
   });
 
   const rows = useMemo(() => issues.data ?? [], [issues.data]);
@@ -133,7 +138,7 @@ export function IssueAnalysisPanel() {
               <div key={issue.topic} className="rounded-xl border border-border p-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-foreground">{issue.label}</p>
-                  <Badge variant="secondary" className="text-[10px]">{issue.count}건 반복</Badge>
+                  <Badge variant="secondary" className="text-[0.625rem]">{issue.count}건 반복</Badge>
                 </div>
                 <ul className="mt-1.5 list-inside list-disc text-xs text-muted-foreground">
                   {/* 같은 제목의 티켓이 여러 건이라 제목은 키가 되지 못한다. */}
@@ -149,7 +154,7 @@ export function IssueAnalysisPanel() {
         <div className="mb-3 flex items-center gap-1.5">
           <ListChecks className="size-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">권장 개선 과제</h2>
-          <span className="text-[11px] text-muted-foreground">미해결 티켓 분류 기준</span>
+          <span className="text-[0.6875rem] text-muted-foreground">미해결 티켓 분류 기준</span>
         </div>
         {improvementTasks.length === 0 ? (
           <p className="text-xs text-muted-foreground">미해결 민원·사고가 없어 제안할 과제가 없습니다.</p>
@@ -174,7 +179,7 @@ export function IssueAnalysisPanel() {
         <div className="mb-3 flex items-center gap-1.5">
           <UserCheck className="size-4 text-primary" />
           <h2 className="text-sm font-bold text-foreground">분류 검토·수정</h2>
-          <span className="text-[11px] text-muted-foreground">자동 분류가 틀렸다면 담당자가 직접 고칠 수 있어요.</span>
+          <span className="text-[0.6875rem] text-muted-foreground">자동 분류가 틀렸다면 담당자가 직접 고칠 수 있어요.</span>
         </div>
         {rows.length === 0 ? (
           <p className="text-xs text-muted-foreground">분류할 티켓이 없습니다.</p>
@@ -195,7 +200,7 @@ export function IssueAnalysisPanel() {
                 <Button size="sm" variant="outline" onClick={() => setLimit((value) => value + PAGE_SIZE)}>
                   더 보기
                 </Button>
-                <p className="text-[11px] text-muted-foreground">전체 {rows.length}건 중 {limit}건 표시 중</p>
+                <p className="text-[0.6875rem] text-muted-foreground">전체 {rows.length}건 중 {limit}건 표시 중</p>
               </div>
             )}
           </>

@@ -36,6 +36,11 @@ export function datetimeLocal(value: string | Date = new Date()) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 }
 
+/** datetimeLocal()의 역함수. datetime-local 입력값을 서버가 받는 ISO 문자열로 되돌린다. */
+export function toIso(value: string | Date) {
+  return new Date(value).toISOString()
+}
+
 /**
  * 같은 id의 첫 행만 남긴다.
  * 참여업체 목록은 부스마다 한 줄로 오기 때문에 업체 단위 화면에서는 대표 한 줄만 필요하다.

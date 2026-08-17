@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { BellRing, CalendarClock, Megaphone, Send, ShieldAlert, X } from "lucide-react";
 import { callBooking, fetchAdminBookings } from "@/features/reservation";
 import { fetchAreas } from "@/features/map/api/map-locations";
@@ -25,7 +25,8 @@ import { Label } from "@/shared/ui/label";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { Textarea } from "@/shared/ui/textarea";
 import { useForm } from "@/shared/lib/use-form";
-import { datetimeLocal } from "@/shared/lib/utils";
+import { useWrite } from "@/shared/lib/use-write";
+import { datetimeLocal, toIso } from "@/shared/lib/utils";
 
 const SEVERITY_TONE: Record<AnnouncementSeverity, Tone> = {
   INFO: "secondary", WARNING: "warning", EMERGENCY: "danger",
@@ -44,7 +45,6 @@ function formatMoment(value: string) {
 type PublishMode = "now" | "scheduled";
 
 export function NotificationAdminPanel() {
-  const queryClient = useQueryClient();
   const role = useAdminSessionStore((state) => state.user?.role);
   const emergencyAllowed = canPublishEmergency(role);
 
@@ -56,11 +56,7 @@ export function NotificationAdminPanel() {
   const waitingBookings = bookings.filter((booking) => booking.status === "WAITING");
   const calledBookings = bookings.filter((booking) => booking.status === "CALLED");
 
-  const callMutation = useMutation({
-    mutationFn: callBooking,
-    meta: { success: "방문객을 호출했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-bookings"] }),
-  });
+  const callMutation = useWrite(callBooking, { success: "방문객을 호출했어요.", invalidates: ["admin-bookings"] });
 
   const { data: announcements = [], isLoading: announcementsLoading, error: announcementsError, refetch: refetchAnnouncements } = useQuery({
     queryKey: ["announcements"],
@@ -68,19 +64,10 @@ export function NotificationAdminPanel() {
   });
   const { data: areaOptions = [] } = useQuery({ queryKey: ["admin-areas"], queryFn: fetchAreas });
 
-  const publishMutation = useMutation({
-    mutationFn: publishAnnouncement,
-    meta: { success: "공지를 발행했어요." },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["announcements"] });
-      reset();
-    },
+  const publishMutation = useWrite(publishAnnouncement, {
+    success: "공지를 발행했어요.", invalidates: ["announcements"], onSuccess: () => reset(),
   });
-  const closeMutation = useMutation({
-    mutationFn: closeAnnouncement,
-    meta: { success: "공지 노출을 종료했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["announcements"] }),
-  });
+  const closeMutation = useWrite(closeAnnouncement, { success: "공지 노출을 종료했어요.", invalidates: ["announcements"] });
 
   const { form, set, field, reset } = useForm(() => ({
     title: "",
@@ -110,8 +97,8 @@ export function NotificationAdminPanel() {
       severity,
       audience,
       targetAreaIds,
-      startsAt: publishMode === "now" ? new Date().toISOString() : new Date(startsAt).toISOString(),
-      endsAt: endsAt ? new Date(endsAt).toISOString() : undefined,
+      startsAt: publishMode === "now" ? toIso(new Date()) : toIso(startsAt),
+      endsAt: endsAt ? toIso(endsAt) : undefined,
     });
   }
 
@@ -184,7 +171,7 @@ export function NotificationAdminPanel() {
               })}
             </div>
             {!emergencyAllowed && (
-              <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <p className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                 <ShieldAlert className="size-3" />
                 긴급 공지는 최고 관리자 권한이 필요해요. 긴급 상황이면 최고 관리자에게 발행을 요청하세요.
               </p>
@@ -274,7 +261,7 @@ export function NotificationAdminPanel() {
               />
             </div>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             {publishMode === "now"
               ? "발행 버튼을 누른 시각부터 방문객 화면에 노출돼요."
               : "지정한 시각이 되면 방문객 화면에 노출돼요. 그 전까지는 '노출 예정' 상태로 남아요."}
@@ -302,7 +289,7 @@ export function NotificationAdminPanel() {
                       : targetAreaIds.map((id) => areaOptions.find((area) => area.id === id)?.name ?? id).join(", ")}
                   </span>
                   <span className="block">
-                    {formatMoment(startsAt)}부터 {endsAt ? `${formatMoment(endsAt)}까지` : "직접 종료할 때까지"} 노출됩니다.
+                    {formatMoment(startsAt)}부터 {endsAt ? `${formatMoment(endsAt)}까지` : "직접 종료할 때까지"} 노출돼요.
                   </span>
                   {severity === "EMERGENCY" && (
                     <span className="block text-destructive">대상 방문객 화면 상단에 즉시 고정되고, 되돌리려면 직접 종료해야 해요.</span>
@@ -323,7 +310,7 @@ export function NotificationAdminPanel() {
             <BellRing className="size-4 text-primary" />
             <h3 className="text-sm font-bold">예약 번호 호출</h3>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             대기 중인 예약을 호출하면 해당 방문객 화면의 알림에 바로 표시돼요.
           </p>
           <div className="space-y-2">

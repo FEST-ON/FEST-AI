@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Coins, QrCode as QrCodeIcon, Store, Ticket } from "lucide-react";
 import {
   fetchCouponOffers,
@@ -11,6 +11,7 @@ import {
   reissueCouponToken,
 } from "@/entities/coupon";
 import { useTranslation } from "@/shared/lib/i18n";
+import { useWrite } from "@/shared/lib/use-write";
 import { useNow } from "@/shared/lib/use-now";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -20,7 +21,6 @@ import { Skeleton } from "@/shared/ui/skeleton";
 
 export default function CouponsPage() {
   const { t, locale, bcp47 } = useTranslation();
-  const queryClient = useQueryClient();
   // 만료 시각이 지난 쿠폰은 재조회를 기다리지 않고 사용 불가로 바뀌어야 한다.
   const now = useNow(60_000);
 
@@ -28,16 +28,10 @@ export default function CouponsPage() {
   const offers = useQuery({ queryKey: ["coupon-offers", locale] as const, queryFn: () => fetchCouponOffers(locale) });
   const points = useQuery({ queryKey: ["visitor-points"], queryFn: fetchPoints });
 
-  const issue = useMutation({
-    mutationFn: issueCoupon,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-coupons"] }),
-  });
+  const issue = useWrite(issueCoupon, { invalidates: ["my-coupons"] });
   // 사용 토큰은 발급 응답에서만 내려오고 기기에만 남는다. 기기를 바꾸면 QR을 만들 수
   // 없어 쿠폰이 죽어 있었다 — 재발급하면 예전 토큰은 즉시 무효가 된다.
-  const reissue = useMutation({
-    mutationFn: reissueCouponToken,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-coupons"] }),
-  });
+  const reissue = useWrite(reissueCouponToken, { invalidates: ["my-coupons"] });
 
   return (
     <div className="px-4 pb-6 pt-4">
@@ -52,7 +46,7 @@ export default function CouponsPage() {
             <p className="text-xl font-extrabold text-foreground">{(points.data?.balance ?? 0).toLocaleString()}P</p>
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px]">{t.coupons.pointsHelper(points.data?.ledger.length ?? 0)}</Badge>
+        <Badge variant="outline" className="text-[0.625rem]">{t.coupons.pointsHelper(points.data?.ledger.length ?? 0)}</Badge>
       </section>
 
       <section className="mt-6">
@@ -85,7 +79,7 @@ export default function CouponsPage() {
                       {coupon.couponName} · {t.coupon.benefitLabel(coupon.benefitType, coupon.benefitValue)}
                     </p>
                   </div>
-                  <Badge variant={usable ? "default" : "outline"} className="shrink-0 text-[10px]">
+                  <Badge variant={usable ? "default" : "outline"} className="shrink-0 text-[0.625rem]">
                     {t.coupon.status[coupon.status]}
                   </Badge>
                 </div>
@@ -96,13 +90,13 @@ export default function CouponsPage() {
                     <p className="font-mono text-xs font-bold tracking-wider break-all text-center text-foreground">
                       {coupon.issueToken}
                     </p>
-                    <p className="text-center text-[11px] leading-4 text-muted-foreground">{t.coupon.qrHelper}</p>
+                    <p className="text-center text-[0.6875rem] leading-4 text-muted-foreground">{t.coupon.qrHelper}</p>
                   </div>
                 )}
 
                 {usable && !coupon.issueToken && (
                   <div className="mt-3 space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
-                    <p className="flex items-start gap-1.5 text-[11px] leading-4 text-amber-900 dark:text-amber-100">
+                    <p className="flex items-start gap-1.5 text-[0.6875rem] leading-4 text-amber-900 dark:text-amber-100">
                       <AlertTriangle className="mt-px size-3.5 shrink-0" />
                       {t.coupon.tokenMissing}
                     </p>
@@ -111,19 +105,19 @@ export default function CouponsPage() {
                       <QrCodeIcon className="size-3.5" /> {t.coupon.reissueButton}
                     </Button>
                     {reissue.error && (
-                      <p className="text-[11px] text-destructive">{queryErrorMessage(reissue.error)}</p>
+                      <p className="text-[0.6875rem] text-destructive">{queryErrorMessage(reissue.error)}</p>
                     )}
                   </div>
                 )}
 
                 {!usable && (
-                  <p className="mt-2 text-[11px] text-muted-foreground">
+                  <p className="mt-2 text-[0.6875rem] text-muted-foreground">
                     {coupon.status === "REDEEMED" ? t.coupon.usedLine : t.coupon.expiredLine}
                   </p>
                 )}
 
                 {coupon.expiresAt && (
-                  <p className="mt-2 text-[11px] text-muted-foreground">
+                  <p className="mt-2 text-[0.6875rem] text-muted-foreground">
                     {t.coupon.expiresLine(new Date(coupon.expiresAt).toLocaleDateString(bcp47))}
                   </p>
                 )}
@@ -158,7 +152,7 @@ export default function CouponsPage() {
               <div key={offer.id} className="rounded-xl border border-border bg-card p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-bold text-foreground">{offer.businessName}</p>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                  <Badge variant="outline" className="shrink-0 text-[0.625rem]">
                     {t.coupon.remainingLabel(Math.max(0, offer.remaining))}
                   </Badge>
                 </div>

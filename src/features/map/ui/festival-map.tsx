@@ -132,12 +132,12 @@ export function FestivalMap() {
     <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
       <div className="relative h-64 bg-muted" aria-label="축제 부스와 시설 지도">
         <div ref={containerRef} className="absolute inset-0" />
-        {status === "loading" && <div className="absolute inset-0 grid place-items-center bg-muted text-xs font-semibold text-muted-foreground">카카오 지도를 불러오는 중입니다.</div>}
+        {status === "loading" && <div className="absolute inset-0 grid place-items-center bg-muted text-xs font-semibold text-muted-foreground">카카오 지도를 불러오는 중이에요.</div>}
         {(status === "missing-key" || status === "error") && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted px-6 text-center">
             <span className="grid size-11 place-items-center rounded-full bg-background text-primary"><AlertCircle className="size-5" /></span>
             <div>
-              <p className="text-sm font-bold text-foreground">{status === "missing-key" ? "카카오 지도 키 설정이 필요합니다" : "카카오 지도를 불러오지 못했습니다"}</p>
+              <p className="text-sm font-bold text-foreground">{status === "missing-key" ? "카카오 지도 키 설정이 필요해요" : "카카오 지도를 불러오지 못했어요"}</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {status === "missing-key"
                   ? "실행 중인 Frontend/.env.local 또는 Frontend/.env에 NEXT_PUBLIC_KAKAO_MAP_APP_KEY를 설정하고 개발 서버를 다시 시작해 주세요."
@@ -146,7 +146,7 @@ export function FestivalMap() {
             </div>
           </div>
         )}
-        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[10px] font-bold text-foreground">
+        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[0.625rem] font-bold text-foreground">
           {status === "ready" ? <CheckCircle2 className="size-3 text-emerald-600" /> : <MapPin className="size-3" />}
           {status === "ready" ? "Kakao Map 연결됨" : `${locations.length}개 지점 등록`}
         </span>
@@ -158,9 +158,9 @@ export function FestivalMap() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-sm font-bold text-foreground">{selectedLocation.name}</p>
-              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{categoryLabel(selectedLocation.category)}</span>
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-bold text-muted-foreground">{categoryLabel(selectedLocation.category)}</span>
             </div>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">{selectedLocation.description ?? "축제에 등록된 부스 지점입니다."}</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{selectedLocation.description ?? "축제에 등록된 부스 지점이에요."}</p>
           </div>
         </div>
       )}

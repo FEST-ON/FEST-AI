@@ -25,7 +25,7 @@ function ExposureList({ title, items, threshold }: { title: string; items: Expos
     <div className="rounded-xl border border-border p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">{title}</p>
-        <Badge variant="outline" className="text-[10px]">기준 {percent(threshold)}</Badge>
+        <Badge variant="outline" className="text-[0.625rem]">기준 {percent(threshold)}</Badge>
       </div>
       <div className="space-y-3">
         {items.length === 0 ? (
@@ -75,7 +75,7 @@ export function RecommendationBiasPanel() {
           <div>
             <h2 className="text-sm font-bold text-foreground">추천 편향 점검</h2>
             <p className="text-xs text-muted-foreground">
-              {report?.summary ?? "추천 이벤트 수집 후 편향 점검 결과가 표시됩니다."}
+              {report?.summary ?? "추천 이벤트를 모으면 편향 점검 결과가 표시돼요."}
             </p>
           </div>
         </div>
@@ -101,24 +101,24 @@ export function RecommendationBiasPanel() {
           <div className="rounded-xl border border-border p-3">
             <p className="text-xs text-muted-foreground">점검 구간</p>
             <p className="mt-1 text-lg font-bold text-foreground">최근 {report?.windowDays ?? 7}일</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">노출 이력 보존 기간 내</p>
+            <p className="mt-1 text-[0.6875rem] text-muted-foreground">노출 이력 보존 기간 내</p>
           </div>
           <div className="rounded-xl border border-border p-3">
             <p className="text-xs text-muted-foreground">수집 이벤트</p>
             <p className="mt-1 text-lg font-bold text-foreground">{report?.checkedEventCount ?? 0}건</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">방문객 추천 요청 수</p>
+            <p className="mt-1 text-[0.6875rem] text-muted-foreground">방문객 추천 요청 수</p>
           </div>
           <div className="rounded-xl border border-border p-3">
             <p className="text-xs text-muted-foreground">전체 노출</p>
             <p className="mt-1 text-lg font-bold text-foreground">{report?.totalExposures ?? 0}회</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-[0.6875rem] text-muted-foreground">
               업체 {percent(report?.thresholds.maxBusinessExposureShare ?? 0.6)} / 업종 {percent(report?.thresholds.maxCategoryExposureShare ?? 0.75)}
             </p>
           </div>
           <div className="rounded-xl border border-border p-3">
             <p className="text-xs text-muted-foreground">광고 노출</p>
             <p className="mt-1 text-lg font-bold text-foreground">{report?.sponsoredExposures ?? 0}회</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">일반 추천과 분리 집계</p>
+            <p className="mt-1 text-[0.6875rem] text-muted-foreground">일반 추천과 분리 집계</p>
           </div>
         </div>
       )}

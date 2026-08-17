@@ -31,7 +31,7 @@ export default function AiInsightsPage() {
             <Sparkles className="size-4 text-primary" />
             AI 민원·추천 인사이트
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">백엔드 민원 분류 결과와 업체 추천 노출 편향을 함께 점검합니다.</p>
+          <p className="mt-1 text-xs text-muted-foreground">백엔드 민원 분류 결과와 업체 추천 노출 편향을 함께 점검해요.</p>
         </div>
         <Button size="sm" className="gap-1.5" onClick={() => issues.refetch()} disabled={issues.isFetching}>
           <RefreshCw className={cn("size-3.5", issues.isFetching && "animate-spin")} />
@@ -43,12 +43,12 @@ export default function AiInsightsPage() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="safety" className="gap-1.5">
             안전 검수
-            {reviews.length > 0 && <Badge variant="destructive" className="text-[10px]">{reviews.length}</Badge>}
+            {reviews.length > 0 && <Badge variant="destructive" className="text-[0.625rem]">{reviews.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="issues">민원 분석</TabsTrigger>
           <TabsTrigger value="bias" className="gap-1.5">
             추천 편향
-            {bias?.status === "WARNING" && <Badge variant="destructive" className="text-[10px]">초과</Badge>}
+            {bias?.status === "WARNING" && <Badge variant="destructive" className="text-[0.625rem]">초과</Badge>}
           </TabsTrigger>
         </TabsList>
       </Tabs>

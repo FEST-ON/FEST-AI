@@ -1,14 +1,13 @@
 "use client";
 
-import { useCallback, useState, type FormEvent } from "react";
+import { useCallback, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { BadgeCheck, ScanLine } from "lucide-react";
 import { isCouponToken, redeemCouponOnSite, type CouponRedemption } from "@/features/coupon-redemption/api/redeem";
 import { QrScanner } from "@/shared/ui/qr-scanner";
-import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { queryErrorMessage } from "@/shared/ui/query-state";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
 
 export default function AdminCouponsPage() {
   const [token, setToken] = useState("");
@@ -32,11 +31,6 @@ export default function AdminCouponsPage() {
     redeem.mutate(value);
   }, [redeem]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    submitToken(token);
-  }
-
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
@@ -51,7 +45,7 @@ export default function AdminCouponsPage() {
 
         <QrScanner onScan={submitToken} label="카메라로 쿠폰 QR 스캔" />
 
-        <form onSubmit={handleSubmit} className="space-y-2">
+        <Form onSubmit={() => submitToken(token)} className="space-y-2">
           <Label htmlFor="coupon-token">쿠폰 코드</Label>
           <div className="flex flex-wrap gap-2">
             <Input
@@ -62,20 +56,18 @@ export default function AdminCouponsPage() {
               autoComplete="off"
               className="min-w-56 flex-1"
             />
-            <Button type="submit" disabled={!token.trim() || redeem.isPending}>
+            <SubmitButton mutation={redeem} size="default" disabled={!token.trim()}>
               <BadgeCheck className="size-4" />
               {redeem.isPending ? "처리 중…" : "사용 처리"}
-            </Button>
+            </SubmitButton>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             카메라 스캔이 안 되는 기기에서는 방문객 화면에 표시된 코드를 그대로 입력하세요.
           </p>
-        </form>
+        </Form>
 
         {inputError && <p className="text-xs text-destructive" role="alert">{inputError}</p>}
-        {redeem.isError && (
-          <p className="text-xs text-destructive" role="alert">{queryErrorMessage(redeem.error, "사용 처리에 실패했어요.")}</p>
-        )}
+        <ErrorText error={redeem.error} fallback="사용 처리에 실패했어요." />
       </section>
 
       <section>

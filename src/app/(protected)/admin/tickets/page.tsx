@@ -12,12 +12,16 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { SelectField } from "@/shared/ui/select-field";
 import { Textarea } from "@/shared/ui/textarea";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
 import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { useForm } from "@/shared/lib/use-form";
+import { isPendingFor, useWrite } from "@/shared/lib/use-write";
+import { includesKeyword, useListView } from "@/shared/lib/use-list-view";
+import { ListSearch, ShowMore } from "@/shared/ui/list-search";
 import { seoulDateTime } from "@/shared/lib/utils";
 
 const TYPES: (TicketType | "전체")[] = ["전체", "민원", "사고"];
@@ -33,6 +37,11 @@ function matchesStatus(ticket: Ticket, filter: StatusFilter) {
   if (filter === "처리 필요") return ticket.apiStatus === "OPEN" || ticket.apiStatus === "ASSIGNED";
   return ticket.apiStatus === "IN_PROGRESS" || ticket.apiStatus === "RESOLVED";
 }
+
+const TYPE_OPTIONS = [
+  { value: "COMPLAINT", label: "민원" },
+  { value: "INCIDENT", label: "사고" },
+];
 
 const PRIORITY_OPTIONS: { value: NewTicket["priority"]; label: string }[] = [
   { value: "LOW", label: "낮음" },
@@ -55,8 +64,8 @@ function TicketHistory({ ticketId }: { ticketId: string }) {
   return (
     <ol className="mt-3 space-y-1.5 border-t border-border pt-3">
       {(data ?? []).map((event) => (
-        <li key={event.id} className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">
+        <li key={event.id} className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-muted-foreground">
+          <Badge variant="outline" className="text-[0.625rem]">
             {event.fromStatus ? `${event.fromStatus} → ${event.toStatus}` : event.toStatus}
           </Badge>
           <span>{seoulDateTime(event.createdAt)}</span>
@@ -84,27 +93,15 @@ function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
 
 function TicketForm({ onDone }: { onDone: () => void }) {
   const { form, set, field, reset } = useForm<NewTicket>(EMPTY_FORM);
-  const queryClient = useQueryClient();
   const areas = useQuery({ queryKey: ["admin-areas"], queryFn: fetchAreas });
-  const mutation = useMutation({
-    mutationFn: createTicket,
-    meta: { success: "티켓을 접수했어요." },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["issue-analysis"] });
-      reset();
-      onDone();
-    },
+  const mutation = useWrite(createTicket, {
+    success: "티켓을 접수했어요.",
+    invalidates: ["tickets", "issue-analysis"],
+    onSuccess: () => { reset(); onDone(); },
   });
 
   return (
-    <form
-      className="space-y-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        mutation.mutate({ ...form, areaId: form.areaId || undefined });
-      }}
-    >
+    <Form className="space-y-3" onSubmit={() => mutation.mutate({ ...form, areaId: form.areaId || undefined })}>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="ticket-title">제목</Label>
@@ -113,32 +110,30 @@ function TicketForm({ onDone }: { onDone: () => void }) {
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1">
             <Label>유형</Label>
-            <Select value={form.ticketType} onValueChange={(value) => set("ticketType")(value as NewTicket["ticketType"])}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="COMPLAINT">민원</SelectItem>
-                <SelectItem value="INCIDENT">사고</SelectItem>
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.ticketType}
+              onValueChange={(value) => set("ticketType")(value as NewTicket["ticketType"])}
+              options={TYPE_OPTIONS}
+              aria-label="유형"
+            />
           </div>
           <div className="space-y-1">
             <Label>우선순위</Label>
-            <Select value={form.priority} onValueChange={(value) => set("priority")(value as NewTicket["priority"])}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PRIORITY_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.priority}
+              onValueChange={(value) => set("priority")(value as NewTicket["priority"])}
+              options={PRIORITY_OPTIONS}
+              aria-label="우선순위"
+            />
           </div>
           <div className="space-y-1">
             <Label>구역</Label>
-            <Select value={form.areaId ?? "none"} onValueChange={(value) => set("areaId")(!value || value === "none" ? undefined : String(value))}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">미지정</SelectItem>
-                {(areas.data ?? []).map((area) => <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.areaId ?? "none"}
+              onValueChange={(value) => set("areaId")(!value || value === "none" ? undefined : value)}
+              options={[{ value: "none", label: "미지정" }, ...(areas.data ?? []).map((area) => ({ value: area.id, label: area.name }))]}
+              aria-label="구역"
+            />
           </div>
         </div>
       </div>
@@ -146,12 +141,12 @@ function TicketForm({ onDone }: { onDone: () => void }) {
         <Label htmlFor="ticket-description">내용</Label>
         <Textarea id="ticket-description" {...field("description")} required rows={3} placeholder="현장 상황과 필요한 조치를 적어주세요." />
       </div>
-      {mutation.error && <p className="text-xs text-destructive">{queryErrorMessage(mutation.error)}</p>}
+      <ErrorText error={mutation.error} />
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onDone}>취소</Button>
-        <Button type="submit" size="sm" disabled={mutation.isPending}>{mutation.isPending ? "등록 중..." : "티켓 등록"}</Button>
+        <SubmitButton mutation={mutation} pending="등록 중...">티켓 등록</SubmitButton>
       </div>
-    </form>
+    </Form>
   );
 }
 
@@ -173,7 +168,11 @@ export default function TicketsPage() {
     () => (tickets.data ?? []).filter((ticket) => type === "전체" || ticket.type === type),
     [tickets.data, type],
   );
-  const filtered = useMemo(() => byType.filter((ticket) => matchesStatus(ticket, statusFilter)), [byType, statusFilter]);
+  const byStatus = useMemo(() => byType.filter((ticket) => matchesStatus(ticket, statusFilter)), [byType, statusFilter]);
+  const list = useListView(byStatus, (ticket, keyword) =>
+    includesKeyword(keyword, ticket.title, ticket.description, ticket.assignee, ticket.category),
+  );
+  const filtered = list.filtered;
 
   return (
     <div className="space-y-4">
@@ -199,7 +198,7 @@ export default function TicketsPage() {
             {STATUS_FILTERS.map((value) => (
               <TabsTrigger key={value} value={value} className="gap-1.5">
                 {value}
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[0.625rem] text-muted-foreground">
                   {byType.filter((ticket) => matchesStatus(ticket, value)).length}
                 </span>
               </TabsTrigger>
@@ -207,6 +206,13 @@ export default function TicketsPage() {
           </TabsList>
         </Tabs>
       </div>
+
+      <ListSearch
+        value={list.query}
+        onChange={list.setQuery}
+        placeholder="제목·내용·담당자로 검색"
+        count={filtered.length}
+      />
 
       <QueryState
         query={tickets}
@@ -216,7 +222,7 @@ export default function TicketsPage() {
       >
         {() => (
           <div className="space-y-3">
-            {filtered.map((ticket: Ticket) => {
+            {list.visible.map((ticket: Ticket) => {
               const Icon = TYPE_ICON[ticket.type];
               return (
                 <div key={ticket.id} className="rounded-2xl border border-border bg-card p-4">
@@ -228,14 +234,14 @@ export default function TicketsPage() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="text-sm font-bold text-foreground">{ticket.title}</span>
-                          <Badge variant="outline" className="text-[10px]">{ticket.type}</Badge>
+                          <Badge variant="outline" className="text-[0.625rem]">{ticket.type}</Badge>
                           <StatusPill tone={PRIORITY_TONE[ticket.priority]}>
                             {ticket.priority}
                           </StatusPill>
-                          {ticket.urgent && <Badge variant="destructive" className="text-[10px]">긴급</Badge>}
+                          {ticket.urgent && <Badge variant="destructive" className="text-[0.625rem]">긴급</Badge>}
                         </div>
                         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{ticket.description}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-muted-foreground">
                           <span>담당자 {ticket.assignee}</span>
                           <span>{ticket.category}</span>
                           <span>{ticket.createdAt}</span>
@@ -247,7 +253,7 @@ export default function TicketsPage() {
                           </button>
                         </div>
                         {ticket.aiTag && (
-                          <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/8 px-2 py-1 text-[10px] font-semibold text-primary dark:bg-primary/20 dark:text-primary-tint">
+                          <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/8 px-2 py-1 text-[0.625rem] font-semibold text-primary dark:bg-primary/20 dark:text-primary-tint">
                             <Sparkles className="size-3" /> {ticket.aiTag}
                           </div>
                         )}
@@ -256,7 +262,7 @@ export default function TicketsPage() {
                     </div>
 
                     <div className="flex w-full shrink-0 items-center gap-2 sm:w-36 sm:flex-col sm:items-end">
-                      <Badge variant="outline" className="gap-1.5 text-[10px]">
+                      <Badge variant="outline" className="gap-1.5 text-[0.625rem]">
                         <span className={`size-1.5 rounded-full ${STATUS_DOT[ticket.status]}`} />
                         {ticket.status}
                       </Badge>
@@ -265,7 +271,7 @@ export default function TicketsPage() {
                         size="sm"
                         className="flex-1 sm:w-full sm:flex-none"
                         onClick={() => mutation.mutate(ticket)}
-                        disabled={(mutation.isPending && mutation.variables?.id === ticket.id) || ticket.apiStatus === "CLOSED"}
+                        disabled={isPendingFor(mutation, ticket.id) || ticket.apiStatus === "CLOSED"}
                       >
                         {TICKET_ACTION_LABEL[ticket.apiStatus]}
                       </Button>
@@ -274,6 +280,7 @@ export default function TicketsPage() {
                 </div>
               );
             })}
+            <ShowMore hidden={list.hidden} onShowMore={list.showMore} />
             {mutation.error && <p className="text-sm text-destructive">{mutation.error.message}</p>}
           </div>
         )}

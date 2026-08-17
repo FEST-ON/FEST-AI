@@ -1,11 +1,13 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { MapPinned } from "lucide-react";
 import { fetchPublicAreas, fetchVisitorArea, setVisitorArea } from "@/features/visitor-area/api/area";
 import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
+import { useWrite } from "@/shared/lib/use-write";
 import { Button } from "@/shared/ui/button";
+import { iconTileClass, iconTileLabelClass } from "@/shared/ui/icon-tile";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/shared/ui/sheet";
 
 /**
@@ -16,16 +18,11 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
  */
 export function AreaSheet() {
   const { t, bcp47 } = useTranslation();
-  const queryClient = useQueryClient();
   const current = useQuery({ queryKey: ["visitor-area"], queryFn: fetchVisitorArea });
   const areas = useQuery({ queryKey: ["public-areas"], queryFn: fetchPublicAreas });
-  const choose = useMutation({
-    mutationFn: (areaId: string | null) => setVisitorArea(areaId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["visitor-area"] });
-      // 구역이 바뀌면 받을 공지 대상도 바뀐다.
-      void queryClient.invalidateQueries({ queryKey: ["public-announcements"] });
-    },
+  // 구역이 바뀌면 받을 공지 대상도 바뀐다.
+  const choose = useWrite((areaId: string | null) => setVisitorArea(areaId), {
+    invalidates: ["visitor-area", "public-announcements"],
   });
 
   const selected = current.data?.areaId ?? null;
@@ -33,14 +30,10 @@ export function AreaSheet() {
   return (
     <Sheet>
       <SheetTrigger
-        render={
-          <Button variant="outline" size="sm" className="gap-1 rounded-full px-2.5" aria-label={t.area.ariaLabel} />
-        }
+        render={<Button variant="ghost" className={iconTileClass} aria-label={t.area.ariaLabel} />}
       >
-        <MapPinned className="size-4" />
-        <span className="max-w-20 truncate text-xs font-semibold">
-          {current.data?.areaName ?? t.area.unknown}
-        </span>
+        <MapPinned className="size-5" />
+        <span className={iconTileLabelClass}>{current.data?.areaName ?? t.area.shortLabel}</span>
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-h-[78dvh] max-w-md rounded-t-3xl">
         <SheetHeader className="border-b border-border pb-3">
@@ -48,14 +41,14 @@ export function AreaSheet() {
           <SheetDescription className="mt-1 text-xs">{t.area.description}</SheetDescription>
         </SheetHeader>
         <div className="overflow-y-auto px-4 pb-6">
-          <p className="mt-3 rounded-xl bg-muted/60 p-3 text-[11px] leading-5 text-muted-foreground">
+          <p className="mt-3 rounded-xl bg-muted/60 p-3 text-[0.6875rem] leading-5 text-muted-foreground">
             {t.area.privacyNotice}
             <br />
             {t.area.validity(current.data?.validHours ?? 2)}
           </p>
 
           {current.data?.areaAssignedAt && (
-            <p className="mt-2 text-[11px] text-muted-foreground">
+            <p className="mt-2 text-[0.6875rem] text-muted-foreground">
               {current.data.areaSource === "QR" ? t.area.sourceQr : t.area.sourceManual} ·{" "}
               {new Date(current.data.areaAssignedAt).toLocaleString(bcp47)}
             </p>
@@ -71,7 +64,7 @@ export function AreaSheet() {
               )}
             >
               {t.area.clear}
-              <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">{t.area.clearHint}</span>
+              <span className="mt-0.5 block text-[0.6875rem] font-normal text-muted-foreground">{t.area.clearHint}</span>
             </button>
             {(areas.data ?? []).map((area) => (
               <button

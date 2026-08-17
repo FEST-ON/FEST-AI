@@ -102,7 +102,9 @@
   --card-foreground: #ffffff;
   --popover: #272729;
   --popover-foreground: #ffffff;
-  --primary: var(--brand);
+  /* #0147FF는 검정 위에서 2.7:1로 묻힌다. 어두운 면에서는 애플 systemBlue(dark)로
+     올려 text-primary/border-primary가 그대로 4.6:1 이상 나오게 한다. */
+  --primary: #0a84ff;
   --primary-foreground: #ffffff;
   --primary-tint: #7aa5ff;
   --secondary: #272729;
@@ -112,8 +114,9 @@
   --accent: #252527;
   --accent-foreground: #7aa5ff;
   --destructive: #ff453a;
-  --border: rgb(255 255 255 / 12%);
-  --input: rgb(255 255 255 / 15%);
+  /* 12%는 카드 경계가 사실상 보이지 않는다 — 카드/배경 분리에 필요한 만큼만 올린다. */
+  --border: rgb(255 255 255 / 22%);
+  --input: rgb(255 255 255 / 30%);
   --ring: #7aa5ff;
   --chart-1: #7aa5ff;
   --chart-2: #0147ff;
@@ -126,8 +129,16 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #1d1d1f;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgb(255 255 255 / 12%);
+  --sidebar-border: rgb(255 255 255 / 22%);
   --sidebar-ring: #7aa5ff;
+}
+
+/* 다크에서 --primary는 잉크용으로 밝혀놨다(#0a84ff). 하지만 그 색을 통째로 채우면
+   위에 얹힌 흰 글자가 3.6:1로 떨어진다 — 채움면만 브랜드 원색으로 되돌려 6.3:1을 지킨다.
+   ponytail: bg-primary/10 같은 틴트는 클래스명이 달라 걸리지 않는다. 채움면 색을 더
+   세분해야 하면 그때 --primary-fill 토큰으로 쪼갠다. */
+.dark .bg-primary {
+  background-color: var(--brand);
 }
 
 @layer base {
@@ -150,8 +161,10 @@
   }
 }
 
+/* 큰 글씨 모드 — 화면의 글자 크기는 모두 rem이라 루트 하나로 함께 커진다.
+   저시력 이용자 기준(WCAG 1.4.4의 200% 확대)에 가깝게 125%까지 올린다. */
 html[data-large-text="true"] {
-  font-size: 112.5%;
+  font-size: 125%;
 }
 
 /* 고대비 모드 — 야외 직사광선·저시력 환경용. 색 토큰만 덮어쓰면 모든 화면에 한 번에

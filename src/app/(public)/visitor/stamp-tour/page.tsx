@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Stamp, MapPin, Coins, QrCode, Ticket, PartyPopper } from "lucide-react";
 import { Button } from "@/shared/ui/button";
+import { Form, SubmitButton } from "@/shared/ui/form";
+import { useWrite } from "@/shared/lib/use-write";
 import { QrScanner } from "@/shared/ui/qr-scanner";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -17,20 +19,13 @@ import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-sta
 
 export default function StampTourPage() {
   const { t, locale, bcp47 } = useTranslation();
-  const queryClient = useQueryClient();
   const [scanningSpot, setScanningSpot] = useState<string | null>(null);
   const [stampCode, setStampCode] = useState("");
   const { data: stampSpots = [], error: spotsError, refetch: refetchSpots } = useQuery({
     queryKey: ["stamp-spots", locale] as const,
     queryFn: () => fetchStampSpots(locale),
   });
-  const collectMutation = useMutation({
-    mutationFn: collectStamp,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stamp-spots"] });
-      queryClient.invalidateQueries({ queryKey: ["visitor-points"] });
-    },
-  });
+  const collectMutation = useWrite(collectStamp, { invalidates: ["stamp-spots", "visitor-points"] });
   // 발행받은 쿠폰은 쿠폰함(/visitor/coupons)이 원본이고, 여기서는 최근 것만 요약해 보여준다.
   const now = useNow(60_000);
   const { data: myCoupons = [] } = useQuery({
@@ -117,10 +112,9 @@ export default function StampTourPage() {
                   collectMutation.mutate({ actionId: scanningSpot, verificationKey: value.trim() });
                 }}
               />
-              <form
+              <Form
                 className="mt-2 space-y-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
+                onSubmit={() => {
                   const key = stampCode.trim();
                   if (!key) return;
                   setScanningSpot(null);
@@ -138,12 +132,12 @@ export default function StampTourPage() {
                     autoComplete="off"
                     className="min-w-40 flex-1"
                   />
-                  <Button type="submit" size="sm" disabled={!stampCode.trim() || collectMutation.isPending}>
+                  <SubmitButton mutation={collectMutation} disabled={!stampCode.trim()}>
                     {t.stampTour.stampButton}
-                  </Button>
+                  </SubmitButton>
                 </div>
-              </form>
-              <p className="mt-2 text-[11px] text-muted-foreground">{t.stampTour.scanHint}</p>
+              </Form>
+              <p className="mt-2 text-[0.6875rem] text-muted-foreground">{t.stampTour.scanHint}</p>
             </div>
           )}
         </div>
@@ -196,7 +190,7 @@ export default function StampTourPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-bold text-foreground">{coupon.businessName}</p>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                  <Badge variant="outline" className="shrink-0 text-[0.625rem]">
                     {t.coupon.status[coupon.status]}
                   </Badge>
                 </div>

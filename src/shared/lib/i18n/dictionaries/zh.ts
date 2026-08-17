@@ -1,10 +1,11 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: ca3412d10928fdf8
+// ko.ts sha256: 91cc20270fff9260
 import type { ko } from "./ko";
 
 export const zh: typeof ko = {
   common: {
     loadFailed: "加载失败，请稍后重试。",
+    back: "返回",
     retry: "重试",
     empty: "暂无可显示的内容。",
     close: "关闭",
@@ -173,6 +174,7 @@ export const zh: typeof ko = {
   },
   area: {
     ariaLabel: "设置当前区域",
+    shortLabel: "区域",
     title: "当前区域",
     description: "选择区域后，也会收到面向该区域的通知。",
     unknown: "未设置区域",
@@ -203,7 +205,8 @@ export const zh: typeof ko = {
     status: { RECEIVED: "已受理", IN_PROGRESS: "处理中", COMPLETED: "已完成", REJECTED: "已拒绝" },
   },
   accessibility: {
-    ariaLabel: "无障碍设置",
+    ariaLabel: "语言与无障碍设置",
+    shortLabel: "语言·设置",
     sheetTitle: "使用环境与无障碍",
     sheetDescription: "可以设置设备使用方式、语言、字体大小和语音引导。",
     kioskLabel: "自助终端简易模式",
@@ -223,6 +226,7 @@ export const zh: typeof ko = {
   },
   complaint: {
     ariaLabel: "提交投诉",
+    shortLabel: "投诉",
     thanksTitle: "您的投诉已受理",
     thanksDescription: "指派负责人后将依次处理，运营团队会跟进受理状态。",
     closeButton: "关闭",
@@ -246,6 +250,7 @@ export const zh: typeof ko = {
   notification: {
     pinnedBadge: "紧急置顶",
     autoCloseAt: (value: string) => `${value} 自动解除`,
+    shortLabel: "通知",
     ariaLabel: (n: number) => `${n}条通知`,
     sheetTitle: "通知",
     sheetDescription: "查看公告事项和预约叫号记录。",
@@ -304,7 +309,7 @@ export const zh: typeof ko = {
     voiceGuideOnAnnouncement: "语音引导已开启。",
     autoSwitchNotice: (language: string) => `已识别您的语音，导览已切换为${language}。`,
     autoSwitchRevertAria: (language: string) => `切换回${language}导览`,
-    welcomeContent: "您好！我是Perso AI庆典导览。欢迎随时咨询日程、交通、便利设施和安全信息。",
+    welcomeContent: "您好！我是Alan AI庆典导览。欢迎随时咨询日程、交通、便利设施和安全信息。",
     welcomeTimestamp: "现在",
     welcomeSource: "庆典运营核准信息",
     replyFailed: "无法获取回答，请稍后再试。",

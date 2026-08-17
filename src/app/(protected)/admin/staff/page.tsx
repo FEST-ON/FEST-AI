@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Clock, UserCog } from "lucide-react";
 import {
   acknowledgeAssignment,
@@ -13,13 +13,15 @@ import {
 import { fetchAreas } from "@/features/map/api/map-locations";
 import { ADMIN_ROLE_LABEL } from "@/shared/lib/permissions";
 import { useForm } from "@/shared/lib/use-form";
-import { datetimeLocal, seoulTime } from "@/shared/lib/utils";
+import { isPendingFor, useWrite } from "@/shared/lib/use-write";
+import { datetimeLocal, seoulTime, toIso } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { SelectField } from "@/shared/ui/select-field";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
+import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { seoulDateTime } from "@/shared/lib/utils";
 
@@ -34,7 +36,6 @@ function defaultForm(): NewStaffAssignment {
 const ALL_AREAS = "__ALL__";
 
 export default function StaffPage() {
-  const queryClient = useQueryClient();
   const { form, set, field, reset } = useForm<NewStaffAssignment>(defaultForm);
   const [areaFilter, setAreaFilter] = useState(ALL_AREAS);
 
@@ -43,16 +44,9 @@ export default function StaffPage() {
   // 최고 관리자만 멤버십을 조회할 수 있다 — 권한이 없으면 배치 폼 없이 목록만 본다.
   const memberships = useQuery({ queryKey: ["memberships"], queryFn: fetchMemberships, retry: false });
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["staff-assignments"] });
-    queryClient.invalidateQueries({ queryKey: ["festival-ai-brief"] });
-  };
-  const assign = useMutation({
-    mutationFn: createStaffAssignment,
-    meta: { success: "인력을 배치했어요." },
-    onSuccess: () => { invalidate(); reset(); },
-  });
-  const acknowledge = useMutation({ mutationFn: acknowledgeAssignment, meta: { success: "배정을 확인 처리했어요." }, onSuccess: invalidate });
+  const invalidates = ["staff-assignments", "festival-ai-brief"];
+  const assign = useWrite(createStaffAssignment, { success: "인력을 배치했어요.", invalidates, onSuccess: reset });
+  const acknowledge = useWrite(acknowledgeAssignment, { success: "배정을 확인 처리했어요.", invalidates });
 
   const visible = (assignments.data ?? []).filter((row) => areaFilter === ALL_AREAS || row.areaId === areaFilter);
 
@@ -67,37 +61,34 @@ export default function StaffPage() {
           인력 목록을 조회할 권한이 없어 배치 등록은 최고 관리자만 사용할 수 있어요.
         </p>
       ) : (
-        <form
+        <Form
           className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            assign.mutate({
-              ...form,
-              task: form.task || undefined,
-              startsAt: new Date(form.startsAt).toISOString(),
-              endsAt: new Date(form.endsAt).toISOString(),
-            });
-          }}
+          onSubmit={() =>
+            assign.mutate({ ...form, task: form.task || undefined, startsAt: toIso(form.startsAt), endsAt: toIso(form.endsAt) })
+          }
         >
           <div className="space-y-1">
             <Label>인력</Label>
-            <Select value={form.membershipId} onValueChange={(value) => set("membershipId")(String(value ?? ""))}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="인력 선택" /></SelectTrigger>
-              <SelectContent>
-                {(memberships.data ?? []).filter((member) => member.status === "ACTIVE").map((member) => (
-                  <SelectItem key={member.id} value={member.id}>{member.name} · {ADMIN_ROLE_LABEL[member.role] ?? member.role}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.membershipId}
+              onValueChange={set("membershipId")}
+              options={(memberships.data ?? []).filter((member) => member.status === "ACTIVE").map((member) => ({
+                value: member.id,
+                label: `${member.name} · ${ADMIN_ROLE_LABEL[member.role] ?? member.role}`,
+              }))}
+              placeholder="인력 선택"
+              aria-label="인력"
+            />
           </div>
           <div className="space-y-1">
             <Label>구역</Label>
-            <Select value={form.areaId} onValueChange={(value) => set("areaId")(String(value ?? ""))}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="구역 선택" /></SelectTrigger>
-              <SelectContent>
-                {(areas.data ?? []).map((area) => <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.areaId}
+              onValueChange={set("areaId")}
+              options={(areas.data ?? []).map((area) => ({ value: area.id, label: area.name }))}
+              placeholder="구역 선택"
+              aria-label="구역"
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="duty">담당 업무</Label>
@@ -116,23 +107,24 @@ export default function StaffPage() {
             <Input id="task" {...field("task")} />
           </div>
           <div className="sm:col-span-3 flex items-center justify-end gap-3">
-            {assign.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(assign.error)}</p>}
-            <Button type="submit" size="sm" disabled={!form.membershipId || !form.areaId || assign.isPending}>
-              {assign.isPending ? "배치 중..." : "인력 배치"}
-            </Button>
+            <ErrorText error={assign.error} className="mr-auto" />
+            <SubmitButton mutation={assign} pending="배치 중..." disabled={!form.membershipId || !form.areaId}>
+              인력 배치
+            </SubmitButton>
           </div>
-        </form>
+        </Form>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Label htmlFor="assignment-filter" className="text-xs text-muted-foreground">구역</Label>
-        <Select value={areaFilter} onValueChange={(value) => setAreaFilter(String(value))}>
-          <SelectTrigger id="assignment-filter" size="sm" className="w-44"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_AREAS}>전체 구역</SelectItem>
-            {(areas.data ?? []).map((area) => <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <SelectField
+          value={areaFilter}
+          onValueChange={setAreaFilter}
+          options={[{ value: ALL_AREAS, label: "전체 구역" }, ...(areas.data ?? []).map((area) => ({ value: area.id, label: area.name }))]}
+          size="sm"
+          className="w-44"
+          aria-label="구역"
+        />
         <span className="text-xs text-muted-foreground">{visible.length}건</span>
       </div>
 
@@ -150,10 +142,10 @@ export default function StaffPage() {
                   <div className="flex flex-wrap items-center gap-1.5">
                     <UserCog className="size-4 text-muted-foreground" />
                     <p className="text-sm font-semibold text-foreground">{assignment.staffName}</p>
-                    <Badge variant="outline" className="text-[10px]">{ADMIN_ROLE_LABEL[assignment.role] ?? assignment.role}</Badge>
+                    <Badge variant="outline" className="text-[0.625rem]">{ADMIN_ROLE_LABEL[assignment.role] ?? assignment.role}</Badge>
                     <span className="text-xs text-muted-foreground">{assignment.dutyRole}</span>
                   </div>
-                  <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                     <Clock className="size-3" />
                     {seoulDateTime(assignment.startsAt)} ~ {seoulTime(assignment.endsAt)}
                     {assignment.task && ` · ${assignment.task}`}
@@ -164,13 +156,13 @@ export default function StaffPage() {
                     <CheckCircle2 className="size-3" /> 확인 완료
                   </Badge>
                 ) : (
-                  <Button size="sm" variant="outline" disabled={acknowledge.isPending && acknowledge.variables === assignment.id} onClick={() => acknowledge.mutate(assignment.id)}>
+                  <Button size="sm" variant="outline" disabled={isPendingFor(acknowledge, assignment.id)} onClick={() => acknowledge.mutate(assignment.id)}>
                     배정 확인
                   </Button>
                 )}
               </div>
             ))}
-            {acknowledge.error && <p className="text-sm text-destructive">{queryErrorMessage(acknowledge.error)}</p>}
+            <ErrorText error={acknowledge.error} className="text-sm" />
           </div>
         )}
       </QueryState>

@@ -52,14 +52,14 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
             </span>
             <div>
               <h2 className="text-sm font-bold text-foreground">운영 위험 한줄 브리핑</h2>
-              <p className="text-[10px] text-muted-foreground">혼잡·민원·인력·일정 신호를 합산해 우선 조치가 필요한 내용을 요약</p>
+              <p className="text-[0.625rem] text-muted-foreground">혼잡·민원·인력·일정 신호를 합산해 우선 조치가 필요한 내용을 요약</p>
             </div>
           </div>
 
           <div className="mt-4 grid gap-3 rounded-xl border border-border bg-background px-4 py-3 text-foreground">
             <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
               <p className="text-xs font-extrabold text-primary">{data?.alanComment ? "Alan 한줄평" : "규칙 기반 요약"}</p>
-              <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
+              <span className="rounded-full bg-muted px-2 py-1 text-[0.625rem] font-bold text-muted-foreground">
                 {statusLabel}
               </span>
             </div>
@@ -68,7 +68,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
               <div className="flex w-fit items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                 <AlertTriangle className="size-4" />
                 <div>
-                  <p className="text-[10px] font-semibold">{data.metricLabel}</p>
+                  <p className="text-[0.625rem] font-semibold">{data.metricLabel}</p>
                   <p className="text-lg font-extrabold">{data.metricValue}</p>
                 </div>
               </div>
@@ -100,9 +100,9 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
                   </ul>
                 )}
                 {isRegenerating && (
-                  <p className="inline-flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                  <p className="inline-flex items-center gap-1.5 text-[0.625rem] font-medium text-muted-foreground">
                     <RefreshCw className="size-3 animate-spin" />
-                    새 한줄평을 생성하고 있습니다. 기존 저장값은 그대로 유지됩니다.
+                    새 한줄평을 만들고 있어요. 기존 저장값은 그대로 유지돼요.
                   </p>
                 )}
               </div>
@@ -112,9 +112,9 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
                 <div className="min-w-0">
                   <p className="text-sm font-bold leading-6">아직 표시할 위험 브리핑이 없습니다.</p>
                   <p className="mt-1 text-xs font-medium leading-5 text-red-700 dark:text-red-200">
-                    운영 위험 신호를 불러오지 못했습니다. 축제 접근 권한과 백엔드 상태를 확인해 주세요.
+                    운영 위험 신호를 불러오지 못했어요. 축제 접근 권한과 백엔드 상태를 확인해 주세요.
                   </p>
-                  {activeError instanceof Error && <p className="mt-2 text-[10px] text-red-600 dark:text-red-200">{activeError.message}</p>}
+                  {activeError instanceof Error && <p className="mt-2 text-[0.625rem] text-red-600 dark:text-red-200">{activeError.message}</p>}
                 </div>
               </div>
             ) : (
@@ -122,10 +122,10 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
                 <RefreshCw className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold leading-6">
-                    {isInitialLoading ? "운영 위험 브리핑을 불러오는 중입니다." : "위험 브리핑을 확인하는 중입니다."}
+                    {isInitialLoading ? "운영 위험 브리핑을 불러오는 중이에요." : "위험 브리핑을 확인하는 중이에요."}
                   </p>
                   <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
-                    수집된 혼잡·민원·인력·일정 신호를 기준으로 요약합니다.
+                    수집된 혼잡·민원·인력·일정 신호를 기준으로 요약해요.
                   </p>
                 </div>
               </div>
@@ -133,7 +133,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
           </div>
 
           {data && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.625rem] text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <Search className="size-3" />
                 근거 {sources.length}개

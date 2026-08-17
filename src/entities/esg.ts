@@ -83,11 +83,11 @@ export async function generateEsgReport(): Promise<EsgReportSection[]> {
       }
       return (Object.keys(groups) as EsgPillar[]).map((pillar) => ({
         pillar,
-        summary: groups[pillar].length ? `승인된 ${pillar} 지표를 기준으로 집계한 성과입니다.` : `승인된 ${pillar} 지표가 아직 없습니다.`,
+        summary: groups[pillar].length ? `승인된 ${pillar} 지표를 기준으로 집계한 성과예요.` : `승인된 ${pillar} 지표가 아직 없어요.`,
         highlights: groups[pillar],
       }));
     }
-    if (report.status === "FAILED") throw new Error("ESG 보고서 생성에 실패했습니다.");
+    if (report.status === "FAILED") throw new Error("ESG 보고서를 만들지 못했어요.");
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error("ESG 보고서 생성이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.");

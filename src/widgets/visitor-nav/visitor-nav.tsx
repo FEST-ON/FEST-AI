@@ -37,7 +37,8 @@ export function VisitorNav() {
   );
 
   return (
-    <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    // 아이폰 홈 인디케이터와 겹치지 않도록 안전 영역만큼 아래를 띄운다(viewportFit: cover와 한 쌍).
+    <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex max-w-md items-stretch justify-between px-2 py-1.5">
         {navItems.map(({ href, labelKey, icon: Icon }) => {
           const active = href === "/visitor" ? pathname === href : pathname.startsWith(href);
@@ -46,7 +47,7 @@ export function VisitorNav() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium transition-colors",
+                "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[0.6875rem] font-medium transition-colors",
                 active ? "text-primary" : "text-muted-foreground hover:text-foreground",
               )}
             >

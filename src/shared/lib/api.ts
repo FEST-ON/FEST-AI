@@ -31,7 +31,8 @@ export class ApiError extends Error {
   }
 }
 
-async function api<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
+/** 응답 봉투를 그대로 돌려주는 호출. page(커서)까지 필요한 목록만 이쪽을 쓴다. */
+async function apiEnvelope<T>(path: string, init: RequestInit = {}, token?: string): Promise<ApiEnvelope<T>> {
   const headers = new Headers(init.headers);
   if (init.body) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
@@ -39,10 +40,14 @@ async function api<T>(path: string, init: RequestInit = {}, token?: string): Pro
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ApiErrorEnvelope;
-    throw new ApiError(body.error?.message ?? "서버 요청에 실패했습니다.", response.status);
+    throw new ApiError(body.error?.message ?? "서버 요청을 처리하지 못했어요.", response.status);
   }
-  if (response.status === 204) return undefined as T;
-  return ((await response.json()) as ApiEnvelope<T>).data;
+  if (response.status === 204) return { data: undefined as T };
+  return (await response.json()) as ApiEnvelope<T>;
+}
+
+async function api<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
+  return (await apiEnvelope<T>(path, init, token)).data;
 }
 
 export function publicApi<T>(path: string, init?: RequestInit) {
@@ -161,12 +166,12 @@ async function refreshAdminToken() {
   const generation = adminSessionGeneration;
   const refresh = (async () => {
     const refreshToken = localStorage.getItem(ADMIN_REFRESH);
-    if (!refreshToken) throw new ApiError("로그인이 필요합니다.", 401);
+    if (!refreshToken) throw new ApiError("로그인이 필요해요.", 401);
     const result = await api<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
       method: "POST",
       body: JSON.stringify({ refreshToken }),
     });
-    if (generation !== adminSessionGeneration) throw new ApiError("로그인이 필요합니다.", 401);
+    if (generation !== adminSessionGeneration) throw new ApiError("로그인이 필요해요.", 401);
     localStorage.setItem(ADMIN_ACCESS, result.accessToken);
     localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
     return result.accessToken;
@@ -180,17 +185,21 @@ async function refreshAdminToken() {
   return refresh;
 }
 
-export async function adminApi<T>(path: string, init?: RequestInit): Promise<T> {
-  let token = localStorage.getItem(ADMIN_ACCESS);
-  if (!token) token = await refreshAdminToken();
+/** 액세스 토큰을 붙여 호출하고, 401이면 한 번만 갱신해 다시 시도한다. */
+async function withAdminToken<T>(call: (token: string) => Promise<T>): Promise<T> {
+  const token = localStorage.getItem(ADMIN_ACCESS) ?? (await refreshAdminToken());
   try {
-    return await api<T>(path, init, token);
+    return await call(token);
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 401) throw error;
+    // 다른 요청이 이미 새 토큰을 받아 뒀으면 그것을 쓰고, 아니면 직접 갱신한다.
     const latestToken = localStorage.getItem(ADMIN_ACCESS);
-    token = latestToken && latestToken !== token ? latestToken : await refreshAdminToken();
-    return api<T>(path, init, token);
+    return call(latestToken && latestToken !== token ? latestToken : await refreshAdminToken());
   }
+}
+
+export function adminApi<T>(path: string, init?: RequestInit): Promise<T> {
+  return withAdminToken((token) => api<T>(path, init, token));
 }
 
 export function currentAdmin() {
@@ -237,25 +246,9 @@ export async function festivalApi<T>(path = "", init?: RequestInit): Promise<T> 
  * data와 함께 page(커서)까지 필요한 목록용. 일반 호출은 envelope의 data만 꺼내 쓰기 때문에
  * nextCursor가 그대로 버려진다 — 다음 페이지를 요청하려면 이쪽을 써야 한다.
  */
-export async function festivalApiPaged<T>(path: string, init?: RequestInit): Promise<{ data: T; page?: PageInfo }> {
-  const token = localStorage.getItem(ADMIN_ACCESS) ?? (await refreshAdminToken());
-  const request = async (accessToken: string) => {
-    const headers = new Headers(init?.headers);
-    if (init?.body) headers.set("Content-Type", "application/json");
-    headers.set("Authorization", `Bearer ${accessToken}`);
-    const response = await fetch(`${API_BASE}/admin/festivals/${await adminFestivalId()}${path}`, { ...init, headers });
-    if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as ApiErrorEnvelope;
-      throw new ApiError(body.error?.message ?? "서버 요청에 실패했습니다.", response.status);
-    }
-    return (await response.json()) as ApiEnvelope<T>;
-  };
-  try {
-    return await request(token);
-  } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 401) throw error;
-    return request(await refreshAdminToken());
-  }
+export async function festivalApiPaged<T>(path: string, init?: RequestInit): Promise<ApiEnvelope<T>> {
+  const festivalId = await adminFestivalId();
+  return withAdminToken((token) => apiEnvelope<T>(`/admin/festivals/${festivalId}${path}`, init, token));
 }
 
 /**

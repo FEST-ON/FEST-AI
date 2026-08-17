@@ -1,10 +1,11 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: ca3412d10928fdf8
+// ko.ts sha256: 91cc20270fff9260
 import type { ko } from "./ko";
 
 export const en: typeof ko = {
   common: {
     loadFailed: "Could not load the data. Please try again.",
+    back: "Back",
     retry: "Retry",
     empty: "Nothing to show yet.",
     close: "Close",
@@ -173,6 +174,7 @@ export const en: typeof ko = {
   },
   area: {
     ariaLabel: "Set current zone",
+    shortLabel: "Zone",
     title: "Current zone",
     description: "Pick a zone to also receive notices targeted at it.",
     unknown: "No zone set",
@@ -203,7 +205,8 @@ export const en: typeof ko = {
     status: { RECEIVED: "Received", IN_PROGRESS: "In progress", COMPLETED: "Completed", REJECTED: "Rejected" },
   },
   accessibility: {
-    ariaLabel: "Accessibility settings",
+    ariaLabel: "Language and accessibility settings",
+    shortLabel: "Language",
     sheetTitle: "Usage & accessibility",
     sheetDescription: "Set your device mode, language, text size, and voice guidance.",
     kioskLabel: "Kiosk simple mode",
@@ -223,6 +226,7 @@ export const en: typeof ko = {
   },
   complaint: {
     ariaLabel: "Submit a complaint",
+    shortLabel: "Report",
     thanksTitle: "Your complaint has been received",
     thanksDescription: "It'll be handled once assigned to staff. The operations team tracks its status.",
     closeButton: "Close",
@@ -246,6 +250,7 @@ export const en: typeof ko = {
   notification: {
     pinnedBadge: "Pinned",
     autoCloseAt: (value: string) => `Clears automatically at ${value}`,
+    shortLabel: "Alerts",
     ariaLabel: (n: number) => `${n} notifications`,
     sheetTitle: "Notifications",
     sheetDescription: "Check notices and reservation calls.",
@@ -304,7 +309,7 @@ export const en: typeof ko = {
     voiceGuideOnAnnouncement: "Voice guidance is on.",
     autoSwitchNotice: (language: string) => `We detected your speech and switched the guide to ${language}.`,
     autoSwitchRevertAria: (language: string) => `Switch the guide back to ${language}`,
-    welcomeContent: "Hi! I'm the Perso AI festival guide. Feel free to ask about schedule, transport, facilities, and safety info.",
+    welcomeContent: "Hi! I'm the Alan AI festival guide. Feel free to ask about schedule, transport, facilities, and safety info.",
     welcomeTimestamp: "Now",
     welcomeSource: "Approved festival operations info",
     replyFailed: "We couldn't load the answer. Please try again in a moment.",

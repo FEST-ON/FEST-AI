@@ -63,7 +63,7 @@ export default function SchedulePage() {
                         <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
                         <p className="text-xs text-muted-foreground">{item.stage}</p>
                       </div>
-                      <Badge className={`shrink-0 text-[10px] ${CATEGORY_STYLE[item.category]}`}>{t.festivalData.category[item.category]}</Badge>
+                      <Badge className={`shrink-0 text-[0.625rem] ${CATEGORY_STYLE[item.category]}`}>{t.festivalData.category[item.category]}</Badge>
                     </div>
                   ))}
                 </div>

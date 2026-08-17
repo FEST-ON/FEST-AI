@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Check, CircleX, FileCheck2, Send, Undo2, Upload } from "lucide-react";
+import { isPendingFor, useWrite } from "@/shared/lib/use-write";
 import { festivalApi, json } from "@/shared/lib/api";
 import { Badge } from "@/shared/ui/badge";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
@@ -70,14 +71,11 @@ async function changeContentState(input: {
 }
 
 export default function ContentReviewPage() {
-  const queryClient = useQueryClient();
   const [comments, setComments] = useState<Record<string, string>>({});
   const items = useQuery({ queryKey: ["content-review"], queryFn: fetchContentItems });
   const data = items.data ?? [];
-  const mutation = useMutation({
-    mutationFn: changeContentState,
-    meta: { success: "콘텐츠 상태를 변경했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-review"] }),
+  const mutation = useWrite(changeContentState, {
+    success: "콘텐츠 상태를 변경했어요.", invalidates: ["content-review"],
   });
 
   const versions = data.flatMap((item) => item.versions.map((version) => ({ item, version })));
@@ -113,7 +111,7 @@ export default function ContentReviewPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-bold text-foreground">{contentPreview(version.body)}</h2>
                       <StatusPill tone={status.tone}>{status.label}</StatusPill>
-                      {isPublished && <Badge className="gap-1 text-[10px]"><Upload className="size-3" /> 게시 중</Badge>}
+                      {isPublished && <Badge className="gap-1 text-[0.625rem]"><Upload className="size-3" /> 게시 중</Badge>}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {item.contentType} · {item.slug} · v{version.versionNo} · {version.language.toUpperCase()}
@@ -138,23 +136,23 @@ export default function ContentReviewPage() {
                     )}
                     <div className="flex justify-end gap-2">
                       {action === "SUBMIT" && (
-                        <Button onClick={() => mutation.mutate({ action: "SUBMIT", itemId: item.id, versionId: version.id })} disabled={mutation.isPending && mutation.variables?.versionId === version.id}>
+                        <Button onClick={() => mutation.mutate({ action: "SUBMIT", itemId: item.id, versionId: version.id })} disabled={isPendingFor(mutation, version.id)}>
                           <Send /> 검수 요청
                         </Button>
                       )}
                       {action === "REVIEW" && <>
-                        <Button variant="destructive" onClick={() => mutation.mutate({ action: "REJECT", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={mutation.isPending && mutation.variables?.versionId === version.id}>
+                        <Button variant="destructive" onClick={() => mutation.mutate({ action: "REJECT", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={isPendingFor(mutation, version.id)}>
                           <CircleX /> 반려
                         </Button>
-                        <Button onClick={() => mutation.mutate({ action: "APPROVE", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={mutation.isPending && mutation.variables?.versionId === version.id}>
+                        <Button onClick={() => mutation.mutate({ action: "APPROVE", itemId: item.id, versionId: version.id, comment: comments[version.id] })} disabled={isPendingFor(mutation, version.id)}>
                           <Check /> 승인
                         </Button>
                       </>}
                       {action === "PUBLISH" && (
                         <ConfirmButton
-                          disabled={mutation.isPending && mutation.variables?.versionId === version.id}
+                          disabled={isPendingFor(mutation, version.id)}
                           title="방문객에게 게시할까요?"
-                          description={`"${contentPreview(version.body)}"이(가) 방문객 화면에 즉시 노출됩니다.`}
+                          description={`"${contentPreview(version.body)}"이(가) 방문객 화면에 즉시 노출돼요.`}
                           confirmLabel="게시"
                           onConfirm={() => mutation.mutate({ action: "PUBLISH", itemId: item.id, versionId: version.id })}
                         >
@@ -164,7 +162,7 @@ export default function ContentReviewPage() {
                       {action === "UNPUBLISH" && (
                         <ConfirmButton
                           variant="outline"
-                          disabled={mutation.isPending && mutation.variables?.versionId === version.id}
+                          disabled={isPendingFor(mutation, version.id)}
                           title="게시를 종료할까요?"
                           description={`"${contentPreview(version.body)}"이(가) 방문객 화면에서 즉시 내려갑니다.`}
                           confirmLabel="게시 종료"

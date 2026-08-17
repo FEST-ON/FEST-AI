@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Activity, BellRing, CheckCircle2, UserX } from "lucide-react";
 import {
   CROWD_LABEL,
@@ -20,10 +20,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { SelectField } from "@/shared/ui/select-field";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
+import { QueryState } from "@/shared/ui/query-state";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { useForm } from "@/shared/lib/use-form";
+import { isPendingFor, useWrite } from "@/shared/lib/use-write";
 import { seoulDateTime, seoulTime } from "@/shared/lib/utils";
 
 const DEFAULT_FORM: NewCrowdSnapshot = { areaId: "", crowdLevel: "MODERATE", peopleCount: null, estimatedWaitMin: null, validMinutes: 30 };
@@ -50,7 +52,6 @@ function matchesBooking(status: string, filter: BookingFilter) {
 }
 
 export default function FieldOperationsPage() {
-  const queryClient = useQueryClient();
   const { form, set, setForm } = useForm<NewCrowdSnapshot>(DEFAULT_FORM);
   const [bookingFilter, setBookingFilter] = useState<BookingFilter>("대기·호출");
 
@@ -58,21 +59,14 @@ export default function FieldOperationsPage() {
   const snapshots = useQuery({ queryKey: ["crowd-snapshots"], queryFn: fetchCrowdSnapshots });
   const bookings = useQuery({ queryKey: ["admin-bookings"], queryFn: () => fetchAdminBookings() });
 
-  const submitSnapshot = useMutation({
-    mutationFn: createCrowdSnapshot,
-    meta: { success: "혼잡도를 기록했어요." },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["crowd-snapshots"] });
-      queryClient.invalidateQueries({ queryKey: ["public-crowd"] });
-      queryClient.invalidateQueries({ queryKey: ["festival-ai-brief"] });
-      setForm((previous) => ({ ...DEFAULT_FORM, areaId: previous.areaId }));
-    },
+  const submitSnapshot = useWrite(createCrowdSnapshot, {
+    success: "혼잡도를 기록했어요.",
+    invalidates: ["crowd-snapshots", "public-crowd", "festival-ai-brief"],
+    // 같은 구역을 연달아 기록하는 경우가 많아 구역 선택만 남긴다.
+    onSuccess: () => setForm((previous) => ({ ...DEFAULT_FORM, areaId: previous.areaId })),
   });
-
-  const changeBooking = useMutation({
-    mutationFn: updateBookingStatus,
-    meta: { success: "예약 상태를 변경했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-bookings"] }),
+  const changeBooking = useWrite(updateBookingStatus, {
+    success: "예약 상태를 변경했어요.", invalidates: ["admin-bookings"],
   });
 
   const visibleBookings = (bookings.data ?? []).filter((row) => matchesBooking(row.status, bookingFilter));
@@ -86,35 +80,30 @@ export default function FieldOperationsPage() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        구역별 혼잡도를 직접 등록하고, 대기표를 호출·완료 처리해요. 등록한 혼잡도는 방문객 앱과 운영 위험 브리핑에 바로 반영됩니다.
+        구역별 혼잡도를 직접 등록하고, 대기표를 호출·완료 처리해요. 등록한 혼잡도는 방문객 앱과 운영 위험 브리핑에 바로 반영돼요.
       </p>
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Activity className="size-4 text-primary" /> 혼잡도 등록</h2>
-        <form
-          className="mt-3 grid gap-3 sm:grid-cols-6"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submitSnapshot.mutate(form);
-          }}
-        >
+        <Form className="mt-3 grid gap-3 sm:grid-cols-6" onSubmit={() => submitSnapshot.mutate(form)}>
           <div className="space-y-1 sm:col-span-2">
             <Label>구역</Label>
-            <Select value={form.areaId} onValueChange={(value) => set("areaId")(String(value ?? ""))}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="구역 선택" /></SelectTrigger>
-              <SelectContent>
-                {(areas.data ?? []).map((area) => <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.areaId}
+              onValueChange={set("areaId")}
+              options={(areas.data ?? []).map((area) => ({ value: area.id, label: area.name }))}
+              placeholder="구역 선택"
+              aria-label="구역"
+            />
           </div>
           <div className="space-y-1">
             <Label>혼잡 수준</Label>
-            <Select value={form.crowdLevel} onValueChange={(value) => set("crowdLevel")(value as CrowdLevel)}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CROWD_LEVELS.map((level) => <SelectItem key={level} value={level}>{CROWD_LABEL[level]}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.crowdLevel}
+              onValueChange={(value) => set("crowdLevel")(value as CrowdLevel)}
+              options={CROWD_LEVELS.map((level) => ({ value: level, label: CROWD_LABEL[level] }))}
+              aria-label="혼잡 수준"
+            />
           </div>
           {/* 인원 수는 타입에만 있고 입력란이 없어서 늘 비어 있었다 — 혼잡도 근거 수치다. */}
           <div className="space-y-1">
@@ -130,12 +119,10 @@ export default function FieldOperationsPage() {
             <Input id="valid" type="number" min={5} value={form.validMinutes} onChange={(event) => set("validMinutes")(Number(event.target.value))} required />
           </div>
           <div className="sm:col-span-6 flex items-center justify-end gap-3">
-            {submitSnapshot.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(submitSnapshot.error)}</p>}
-            <Button type="submit" size="sm" disabled={!form.areaId || submitSnapshot.isPending}>
-              {submitSnapshot.isPending ? "등록 중..." : "혼잡도 등록"}
-            </Button>
+            <ErrorText error={submitSnapshot.error} className="mr-auto" />
+            <SubmitButton mutation={submitSnapshot} pending="등록 중..." disabled={!form.areaId}>혼잡도 등록</SubmitButton>
           </div>
-        </form>
+        </Form>
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">
@@ -151,7 +138,7 @@ export default function FieldOperationsPage() {
                       {CROWD_LABEL[row.crowdLevel]}
                     </StatusPill>
                   </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                     {row.estimatedWaitMin !== null ? `예상 대기 ${row.estimatedWaitMin}분 · ` : ""}
                     {seoulTime(row.capturedAt)} 기준
                     {row.stale && " · 오래된 값"}
@@ -171,7 +158,7 @@ export default function FieldOperationsPage() {
               {BOOKING_FILTERS.map((value) => (
                 <TabsTrigger key={value} value={value} className="gap-1.5">
                   {value}
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[0.625rem] text-muted-foreground">
                     {(bookings.data ?? []).filter((row) => matchesBooking(row.status, value)).length}
                   </span>
                 </TabsTrigger>
@@ -188,12 +175,12 @@ export default function FieldOperationsPage() {
                     <p className="truncate text-sm font-semibold text-foreground">
                       {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}{booking.programTitle}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-[0.6875rem] text-muted-foreground">
                       {seoulDateTime(booking.startsAt)} · {booking.partySize}명
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="text-[10px]">{BOOKING_STATUS_LABEL[booking.status] ?? booking.status}</Badge>
+                    <Badge variant="outline" className="text-[0.625rem]">{BOOKING_STATUS_LABEL[booking.status] ?? booking.status}</Badge>
                     {bookingActionsFor(booking.status).map((status) => {
                       const { label, icon: Icon } = BOOKING_ACTION_META[status];
                       return (
@@ -201,7 +188,7 @@ export default function FieldOperationsPage() {
                           key={status}
                           size="sm"
                           variant="outline"
-                          disabled={changeBooking.isPending && changeBooking.variables?.bookingId === booking.id}
+                          disabled={isPendingFor(changeBooking, booking.id)}
                           onClick={() => changeBooking.mutate({ bookingId: booking.id, status })}
                         >
                           <Icon className="size-3.5" /> {label}
@@ -214,7 +201,7 @@ export default function FieldOperationsPage() {
             </div>
           )}
         </QueryState>
-        {changeBooking.error && <p className="mt-3 text-sm text-destructive">{queryErrorMessage(changeBooking.error)}</p>}
+        <ErrorText error={changeBooking.error} className="mt-3 text-sm" />
       </section>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Fingerprint, Radio, ShieldCheck, Trash2 } from "lucide-react";
 import {
   PRIVACY_REQUEST_STATUS_LABEL,
@@ -16,6 +16,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { QueryState } from "@/shared/ui/query-state";
+import { useWrite } from "@/shared/lib/use-write";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { StatCard } from "@/shared/ui/stat-card";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
@@ -60,22 +61,17 @@ function lag(seconds: number | null) {
  * 감사·점검 때 여러 메뉴를 오가야 합니다.
  */
 export default function AdminPrivacyPage() {
-  const queryClient = useQueryClient();
   const role = useAdminSessionStore((state) => state.user?.role);
   const policy = useQuery({ queryKey: ["privacy-policy"], queryFn: fetchPrivacyPolicy });
   const requests = useQuery({ queryKey: ["privacy-requests-admin"], queryFn: fetchAdminPrivacyRequests });
   const identity = useQuery({ queryKey: ["visitor-identity"], queryFn: fetchIdentityReview });
   const deliveries = useQuery({ queryKey: ["notification-deliveries"], queryFn: fetchDeliveryReport });
 
-  const handle = useMutation({
-    mutationFn: handlePrivacyRequest,
-    meta: { success: "요구 처리 상태를 변경했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["privacy-requests-admin"] }),
+  const handle = useWrite(handlePrivacyRequest, {
+    success: "요구 처리 상태를 변경했어요.", invalidates: ["privacy-requests-admin"],
   });
-  const purge = useMutation({
-    mutationFn: runPrivacyPurge,
-    meta: { success: "보유기간이 지난 개인정보를 파기했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["privacy-policy"] }),
+  const purge = useWrite(runPrivacyPurge, {
+    success: "보유기간이 지난 개인정보를 파기했어요.", invalidates: ["privacy-policy"],
   });
 
   return (
@@ -85,7 +81,7 @@ export default function AdminPrivacyPage() {
           <ShieldCheck className="size-5 text-primary" /> 개인정보·전달 관리
         </h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          항목별 보유기간과 파기 실행, 정보주체의 열람·삭제 요구 처리, 식별자 재발급 검토, 공지 도달 결과를 확인합니다.
+          항목별 보유기간과 파기 실행, 정보주체의 열람·삭제 요구 처리, 식별자 재발급 검토, 공지 도달 결과를 확인해요.
         </p>
       </div>
 
@@ -108,7 +104,7 @@ export default function AdminPrivacyPage() {
         <QueryState query={policy} skeleton={<SkeletonList count={3} className="h-10 rounded-lg" wrapperClassName="space-y-2" />}>
           {(data) => (
             <>
-              <p className="mb-2 text-[11px] text-muted-foreground">
+              <p className="mb-2 text-[0.6875rem] text-muted-foreground">
                 파기 주기 {data.purgeSchedule} · 최근 파기 {time(data.lastPurge?.createdAt)}
                 {data.lastPurge && ` (${Object.entries(data.lastPurge.afterData).map(([key, value]) => `${key} ${value}`).join(", ")})`}
               </p>
@@ -128,14 +124,14 @@ export default function AdminPrivacyPage() {
                       <TableCell className="text-xs text-muted-foreground">{row.featureId}</TableCell>
                       <TableCell className="text-xs">{row.retention}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px]">{MODE_LABEL[row.mode] ?? row.mode}</Badge>
+                        <Badge variant="outline" className="text-[0.625rem]">{MODE_LABEL[row.mode] ?? row.mode}</Badge>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               {purge.data && (
-                <p className="mt-2 text-[11px] font-medium text-primary">
+                <p className="mt-2 text-[0.6875rem] font-medium text-primary">
                   파기 결과 · {Object.entries(purge.data.purged).map(([key, value]) => `${key} ${value}건`).join(" · ")}
                 </p>
               )}
@@ -160,17 +156,17 @@ export default function AdminPrivacyPage() {
                       <p className="text-sm font-semibold text-foreground">
                         {row.requestType === "DELETE" ? "삭제 요구" : "열람 요구"}
                         {!row.visitorSessionId && (
-                          <span className="ml-2 text-[11px] font-medium text-muted-foreground">식별자 없음</span>
+                          <span className="ml-2 text-[0.6875rem] font-medium text-muted-foreground">식별자 없음</span>
                         )}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                         접수 {time(row.createdAt)}
                         {row.handledAt && ` · 처리 ${time(row.handledAt)}`}
                         {row.handlerName && ` · ${row.handlerName}`}
                       </p>
                       {row.detail && <p className="mt-1 text-xs text-muted-foreground">{row.detail}</p>}
                       {row.result?.collected && (
-                        <p className="mt-1 text-[11px] text-muted-foreground">
+                        <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                           대상 데이터 · {Object.entries(row.result.collected).map(([key, value]) => `${key} ${value}`).join(" · ")}
                         </p>
                       )}
@@ -196,8 +192,8 @@ export default function AdminPrivacyPage() {
                             title={row.requestType === "DELETE" ? "삭제를 완료 처리할까요?" : "열람 요구를 완료 처리할까요?"}
                             description={
                               row.requestType === "DELETE"
-                                ? "해당 방문 세션의 데이터를 참조 데이터까지 연쇄 파기합니다. 되돌릴 수 없습니다."
-                                : "수집 항목 요약을 요구 이력에 기록합니다."
+                                ? "해당 방문 세션의 데이터를 참조 데이터까지 연쇄 파기해요. 되돌릴 수 없어요."
+                                : "수집 항목 요약을 요구 이력에 기록해요."
                             }
                             confirmLabel="완료 처리"
                             onConfirm={() => handle.mutate({ requestId: row.id, status: "COMPLETED" })}
@@ -229,7 +225,7 @@ export default function AdminPrivacyPage() {
         <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-foreground">
           <Fingerprint className="size-4 text-primary" /> 식별자 재발급 검토
         </h2>
-        <p className="mb-3 text-[11px] text-muted-foreground">
+        <p className="mb-3 text-[0.6875rem] text-muted-foreground">
           같은 기기 버킷에서 익명 식별자가 여러 번 발급되면 1인당 한도가 초기화됐을 수 있습니다. 공용 와이파이에서는
           서로 다른 방문객이 한 버킷에 묶일 수 있어 자동 차단이 아니라 담당자 검토 신호로만 씁니다.
         </p>
@@ -281,10 +277,10 @@ export default function AdminPrivacyPage() {
         <QueryState query={deliveries} skeleton={<SkeletonList count={3} className="h-10 rounded-lg" wrapperClassName="space-y-2" />}>
           {(data) => (
             <>
-              <p className="mb-3 rounded-xl bg-muted/60 p-3 text-[11px] leading-5 text-muted-foreground">
+              <p className="mb-3 rounded-xl bg-muted/60 p-3 text-[0.6875rem] leading-5 text-muted-foreground">
                 {data.channel.limitation}
                 <br />
-                공지 {data.channel.announcementPollSeconds}초 · 예약 호출 {data.channel.bookingPollSeconds}초 주기로 갱신됩니다.
+                공지 {data.channel.announcementPollSeconds}초 · 예약 호출 {data.channel.bookingPollSeconds}초 주기로 갱신돼요.
                 예약 호출 {data.bookingCalls.called}건 중 {data.bookingCalls.delivered}건 노출
                 {data.bookingCalls.avgLagSeconds !== null && ` · 평균 ${data.bookingCalls.avgLagSeconds}초`}
               </p>

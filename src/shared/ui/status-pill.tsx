@@ -25,5 +25,5 @@ export type Tone = keyof typeof TONE;
 
 /** 목록 행에 붙는 작은 상태 알약. 크기·굵기를 바꿔야 하면 className으로 덮어쓴다. */
 export function StatusPill({ tone, className, children }: { tone: Tone; className?: string; children: ReactNode }) {
-  return <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", TONE[tone], className)}>{children}</span>;
+  return <span className={cn("rounded-full px-2 py-0.5 text-[0.625rem] font-bold", TONE[tone], className)}>{children}</span>;
 }

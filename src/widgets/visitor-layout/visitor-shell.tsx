@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { KioskSettingsBar } from "@/features/accessibility/ui/kiosk-settings-bar";
 import { setVisitorArea } from "@/features/visitor-area/api/area";
 import { EmergencyAnnouncementBanner } from "@/features/notification/ui/emergency-announcement-banner";
 import { useTranslation } from "@/shared/lib/i18n";
@@ -52,6 +53,7 @@ export function VisitorShell({ children }: { children: React.ReactNode }) {
       <EmergencyAnnouncementBanner />
       {!isImmersiveAiGuide && <VisitorTopbar />}
       <main
+        id="main"
         className={cn(
           "mx-auto min-h-0 w-full max-w-md flex-1",
           isImmersiveAiGuide ? "overflow-hidden" : "overflow-y-auto pb-4",
@@ -59,6 +61,8 @@ export function VisitorShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
+      {/* 키오스크는 이용자가 바뀔 때마다 언어·글씨 크기부터 다시 맞춘다 — 모든 화면에서 바로 보이게 둔다. */}
+      {visitorMode === "kiosk" && <KioskSettingsBar />}
       <VisitorNav />
     </div>
   );

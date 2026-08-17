@@ -41,7 +41,7 @@ const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/e
 const { nextTicketStatus } = await importTypeScript("../src/entities/ticket.ts", entity);
 const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement.ts", entity);
 const { contentAction, contentPreview } = await importTypeScript("../src/features/content-review/model/content.ts");
-const { canAccessPath, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
+const { canAccessPath, mobileNavItems, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
 const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
 const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
 const { detectLocale } = await importTypeScript("../src/shared/lib/i18n/detect-locale.ts");
@@ -496,6 +496,22 @@ test("번역이 실패하면 원문을 돌려주되 degraded로 알린다", asyn
   globalThis.fetch = async () => Response.json({ entries: { title: "Festival guide" }, degraded: false });
   assert.deepEqual(await client.translateEntries(entries, "en"), { title: "Festival guide" });
   assert.equal(client.isTranslationDegraded(), false);
+});
+
+test("모바일 하단 탭은 볼 수 있는 화면만, 사이드바와 같은 권한으로 노출한다", () => {
+  const hrefs = (role) => mobileNavItems(role).map((item) => item.href);
+
+  // 현장 운영자가 폰으로 여는 화면이 전부 들어 있고, 순서가 유지된다.
+  assert.deepEqual(hrefs("FIELD_OPERATOR"), [
+    "/admin", "/admin/field", "/admin/bookings", "/admin/coupons", "/admin/tickets",
+  ]);
+  // 권한 없는 항목은 탭에도 없어야 한다 — 들어가 봐야 403만 본다.
+  for (const role of ["FIELD_OPERATOR", "REVIEWER", "MERCHANT", "SUPER_ADMIN"]) {
+    for (const href of hrefs(role)) assert.ok(canAccessPath(role, href), `${role}이 ${href}에 못 들어갑니다.`);
+  }
+  // 현장 화면이 거의 없는 역할·비로그인은 탭바 자체를 띄우지 않는다.
+  assert.deepEqual(hrefs("REVIEWER"), []);
+  assert.deepEqual(hrefs(undefined), []);
 });
 
 test("사이드바 항목은 모두 아이콘이 등록돼 있다", async () => {

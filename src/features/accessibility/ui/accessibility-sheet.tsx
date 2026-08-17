@@ -5,6 +5,7 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
 import { Switch } from "@/shared/ui/switch";
+import { iconTileClass, iconTileLabelClass } from "@/shared/ui/icon-tile";
 import {
   Sheet,
   SheetContent,
@@ -34,7 +35,8 @@ function AccessibilityIcon({ className }: { className?: string }) {
 
 export function AccessibilitySheet({
   triggerClassName,
-}: { triggerClassName?: string } = {}) {
+  showLabel = false,
+}: { triggerClassName?: string; showLabel?: boolean } = {}) {
   const {
     largeText,
     highContrast,
@@ -53,14 +55,15 @@ export function AccessibilitySheet({
       <SheetTrigger
         render={
           <Button
-            variant="outline"
-            size="icon"
-            className={cn("rounded-full", triggerClassName)}
+            variant={showLabel ? "ghost" : "outline"}
+            size={showLabel ? "default" : "icon"}
+            className={cn(showLabel ? iconTileClass : "rounded-full", triggerClassName)}
             aria-label={t.accessibility.ariaLabel}
           />
         }
       >
-        <AccessibilityIcon className="size-4" />
+        <AccessibilityIcon className={showLabel ? "size-5" : "size-4"} />
+        {showLabel && <span className={iconTileLabelClass}>{t.accessibility.shortLabel}</span>}
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-w-md rounded-t-3xl">
         <SheetHeader>
@@ -70,6 +73,12 @@ export function AccessibilitySheet({
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-5 px-4">
+          <div>
+            <Label className="mb-2 block text-sm font-semibold">
+              {t.accessibility.languageLabel}
+            </Label>
+            <LanguageBar />
+          </div>
           <section className="space-y-2.5" aria-labelledby="visitor-mode-label">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -108,7 +117,7 @@ export function AccessibilitySheet({
                   )}
                 />
                 <p className="text-sm font-semibold">{t.accessibility.qrTitle}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                   {t.accessibility.qrSubtitle}
                 </p>
               </div>
@@ -127,19 +136,13 @@ export function AccessibilitySheet({
                   )}
                 />
                 <p className="text-sm font-semibold">{t.accessibility.kioskModeTitle}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                   {t.accessibility.kioskModeSubtitle}
                 </p>
               </div>
             </div>
           </section>
 
-          <div>
-            <Label className="mb-2 block text-sm font-semibold">
-              {t.accessibility.languageLabel}
-            </Label>
-            <LanguageBar />
-          </div>
           <div className="flex items-center justify-between rounded-xl border border-border p-3">
             <div>
               <Label htmlFor="large-text" className="text-sm font-semibold">
@@ -187,7 +190,7 @@ export function AccessibilitySheet({
           </div>
         </div>
         <SheetFooter>
-          <p className="text-center text-[11px] text-muted-foreground">
+          <p className="text-center text-[0.6875rem] text-muted-foreground">
             {t.accessibility.footerNote}
           </p>
         </SheetFooter>

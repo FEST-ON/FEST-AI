@@ -1,10 +1,11 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: ca3412d10928fdf8
+// ko.ts sha256: 91cc20270fff9260
 import type { ko } from "./ko";
 
 export const ja: typeof ko = {
   common: {
     loadFailed: "読み込めませんでした。しばらくしてからもう一度お試しください。",
+    back: "戻る",
     retry: "再試行",
     empty: "表示する内容がありません。",
     close: "閉じる",
@@ -173,6 +174,7 @@ export const ja: typeof ko = {
   },
   area: {
     ariaLabel: "現在のエリア設定",
+    shortLabel: "エリア",
     title: "現在のエリア",
     description: "エリアを選ぶと、そのエリア向けのお知らせも届きます。",
     unknown: "エリア未設定",
@@ -203,7 +205,8 @@ export const ja: typeof ko = {
     status: { RECEIVED: "受付", IN_PROGRESS: "処理中", COMPLETED: "完了", REJECTED: "却下" },
   },
   accessibility: {
-    ariaLabel: "アクセシビリティ設定",
+    ariaLabel: "言語とアクセシビリティ設定",
+    shortLabel: "言語・設定",
     sheetTitle: "利用環境・アクセシビリティ",
     sheetDescription: "デバイスの利用方法、言語、文字サイズ、音声案内を設定できます。",
     kioskLabel: "キオスク簡易モード",
@@ -223,6 +226,7 @@ export const ja: typeof ko = {
   },
   complaint: {
     ariaLabel: "苦情の送信",
+    shortLabel: "苦情",
     thanksTitle: "苦情を受け付けました",
     thanksDescription: "担当者の割り当て後、順次対応します。受付状況は運営チームが確認します。",
     closeButton: "閉じる",
@@ -246,6 +250,7 @@ export const ja: typeof ko = {
   notification: {
     pinnedBadge: "緊急固定",
     autoCloseAt: (value: string) => `${value} に自動解除`,
+    shortLabel: "通知",
     ariaLabel: (n: number) => `通知${n}件`,
     sheetTitle: "通知",
     sheetDescription: "お知らせと予約呼び出し履歴を確認できます。",
@@ -304,7 +309,7 @@ export const ja: typeof ko = {
     voiceGuideOnAnnouncement: "音声案内がオンになりました。",
     autoSwitchNotice: (language: string) => `音声を認識し、案内を${language}に切り替えました。`,
     autoSwitchRevertAria: (language: string) => `${language}の案内に戻す`,
-    welcomeContent: "こんにちは！Perso AIフェスティバルガイドです。日程、交通、施設、安全情報などお気軽にお尋ねください。",
+    welcomeContent: "こんにちは！Alan AIフェスティバルガイドです。日程、交通、施設、安全情報などお気軽にお尋ねください。",
     welcomeTimestamp: "たった今",
     welcomeSource: "フェスティバル運営承認情報",
     replyFailed: "案内情報を取得できませんでした。しばらくしてからもう一度お試しください。",

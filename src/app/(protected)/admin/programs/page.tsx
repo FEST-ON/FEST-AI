@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { CalendarPlus, FileCheck2, Plus, Trash2 } from "lucide-react";
 import {
   createProgram,
@@ -24,9 +24,10 @@ import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { SelectField } from "@/shared/ui/select-field";
 import { Textarea } from "@/shared/ui/textarea";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
+import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import {
   Table,
@@ -38,7 +39,8 @@ import {
 } from "@/shared/ui/table";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { useForm } from "@/shared/lib/use-form";
-import { datetimeLocal, seoulShort } from "@/shared/lib/utils";
+import { isPendingFor, useWrite } from "@/shared/lib/use-write";
+import { datetimeLocal, seoulShort, toIso } from "@/shared/lib/utils";
 
 const CATEGORIES: (OperationCategory | "전체")[] = ["전체", "프로그램", "참여업체", "부스", "인력", "자원봉사자"];
 
@@ -53,10 +55,11 @@ const PROGRAM_CATEGORIES = [
 
 const STATUS_TONE = { 준비중: "neutral", 운영중: "success", 완료: "accent", 이슈: "danger" } as const;
 
+const STATUS_OPTIONS = PROGRAM_STATUSES.map((status) => ({ value: status, label: PROGRAM_STATUS_LABEL[status] }));
+
 const EMPTY_PROGRAM: NewProgram = { slug: "", title: "", summary: "", category: "performance", status: "DRAFT" };
 
 function SessionPanel({ program }: { program: Program }) {
-  const queryClient = useQueryClient();
   const areas = useQuery({ queryKey: ["admin-areas"], queryFn: fetchAreas });
   const sessions = useQuery({ queryKey: ["program-sessions", program.id], queryFn: () => fetchProgramSessions(program.id) });
   const { form, set, field } = useForm<NewProgramSession>(() => {
@@ -64,12 +67,9 @@ function SessionPanel({ program }: { program: Program }) {
     return { areaId: "", startsAt: datetimeLocal(start), endsAt: datetimeLocal(new Date(start.getTime() + 60 * 60_000)), capacity: 30, status: "OPEN" };
   });
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["program-sessions", program.id] });
-    queryClient.invalidateQueries({ queryKey: ["operation-resources"] });
-  };
-  const create = useMutation({ mutationFn: createProgramSession, meta: { success: "회차를 추가했어요." }, onSuccess: invalidate });
-  const remove = useMutation({ mutationFn: deleteProgramSession, meta: { success: "회차를 삭제했어요." }, onSuccess: invalidate });
+  const invalidates = [["program-sessions", program.id], "operation-resources"] as const;
+  const create = useWrite(createProgramSession, { success: "회차를 추가했어요.", invalidates });
+  const remove = useWrite(deleteProgramSession, { success: "회차를 삭제했어요.", invalidates });
   const areaName = (id: string) => areas.data?.find((area) => area.id === id)?.name ?? "구역";
 
   return (
@@ -84,7 +84,7 @@ function SessionPanel({ program }: { program: Program }) {
         {(rows) => (
           <ul className="mt-2 space-y-1">
             {rows.map((session) => (
-              <li key={session.id} className="flex items-center justify-between gap-2 text-[11px]">
+              <li key={session.id} className="flex items-center justify-between gap-2 text-[0.6875rem]">
                 <span className="text-foreground">
                   {seoulShort(session.startsAt)}
                   {" · "}{areaName(session.areaId)}{session.capacity !== null && ` · 정원 ${session.capacity}명`}
@@ -94,9 +94,9 @@ function SessionPanel({ program }: { program: Program }) {
                   size="icon-xs"
                   aria-label="회차 삭제"
                   className="text-muted-foreground hover:text-destructive"
-                  disabled={remove.isPending && remove.variables === session.id}
+                  disabled={isPendingFor(remove, session.id)}
                   title="회차를 삭제할까요?"
-                  description={`${seoulShort(session.startsAt)} · ${areaName(session.areaId)} 회차가 삭제됩니다. 이미 잡힌 예약이 있으면 함께 사라져요.`}
+                  description={`${seoulShort(session.startsAt)} · ${areaName(session.areaId)} 회차가 삭제돼요. 이미 잡힌 예약이 있으면 함께 사라져요.`}
                   confirmLabel="삭제"
                   onConfirm={() => remove.mutate(session.id)}
                 >
@@ -108,36 +108,30 @@ function SessionPanel({ program }: { program: Program }) {
         )}
       </QueryState>
 
-      <form
+      <Form
         className="mt-3 grid gap-2 sm:grid-cols-5"
-        onSubmit={(event) => {
-          event.preventDefault();
-          create.mutate({
-            ...form,
-            programId: program.id,
-            startsAt: new Date(form.startsAt).toISOString(),
-            endsAt: new Date(form.endsAt).toISOString(),
-          });
-        }}
+        onSubmit={() =>
+          create.mutate({ ...form, programId: program.id, startsAt: toIso(form.startsAt), endsAt: toIso(form.endsAt) })
+        }
       >
-        <Select value={form.areaId} onValueChange={(value) => set("areaId")(String(value ?? ""))}>
-          <SelectTrigger className="w-full"><SelectValue placeholder="구역" /></SelectTrigger>
-          <SelectContent>
-            {(areas.data ?? []).map((area) => <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <SelectField
+          value={form.areaId}
+          onValueChange={set("areaId")}
+          options={(areas.data ?? []).map((area) => ({ value: area.id, label: area.name }))}
+          placeholder="구역"
+          aria-label="구역"
+        />
         <Input type="datetime-local" {...field("startsAt")} required />
         <Input type="datetime-local" {...field("endsAt")} required />
         <Input type="number" min={0} placeholder="정원" value={form.capacity ?? ""} onChange={(event) => set("capacity")(event.target.value === "" ? null : Number(event.target.value))} />
-        <Button type="submit" size="sm" disabled={!form.areaId || create.isPending}>회차 추가</Button>
-      </form>
-      {(create.error || remove.error) && <p className="mt-2 text-[11px] text-destructive">{queryErrorMessage(create.error ?? remove.error)}</p>}
+        <SubmitButton mutation={create} disabled={!form.areaId}>회차 추가</SubmitButton>
+      </Form>
+      <ErrorText error={create.error ?? remove.error} className="mt-2 text-[0.6875rem]" />
     </div>
   );
 }
 
 export default function ProgramsPage() {
-  const queryClient = useQueryClient();
   const resources = useQuery({ queryKey: ["operation-resources"], queryFn: fetchOperationResources });
   const programs = useQuery({ queryKey: ["admin-programs"], queryFn: fetchPrograms });
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("전체");
@@ -145,17 +139,16 @@ export default function ProgramsPage() {
   const { form, set, field, reset } = useForm<NewProgram>(EMPTY_PROGRAM);
   const [openSessions, setOpenSessions] = useState<string | null>(null);
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin-programs"] });
-    queryClient.invalidateQueries({ queryKey: ["operation-resources"] });
-  };
-  const create = useMutation({ mutationFn: createProgram, meta: { success: "프로그램을 등록했어요." }, onSuccess: () => { invalidate(); reset(); setCreating(false); } });
-  const update = useMutation({ mutationFn: updateProgram, meta: { success: "프로그램을 수정했어요." }, onSuccess: invalidate });
-  const remove = useMutation({ mutationFn: deleteProgram, meta: { success: "프로그램을 보관했어요." }, onSuccess: invalidate });
-  const submitContent = useMutation({
-    mutationFn: submitProgramContent,
-    meta: { success: "검수를 요청했어요. 검수·게시 관리 화면에서 승인하면 방문객에게 공개됩니다." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["content-review"] }),
+  const invalidates = ["admin-programs", "operation-resources"];
+  const create = useWrite(createProgram, {
+    success: "프로그램을 등록했어요.", invalidates,
+    onSuccess: () => { reset(); setCreating(false); },
+  });
+  const update = useWrite(updateProgram, { success: "프로그램을 수정했어요.", invalidates });
+  const remove = useWrite(deleteProgram, { success: "프로그램을 보관했어요.", invalidates });
+  const submitContent = useWrite(submitProgramContent, {
+    success: "검수를 요청했어요. 검수·게시 관리 화면에서 승인하면 방문객에게 공개돼요.",
+    invalidates: ["content-review"],
   });
 
   const filtered = useMemo(() => {
@@ -182,9 +175,9 @@ export default function ProgramsPage() {
         </div>
 
         {creating && (
-          <form
+          <Form
             className="mt-3 grid gap-3 sm:grid-cols-4"
-            onSubmit={(event) => { event.preventDefault(); create.mutate({ ...form, summary: form.summary || undefined }); }}
+            onSubmit={() => create.mutate({ ...form, summary: form.summary || undefined })}
           >
             <div className="space-y-1">
               <Label htmlFor="program-title">제목</Label>
@@ -197,32 +190,22 @@ export default function ProgramsPage() {
             <div className="space-y-1">
               <Label>분류</Label>
               {/* 방문객 일정 화면이 이 값으로 한글 카테고리를 매핑한다 — 원시값을 직접 타이핑하지 않게 고정한다. */}
-              <Select value={form.category} onValueChange={(value) => set("category")(String(value))}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PROGRAM_CATEGORIES.map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SelectField value={form.category} onValueChange={set("category")} options={PROGRAM_CATEGORIES} aria-label="분류" />
             </div>
             <div className="space-y-1">
               <Label>상태</Label>
-              <Select value={form.status} onValueChange={(value) => set("status")(String(value))}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PROGRAM_STATUSES.map((status) => <SelectItem key={status} value={status}>{PROGRAM_STATUS_LABEL[status]}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SelectField value={form.status} onValueChange={set("status")} options={STATUS_OPTIONS} aria-label="상태" />
             </div>
             <div className="space-y-1 sm:col-span-4">
               <Label htmlFor="program-summary">소개</Label>
               <Textarea id="program-summary" rows={2} {...field("summary")} />
             </div>
             <div className="sm:col-span-4 flex items-center justify-end gap-3">
-              {create.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(create.error)}</p>}
+              <ErrorText error={create.error} className="mr-auto" />
               <Button type="button" variant="outline" size="sm" onClick={() => setCreating(false)}>취소</Button>
-              <Button type="submit" size="sm" disabled={create.isPending}>{create.isPending ? "등록 중..." : "등록"}</Button>
+              <SubmitButton mutation={create} pending="등록 중...">등록</SubmitButton>
             </div>
-          </form>
+          </Form>
         )}
 
         <div className="mt-3 space-y-2">
@@ -233,22 +216,24 @@ export default function ProgramsPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">{program.title}</p>
-                      <p className="text-[11px] text-muted-foreground">{program.slug} · {program.category}</p>
+                      <p className="text-[0.6875rem] text-muted-foreground">{program.slug} · {program.category}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Select value={program.status} onValueChange={(value) => update.mutate({ id: program.id, version: program.version, status: String(value) })}>
-                        <SelectTrigger size="sm" className="w-28"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {PROGRAM_STATUSES.map((status) => <SelectItem key={status} value={status}>{PROGRAM_STATUS_LABEL[status]}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <SelectField
+                        value={program.status}
+                        onValueChange={(status) => update.mutate({ id: program.id, version: program.version, status })}
+                        options={STATUS_OPTIONS}
+                        size="sm"
+                        className="w-28"
+                        aria-label="프로그램 상태"
+                      />
                       <Button size="sm" variant="outline" onClick={() => setOpenSessions(openSessions === program.id ? null : program.id)}>회차</Button>
                       {/* 방문객 채널 노출은 콘텐츠 검수를 거친다. 내용을 고쳤으면 새 버전을 올려
                           검수를 다시 요청해야 공개 화면에 반영된다. */}
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={submitContent.isPending && submitContent.variables?.id === program.id}
+                        disabled={isPendingFor(submitContent, program.id)}
                         onClick={() => submitContent.mutate(program)}
                       >
                         <FileCheck2 className="size-3.5" /> 검수 요청
@@ -257,7 +242,7 @@ export default function ProgramsPage() {
                         size="sm"
                         variant="outline"
                         aria-label="프로그램 보관"
-                        disabled={remove.isPending && remove.variables === program.id}
+                        disabled={isPendingFor(remove, program.id)}
                         title="프로그램을 보관할까요?"
                         description={`"${program.title}"이(가) 방문객 화면에서 내려갑니다. 회차와 예약 기록은 남아요.`}
                         confirmLabel="보관"
@@ -280,7 +265,7 @@ export default function ProgramsPage() {
           {CATEGORIES.map((value) => (
             <TabsTrigger key={value} value={value} className="gap-1.5">
               {value}
-              {value !== "전체" && <span className="text-[10px] text-muted-foreground">{counts.get(value) ?? 0}</span>}
+              {value !== "전체" && <span className="text-[0.625rem] text-muted-foreground">{counts.get(value) ?? 0}</span>}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -310,13 +295,13 @@ export default function ProgramsPage() {
               <TableBody>
                 {filtered.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell><Badge variant="outline" className="text-[10px]">{row.category}</Badge></TableCell>
+                    <TableCell><Badge variant="outline" className="text-[0.625rem]">{row.category}</Badge></TableCell>
                     <TableCell className="font-medium text-foreground">{row.name}</TableCell>
                     <TableCell className="text-muted-foreground">{row.manager}</TableCell>
                     <TableCell className="text-muted-foreground">{row.location}</TableCell>
                     <TableCell className="text-muted-foreground">{row.time}</TableCell>
                     <TableCell>
-                      <StatusPill tone={STATUS_TONE[row.status]} className="text-[11px]">{row.status}</StatusPill>
+                      <StatusPill tone={STATUS_TONE[row.status]} className="text-[0.6875rem]">{row.status}</StatusPill>
                     </TableCell>
                     <TableCell className="max-w-[220px] truncate text-muted-foreground">{row.note}</TableCell>
                   </TableRow>

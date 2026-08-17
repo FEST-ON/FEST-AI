@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
@@ -8,10 +8,9 @@ import { currentAdmin, loginAdmin } from "@/shared/lib/api";
 import { useAdminSessionStore } from "@/features/admin-auth/model/store";
 import { ADMIN_ROLE_LABEL, canAccessPath } from "@/shared/lib/permissions";
 import { useForm } from "@/shared/lib/use-form";
-import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Logo } from "@/shared/ui/logo";
-import { queryErrorMessage } from "@/shared/ui/query-state";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
 import { Skeleton } from "@/shared/ui/skeleton";
 
 export function AdminAuthGate({ children }: { children: React.ReactNode }) {
@@ -42,11 +41,6 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
     },
   });
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    login.mutate();
-  }
-
   if (checking) {
     return <div className="mx-auto mt-32 w-full max-w-sm space-y-3"><Skeleton className="h-12" /><Skeleton className="h-44" /></div>;
   }
@@ -72,7 +66,7 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6">
+      <Form onSubmit={() => login.mutate()} className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6">
         <Logo />
         <div>
           <h1 className="text-lg font-bold">운영자 로그인</h1>
@@ -80,11 +74,9 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
         </div>
         <Input type="email" {...field("email")} aria-label="이메일" placeholder="이메일" autoComplete="username" required />
         <Input type="password" {...field("password")} aria-label="비밀번호" placeholder="비밀번호" autoComplete="current-password" required />
-        {login.error && <p className="text-sm text-destructive">{queryErrorMessage(login.error, "로그인에 실패했습니다.")}</p>}
-        <Button type="submit" className="w-full" disabled={login.isPending}>
-          {login.isPending ? "로그인 중..." : "로그인"}
-        </Button>
-      </form>
+        <ErrorText error={login.error} fallback="로그인하지 못했어요." className="text-sm" />
+        <SubmitButton mutation={login} size="default" pending="로그인 중..." className="w-full">로그인</SubmitButton>
+      </Form>
     </main>
   );
 }

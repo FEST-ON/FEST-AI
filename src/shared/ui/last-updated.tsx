@@ -21,7 +21,7 @@ export function LastUpdated({
   if (Number.isNaN(date.getTime())) return null;
 
   return (
-    <p className={cn("inline-flex items-center gap-1 text-[11px] font-medium", className)}>
+    <p className={cn("inline-flex items-center gap-1 text-[0.6875rem] font-medium", className)}>
       <History className="size-3 shrink-0" aria-hidden="true" />
       <time dateTime={date.toISOString()}>
         {label(date.toLocaleString(bcp47, { dateStyle: "medium", timeStyle: "short" }))}

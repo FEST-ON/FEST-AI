@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Clock, Info, MapPin, Ticket, Users, X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
+import { useWrite } from "@/shared/lib/use-write";
 import { Badge } from "@/shared/ui/badge";
 import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
@@ -14,14 +15,12 @@ import type { Dictionary } from "@/shared/lib/i18n";
 
 export default function ReservationPage() {
   const { t, locale, bcp47 } = useTranslation();
-  const queryClient = useQueryClient();
   const bookings = useQuery({ queryKey: ["visitor-bookings"], queryFn: fetchVisitorBookings });
   const sessions = useQuery({ queryKey: ["bookable-sessions"], queryFn: fetchBookableSessions });
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["visitor-bookings"] });
-  const issue = useMutation({ mutationFn: createBooking, onSuccess: refresh });
+  const issue = useWrite(createBooking, { invalidates: ["visitor-bookings"] });
   // 예약 인원은 정원 계산에 그대로 들어간다. 예전에는 화면이 항상 1명으로 고정해 보냈다.
   const [partySizes, setPartySizes] = useState<Record<string, number>>({});
-  const cancel = useMutation({ mutationFn: cancelBooking, onSuccess: refresh });
+  const cancel = useWrite(cancelBooking, { invalidates: ["visitor-bookings"] });
 
   // 프로그램·구역명은 운영자가 등록한 값이라 사전에 없다 — 요청 시점에 자동 번역한다.
   const { translated: text } = useAutoTranslate(
@@ -121,7 +120,7 @@ export default function ReservationPage() {
       </ul>
     </section>
 
-    <Badge variant="outline" className="mt-3 w-full justify-center py-2 text-[11px] text-muted-foreground">{t.reservation.autoRefreshNotice}</Badge>
+    <Badge variant="outline" className="mt-3 w-full justify-center py-2 text-[0.6875rem] text-muted-foreground">{t.reservation.autoRefreshNotice}</Badge>
   </div>;
 }
 

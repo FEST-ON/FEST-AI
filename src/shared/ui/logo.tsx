@@ -22,7 +22,7 @@ export function Logo({ className, withTagline = false, tone = "default" }: LogoP
         <span className="ml-1">AI</span>
       </span>
       {withTagline && (
-        <span className={cn("mt-0.5 text-[11px] font-medium", isDark ? "text-white/60" : "text-muted-foreground")}>
+        <span className={cn("mt-0.5 text-[0.6875rem] font-medium", isDark ? "text-white/60" : "text-muted-foreground")}>
           AI·ESG 지역축제 DX 플랫폼
         </span>
       )}

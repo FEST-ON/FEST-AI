@@ -29,14 +29,14 @@ function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; s
           </p>
         </div>
         {sponsored ? (
-          <Badge className="shrink-0 gap-1 bg-amber-500 text-[10px] text-white hover:bg-amber-500"><Megaphone className="size-3" /> {label}</Badge>
+          <Badge className="shrink-0 gap-1 bg-amber-500 text-[0.625rem] text-white hover:bg-amber-500"><Megaphone className="size-3" /> {label}</Badge>
         ) : (
-          <Badge variant="outline" className="shrink-0 text-[10px]">{Math.round(item.score * 100)}점</Badge>
+          <Badge variant="outline" className="shrink-0 text-[0.625rem]">{Math.round(item.score * 100)}점</Badge>
         )}
       </div>
       <ul className="mt-2 space-y-0.5">
         {item.reasons.map((reason) => (
-          <li key={reason} className="flex items-start gap-1.5 text-[11px] leading-4 text-muted-foreground">
+          <li key={reason} className="flex items-start gap-1.5 text-[0.6875rem] leading-4 text-muted-foreground">
             <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" />
             {reason}
           </li>
@@ -75,7 +75,7 @@ export default function VisitorNearbyPage() {
 
       <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card p-3">
         <Navigation className={`size-4 shrink-0 ${position ? "text-primary" : "text-muted-foreground"}`} />
-        <p className="min-w-0 flex-1 text-[11px] text-muted-foreground">
+        <p className="min-w-0 flex-1 text-[0.6875rem] text-muted-foreground">
           {locating ? t.nearby.locating : position ? t.nearby.locationOn : t.nearby.locationOff}
         </p>
         {!position && !locating && (
@@ -135,7 +135,7 @@ export default function VisitorNearbyPage() {
           <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-foreground">
             <Megaphone className="size-4" /> {t.nearby.sponsoredTitle}
           </h2>
-          <p className="mb-2 text-[11px] text-muted-foreground">{t.nearby.sponsoredNotice}</p>
+          <p className="mb-2 text-[0.6875rem] text-muted-foreground">{t.nearby.sponsoredNotice}</p>
           <div className="space-y-2">
             {recommendations.data.sponsoredItems.map((item) => (
               <BusinessCard key={item.businessId} item={item} sponsored label={t.nearby.sponsoredBadge} />
@@ -163,7 +163,7 @@ export default function VisitorNearbyPage() {
                     <p className="truncate text-sm font-semibold text-foreground">{business.name}</p>
                     <div className="flex shrink-0 items-center gap-1">
                       {business.accessibility?.wheelchair && <Accessibility className="size-3.5 text-primary" />}
-                      <Badge variant="outline" className="text-[10px]">{business.category}</Badge>
+                      <Badge variant="outline" className="text-[0.625rem]">{business.category}</Badge>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">

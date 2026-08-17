@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Download, History, Search } from "lucide-react";
 import { fetchAuditLogs, type AuditLogEntry, type AuditLogFilter } from "@/entities/audit-log";
@@ -10,8 +10,9 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { SelectField } from "@/shared/ui/select-field";
+import { ErrorText, Form } from "@/shared/ui/form";
+import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { seoulDateTime } from "@/shared/lib/utils";
@@ -86,6 +87,19 @@ function describeActor(log: AuditLogEntry, currentUser: AdminUser | null) {
 
 const ALL = "__ALL__";
 
+const ACTION_OPTIONS = [
+  { value: ALL, label: "전체" },
+  ...Object.entries(ACTION_DESCRIPTIONS).map(([action, description]) => ({
+    value: action,
+    label: (
+      <>
+        <span className="font-medium">{action}</span>
+        <span className="ml-1.5 text-xs text-muted-foreground">{description}</span>
+      </>
+    ),
+  })),
+];
+
 export default function AuditLogsPage() {
   const currentUser = useAdminSessionStore((s) => s.user);
   const [filter, setFilter] = useState<AuditLogFilter>({});
@@ -121,8 +135,7 @@ export default function AuditLogsPage() {
 
   const exportArtifact = artifactOf(job.data?.result as JobResult | null | undefined);
 
-  function applyFilter(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function applyFilter() {
     setLimit(50);
     setFilter({
       action: actionInput === ALL ? undefined : actionInput,
@@ -139,22 +152,17 @@ export default function AuditLogsPage() {
         </p>
       </div>
 
-      <form onSubmit={applyFilter} className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
+      <Form onSubmit={applyFilter} className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
         <div className="space-y-1.5">
           <Label>행위</Label>
           {/* 값을 외워서 타이핑하던 자리 — 고를 수 있는 목록이라 오타로 0건 나오는 일이 없다. */}
-          <Select value={actionInput} onValueChange={(value) => setActionInput(String(value))}>
-            <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>전체</SelectItem>
-              {Object.entries(ACTION_DESCRIPTIONS).map(([action, description]) => (
-                <SelectItem key={action} value={action}>
-                  <span className="font-medium">{action}</span>
-                  <span className="ml-1.5 text-xs text-muted-foreground">{description}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SelectField
+            value={actionInput}
+            onValueChange={setActionInput}
+            options={ACTION_OPTIONS}
+            className="w-64"
+            aria-label="행위"
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="filter-resource-type">대상 유형</Label>
@@ -177,7 +185,7 @@ export default function AuditLogsPage() {
         </Button>
         <div className="ml-auto flex items-center gap-2">
           {exportJob.data && (
-            <span className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-2 text-[0.6875rem] text-muted-foreground">
               작업 {exportJob.data.jobId.slice(0, 8)}… · {job.data?.status ?? exportJob.data.status}
               {exportArtifact && (
                 <Button type="button" size="sm" variant="secondary"
@@ -187,7 +195,7 @@ export default function AuditLogsPage() {
               )}
             </span>
           )}
-          {exportJob.error && <span className="text-[11px] text-destructive">{queryErrorMessage(exportJob.error)}</span>}
+          <ErrorText error={exportJob.error} className="text-[0.6875rem]" />
           <Button type="button" size="sm" variant="outline" disabled={exportJob.isPending} onClick={() => exportJob.mutate({ resourceType: "AUDIT_LOG", format: "CSV" })}>
             <Download className="size-3.5" /> CSV 내보내기
           </Button>
@@ -195,7 +203,7 @@ export default function AuditLogsPage() {
             <Download className="size-3.5" /> JSON
           </Button>
         </div>
-      </form>
+      </Form>
 
       <div className="rounded-2xl border border-border bg-card">
         <QueryState
@@ -223,7 +231,7 @@ export default function AuditLogsPage() {
                     </TableCell>
                     <TableCell className="text-sm">{describeActor(log, currentUser)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-[10px]" title={describeAction(log.action)}>{log.action}</Badge>
+                      <Badge variant="outline" className="text-[0.625rem]" title={describeAction(log.action)}>{log.action}</Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {log.resourceType ?? "-"}{log.resourceId ? ` · ${log.resourceId}` : ""}
