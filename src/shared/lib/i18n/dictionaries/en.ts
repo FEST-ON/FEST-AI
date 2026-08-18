@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 993c4904a8665ffc
+// ko.ts sha256: c0daa2f8a04f73df
 import type { ko } from "./ko";
 
 export const en: typeof ko = {
@@ -34,6 +34,7 @@ export const en: typeof ko = {
       reservation: "Reserve & Queue",
       stampTour: "Stamp Tour",
       coupons: "Coupons & Points",
+      plogging: "Plogging",
       nearby: "Local Shops",
       survey: "Survey",
     },
@@ -129,6 +130,12 @@ export const en: typeof ko = {
     bookedWithoutNumber: "Booked",
     cancelAria: "Cancel booking",
     partySize: (n: number) => `${n} people`,
+    phoneDialogTitle: "Contact phone number",
+    phoneDialogDescription: "Please enter a phone number so we can identify this booking.",
+    phoneLabel: "Phone number",
+    phonePlaceholder: "010-1234-5678",
+    phoneInvalid: "Please enter a valid phone number.",
+    confirmBookingButton: "Book now",
     status: {
       CONFIRMED: "Confirmed",
       WAITING: "Waiting",
@@ -171,6 +178,10 @@ export const en: typeof ko = {
     textPlaceholder: "Type your comments here",
     submitting: "Submitting...",
     submit: "Submit",
+    storeLockedTitle: "Unlocked by collecting stamps",
+    storeLockedHint: (storeName: string) => `Collect the ${storeName} stamp to take part.`,
+    storeLockedCta: "Go to stamp tour",
+    allLockedEmpty: "No surveys are available yet. Collect a store stamp first.",
   },
   area: {
     ariaLabel: "Set current zone",

@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 993c4904a8665ffc
+// ko.ts sha256: c0daa2f8a04f73df
 import type { ko } from "./ko";
 
 export const ja: typeof ko = {
@@ -34,6 +34,7 @@ export const ja: typeof ko = {
       reservation: "予約・待機",
       stampTour: "スタンプツアー",
       coupons: "クーポン・ポイント",
+      plogging: "プロギング",
       nearby: "地域の店舗",
       survey: "満足度調査",
     },
@@ -129,6 +130,12 @@ export const ja: typeof ko = {
     bookedWithoutNumber: "予約完了",
     cancelAria: "予約をキャンセル",
     partySize: (n: number) => `${n}名`,
+    phoneDialogTitle: "予約者の電話番号",
+    phoneDialogDescription: "予約を区別できるよう電話番号を入力してください。",
+    phoneLabel: "電話番号",
+    phonePlaceholder: "010-1234-5678",
+    phoneInvalid: "正しい電話番号を入力してください。",
+    confirmBookingButton: "予約する",
     status: {
       CONFIRMED: "予約確定",
       WAITING: "待機中",
@@ -171,6 +178,10 @@ export const ja: typeof ko = {
     textPlaceholder: "ご意見を入力してください",
     submitting: "送信中...",
     submit: "送信する",
+    storeLockedTitle: "スタンプを集めると解放されるアンケート",
+    storeLockedHint: (storeName: string) => `${storeName}のスタンプを集めると参加できます。`,
+    storeLockedCta: "スタンプツアーへ",
+    allLockedEmpty: "今参加できるアンケートはありません。まず店舗のスタンプを集めてください。",
   },
   area: {
     ariaLabel: "現在のエリア設定",

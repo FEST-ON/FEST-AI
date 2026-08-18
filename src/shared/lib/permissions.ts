@@ -28,46 +28,48 @@ export interface AdminNavItem {
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "운영 대시보드", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR", "REVIEWER"] },
 
-  { href: "/admin/programs", label: "통합 운영관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
   // crowd-snapshots, bookings/{id}/status → SUPER_ADMIN, FESTIVAL_MANAGER, FIELD_OPERATOR
   { href: "/admin/field", label: "현장 운영", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
+  // bookings 조회·상태 변경(호출·노쇼·입장)은 현장에서 처리하므로 현장 운영자까지 포함한다.
+  { href: "/admin/bookings", label: "예약·호출 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
+  { href: "/admin/tickets", label: "민원·공지·사고", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
+  // coupon-redemptions 는 백엔드에서 Operator(최고 관리자·축제 담당자·현장 운영자) 범위다.
+  { href: "/admin/coupons", label: "쿠폰 사용 처리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
+  { href: "/admin/plogging", label: "플로깅 인증", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
   { href: "/admin/reusable-containers", label: "재사용기 회수", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
   // staff-assignments 등록은 Manager, 배정 확인은 본인 계정
   { href: "/admin/staff", label: "인력 배치", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
-  { href: "/admin/tickets", label: "민원·공지·사고", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
-  // bookings 조회·상태 변경(호출·노쇼·입장)은 현장에서 처리하므로 현장 운영자까지 포함한다.
-  { href: "/admin/bookings", label: "예약·호출 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
-  // coupon-redemptions 는 백엔드에서 Operator(최고 관리자·축제 담당자·현장 운영자) 범위다.
-  { href: "/admin/coupons", label: "쿠폰 사용 처리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
+  { href: "/admin/programs", label: "통합 운영관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR"], group: "현장 운영" },
 
-  // content-versions/{id}/reviews → SUPER_ADMIN, REVIEWER
-  { href: "/admin/content", label: "검수·게시 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
+  // 긴급 안내가 가장 빨리 보이도록 소통 메뉴의 첫 자리에 둔다.
   // 발행 흐름이 content-versions/{id}/reviews(Reviewer)와 announcements/publish(Manager)를
   // 모두 거쳐서 전체를 끝낼 수 있는 건 SUPER_ADMIN 뿐. FESTIVAL_MANAGER는 조회·종료만 된다.
   { href: "/admin/announcements", label: "공지 발행", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "콘텐츠·소통" },
+  // content-versions/{id}/reviews → SUPER_ADMIN, REVIEWER
+  { href: "/admin/content", label: "검수·게시 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
   // ai/reviews, ai/reviews/{id}/decision → SUPER_ADMIN, FESTIVAL_MANAGER, REVIEWER
   { href: "/admin/ai-insights", label: "AI 민원 인사이트", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
-  // internal-documents 등록은 Manager, ai/operations/search는 로그인한 모든 역할
-  { href: "/admin/documents", label: "운영 문서·검색", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR", "REVIEWER"], group: "콘텐츠·소통" },
   // surveys 등록·상태 변경은 Manager, 결과 집계 조회는 축제 범위의 모든 역할
   { href: "/admin/surveys", label: "설문 관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "콘텐츠·소통" },
+  // internal-documents 등록은 Manager, ai/operations/search는 로그인한 모든 역할
+  { href: "/admin/documents", label: "운영 문서·검색", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "FIELD_OPERATOR", "REVIEWER"], group: "콘텐츠·소통" },
 
-  // businesses/{id}/review → SUPER_ADMIN, FESTIVAL_MANAGER, REVIEWER / 쿠폰 발행은 Manager
-  { href: "/admin/businesses", label: "참여업체·쿠폰", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "참여업체·ESG" },
-  // reward-campaigns → SUPER_ADMIN, FESTIVAL_MANAGER
-  { href: "/admin/rewards", label: "ESG 리워드", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "참여업체·ESG" },
   // esg/measurements/{id}/reviews, esg/reports/{id}/approve → SUPER_ADMIN, REVIEWER
-  { href: "/admin/esg", label: "ESG 성과관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "참여업체·ESG" },
+  { href: "/admin/esg", label: "ESG 성과관리", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "ESG" },
+  // reward-campaigns → SUPER_ADMIN, FESTIVAL_MANAGER
+  { href: "/admin/rewards", label: "ESG 리워드", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "ESG" },
 
   // festivals PATCH·clone, facilities CRUD → SUPER_ADMIN, FESTIVAL_MANAGER
   { href: "/admin/festival", label: "축제 설정", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
   // areas CRUD → SUPER_ADMIN, FESTIVAL_MANAGER
   { href: "/admin/map-locations", label: "지도·부스 설정", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
+  // businesses/{id}/review → SUPER_ADMIN, FESTIVAL_MANAGER, REVIEWER / 쿠폰 발행은 Manager
+  { href: "/admin/businesses", label: "참여업체·쿠폰", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER", "REVIEWER"], group: "설정·관리" },
   // organizations/{id}/memberships → SUPER_ADMIN 전용
   { href: "/admin/members", label: "계정·권한", roles: ["SUPER_ADMIN"], group: "설정·관리" },
-  { href: "/admin/audit-logs", label: "감사 로그", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
   // privacy/policy·requests는 Manager, privacy/purge는 SUPER_ADMIN 전용(화면에서 버튼만 감춘다).
   { href: "/admin/privacy", label: "개인정보·전달", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
+  { href: "/admin/audit-logs", label: "감사 로그", roles: ["SUPER_ADMIN", "FESTIVAL_MANAGER"], group: "설정·관리" },
 ];
 
 /**

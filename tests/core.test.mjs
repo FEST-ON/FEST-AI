@@ -46,7 +46,7 @@ const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/e
 const { nextTicketStatus } = await importTypeScript("../src/entities/ticket.ts", entity);
 const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement.ts", entity);
 const { contentAction, contentPreview } = await importTypeScript("../src/features/content-review/model/content.ts");
-const { canAccessPath, mobileNavItems, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
+const { ADMIN_NAV_ITEMS, canAccessPath, mobileNavItems, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
 const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
 const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
 const { detectLocale } = await importTypeScript("../src/shared/lib/i18n/detect-locale.ts");
@@ -293,7 +293,7 @@ test("검수자는 검수가 필요한 화면에 모두 접근할 수 있다", (
   }
   assert.deepEqual(
     visibleNavItems("REVIEWER").map((item) => item.href),
-    ["/admin", "/admin/content", "/admin/ai-insights", "/admin/documents", "/admin/surveys", "/admin/businesses", "/admin/esg"],
+    ["/admin", "/admin/content", "/admin/ai-insights", "/admin/surveys", "/admin/documents", "/admin/esg", "/admin/businesses"],
   );
   // 계정·권한 관리는 최고 관리자 전용이다.
   assert.equal(canAccessPath("SUPER_ADMIN", "/admin/members"), true);
@@ -329,6 +329,21 @@ test("사이드바 그룹은 연속 배치되어 헤더가 한 번만 나온다"
     assert.deepEqual(headers, [...new Set(headers)], role);
     assert.equal(groups[0], undefined, `${role}: 대시보드가 맨 위에 있어야 한다`);
   }
+  const groupOf = (href) => ADMIN_NAV_ITEMS.find((item) => item.href === href)?.group;
+  assert.equal(groupOf("/admin/rewards"), "ESG");
+  assert.equal(groupOf("/admin/esg"), "ESG");
+  assert.equal(groupOf("/admin/businesses"), "설정·관리");
+});
+
+test("사이드바는 운영 빈도와 업무 흐름 순으로 배치된다", () => {
+  assert.deepEqual(ADMIN_NAV_ITEMS.map((item) => item.href), [
+    "/admin",
+    "/admin/field", "/admin/bookings", "/admin/tickets", "/admin/coupons", "/admin/reusable-containers",
+    "/admin/staff", "/admin/programs",
+    "/admin/announcements", "/admin/content", "/admin/ai-insights", "/admin/surveys", "/admin/documents",
+    "/admin/esg", "/admin/rewards",
+    "/admin/festival", "/admin/map-locations", "/admin/businesses", "/admin/members", "/admin/privacy", "/admin/audit-logs",
+  ]);
 });
 
 test("자동 번역은 항목별 필드를 한 번의 요청으로 묶고, 실패하면 원문을 유지한다", async () => {
@@ -525,7 +540,6 @@ test("사이드바 항목은 모두 아이콘이 등록돼 있다", async () => 
   // 렌더 시에는 기본 아이콘으로 받아내지만, 등록 자체를 잊지 않도록 여기서 잡는다.
   const source = await readFile(new URL("../src/widgets/admin-sidebar/admin-sidebar.tsx", import.meta.url), "utf8");
   const registered = new Set([...source.matchAll(/"(\/admin[^"]*)":/g)].map((match) => match[1]));
-  const { ADMIN_NAV_ITEMS } = await importTypeScript("../src/shared/lib/permissions.ts");
   for (const item of ADMIN_NAV_ITEMS) {
     assert.ok(registered.has(item.href), `${item.href} 아이콘이 NAV_ICONS에 없습니다.`);
   }

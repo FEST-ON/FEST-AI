@@ -35,7 +35,7 @@ export function QrScanner({ onScan, label = "카메라로 QR 스캔" }: { onScan
     let stream: MediaStream | undefined;
     let timer: number | undefined;
     let stopped = false;
-    const detector = new Detector({ formats: ["qrCode"] });
+    const detector = new Detector({ formats: ["qr_code"] });
 
     (async () => {
       try {

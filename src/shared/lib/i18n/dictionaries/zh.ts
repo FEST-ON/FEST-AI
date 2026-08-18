@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 993c4904a8665ffc
+// ko.ts sha256: c0daa2f8a04f73df
 import type { ko } from "./ko";
 
 export const zh: typeof ko = {
@@ -34,6 +34,7 @@ export const zh: typeof ko = {
       reservation: "预约·排队",
       stampTour: "集章之旅",
       coupons: "优惠券·积分",
+      plogging: "慢跑捡垃圾",
       nearby: "周边商圈",
       survey: "满意度调查",
     },
@@ -129,6 +130,12 @@ export const zh: typeof ko = {
     bookedWithoutNumber: "预约完成",
     cancelAria: "取消预约",
     partySize: (n: number) => `${n}人`,
+    phoneDialogTitle: "预约人电话号码",
+    phoneDialogDescription: "请输入电话号码以便区分预约人。",
+    phoneLabel: "电话号码",
+    phonePlaceholder: "010-1234-5678",
+    phoneInvalid: "请输入正确的电话号码格式。",
+    confirmBookingButton: "确认预约",
     status: {
       CONFIRMED: "预约确认",
       WAITING: "等候中",
@@ -171,6 +178,10 @@ export const zh: typeof ko = {
     textPlaceholder: "请输入您的意见",
     submitting: "提交中...",
     submit: "提交",
+    storeLockedTitle: "集齐印章后解锁的问卷",
+    storeLockedHint: (storeName: string) => `领取${storeName}印章后即可参与。`,
+    storeLockedCta: "前往集章之旅",
+    allLockedEmpty: "目前还没有可参与的问卷。请先领取店铺印章。",
   },
   area: {
     ariaLabel: "设置当前区域",

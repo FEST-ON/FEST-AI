@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ShieldCheck } from "lucide-react";
+import { ArrowRight, Scale, ShieldCheck } from "lucide-react";
 import {
   createPrivacyRequest,
   fetchPrivacyNotice,
@@ -195,6 +196,17 @@ export default function VisitorPrivacyPage() {
           )}
         </QueryState>
       </section>
+
+      {/* 오픈소스 고지는 개인정보 화면 아래에 둔다 — 홈에서 따로 찾아갈 만한 내용이 아니다. */}
+      <Link
+        href="/visitor/licenses"
+        className="mt-6 flex items-center justify-between rounded-xl border border-border bg-card p-3 text-xs font-semibold text-muted-foreground"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <Scale className="size-4 text-primary" /> 오픈소스 라이선스
+        </span>
+        <ArrowRight className="size-3.5" />
+      </Link>
     </div>
   );
 }

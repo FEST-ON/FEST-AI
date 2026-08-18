@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, BellRing, UserCheck, UserX } from "lucide-react";
+import { AlertTriangle, BellRing, Phone, UserCheck, UserX } from "lucide-react";
 import {
   fetchAdminBookings,
+  readReservationPhones,
   updateBookingStatus,
   type BookingAction,
   type AdminBooking,
@@ -75,6 +76,8 @@ export default function AdminBookingsPage() {
     () => (bookings.data ?? []).filter((booking) => filter === "전체" || booking.status === filter),
     [bookings.data, filter],
   );
+  // 전화번호는 서버 스펙에 없는 목업 값이라 방문객 브라우저의 로컬 저장소에서만 조회된다.
+  const phones = readReservationPhones();
   const list = useListView(byStatus, (booking, keyword) =>
     includesKeyword(keyword, booking.programTitle, booking.queueNumber?.toString()),
   );
@@ -146,6 +149,7 @@ export default function AdminBookingsPage() {
               <BookingRow
                 key={booking.id}
                 booking={booking}
+                phone={phones[booking.id]}
                 noShowDue={booking.status === "CALLED" && isNoShowDue(booking.calledAt, now)}
                 pending={mutate.isPending}
                 onUpdate={(status, note) => mutate.mutate({ bookingId: booking.id, status, note })}
@@ -163,11 +167,13 @@ export default function AdminBookingsPage() {
 
 function BookingRow({
   booking,
+  phone,
   noShowDue,
   pending,
   onUpdate,
 }: {
   booking: AdminBooking;
+  phone?: string;
   noShowDue: boolean;
   pending: boolean;
   onUpdate: (status: BookingAction, note: string) => void;
@@ -190,6 +196,11 @@ function BookingRow({
           {formatMoment(booking.startsAt)} · {booking.partySize}명
           {booking.calledAt && ` · ${formatMoment(booking.calledAt)} 호출`}
         </p>
+        {phone && (
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <Phone className="size-3" /> {phone}
+          </p>
+        )}
       </div>
 
       {/* 어떤 상태에서 어떤 조치가 가능한지는 서버 규칙과 같은 표(booking-policy)를 따른다. */}

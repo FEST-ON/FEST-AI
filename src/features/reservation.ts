@@ -46,12 +46,34 @@ export async function fetchBookableSessions(): Promise<BookableSession[]> {
 /** 서버는 1~20명을 받지만 현장 대기열 운영상 한 번에 6명까지만 고르게 한다. */
 export const MAX_PARTY_SIZE = 6;
 
-export function createBooking({ sessionId, partySize = 1 }: { sessionId: string; partySize?: number }) {
+// phone은 서버 스펙에 없다 — 예약자 구분용 목업 값이라 호출부가 성공 후 로컬에만 저장한다.
+export function createBooking({ sessionId, partySize = 1 }: { sessionId: string; partySize?: number; phone?: string }) {
   return visitorApi<VisitorBooking>(`/visitor/program-sessions/${sessionId}/bookings`, {
     method: "POST",
     headers: { "Idempotency-Key": idempotencyKey() },
     body: JSON.stringify({ partySize }),
   });
+}
+
+const RESERVATION_PHONE_STORAGE_KEY = "festai-reservation-phones";
+
+export function readReservationPhones(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(RESERVATION_PHONE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" ? parsed as Record<string, string> : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveReservationPhone(bookingId: string, phone: string) {
+  if (typeof window === "undefined") return;
+  const phones = readReservationPhones();
+  phones[bookingId] = phone;
+  window.localStorage.setItem(RESERVATION_PHONE_STORAGE_KEY, JSON.stringify(phones));
 }
 
 export function cancelBooking(bookingId: string) {

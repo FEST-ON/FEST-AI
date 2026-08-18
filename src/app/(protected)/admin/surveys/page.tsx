@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, ClipboardList, Plus, Trash2 } from "lucide-react";
+import { BarChart3, ClipboardList, Plus, Store, Trash2 } from "lucide-react";
 import {
   QUESTION_TYPE_LABEL,
   SURVEY_STATUS_LABEL,
@@ -13,6 +13,7 @@ import {
   type NewSurveyQuestion,
   type SurveyQuestionType,
 } from "@/features/survey-admin";
+import { fetchRewardCampaigns } from "@/features/rewards";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
@@ -26,6 +27,10 @@ import { SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { useForm } from "@/shared/lib/use-form";
 import { useWrite } from "@/shared/lib/use-write";
+import { linkedStoreName, withLinkedStoreName } from "@/shared/lib/survey-store-link";
+
+/** SelectField는 빈 문자열 value를 허용하지 않아 "매장 무관"에 별도 값을 쓴다. */
+const NO_STORE = "__none__";
 
 const QUESTION_TYPES: SurveyQuestionType[] = ["RATING", "SINGLE_CHOICE", "MULTIPLE_CHOICE", "TEXT"];
 const QUESTION_TYPE_OPTIONS = QUESTION_TYPES.map((type) => ({ value: type, label: QUESTION_TYPE_LABEL[type] }));
@@ -84,14 +89,24 @@ function SummaryPanel({ surveyId }: { surveyId: string }) {
 
 export default function SurveysPage() {
   const surveys = useQuery({ queryKey: ["admin-surveys"], queryFn: fetchSurveys });
+  // 매장 연결 설문은 스탬프 스팟(리워드 액션) 이름과 제목 접두어를 대조해 방문객 화면에서 잠긴다.
+  const campaigns = useQuery({ queryKey: ["reward-campaigns"], queryFn: fetchRewardCampaigns });
+  const storeOptions = useMemo(() => {
+    const names = new Set<string>();
+    (campaigns.data ?? []).forEach((campaign) =>
+      campaign.actions.forEach((action) => { if (action.rule.name) names.add(action.rule.name); }));
+    return Array.from(names);
+  }, [campaigns.data]);
+
   const [creating, setCreating] = useState(false);
   const [openSummary, setOpenSummary] = useState<string | null>(null);
   const [questions, setQuestions] = useState<NewSurveyQuestion[]>([emptyQuestion()]);
+  const [linkedStore, setLinkedStore] = useState(NO_STORE);
   const { form, field, reset } = useForm({ title: "", description: "", preventDuplicates: true });
 
   const create = useWrite(createSurvey, {
     success: "설문을 등록했어요.", invalidates: ["admin-surveys"],
-    onSuccess: () => { reset(); setQuestions([emptyQuestion()]); setCreating(false); },
+    onSuccess: () => { reset(); setQuestions([emptyQuestion()]); setLinkedStore(NO_STORE); setCreating(false); },
   });
   const change = useWrite(updateSurvey, { success: "설문 상태를 변경했어요.", invalidates: ["admin-surveys"] });
 
@@ -122,7 +137,7 @@ export default function SurveysPage() {
             className="mt-3 space-y-3"
             onSubmit={() =>
               create.mutate({
-                title: form.title,
+                title: withLinkedStoreName(form.title, linkedStore === NO_STORE ? null : linkedStore),
                 description: form.description || undefined,
                 preventDuplicates: form.preventDuplicates,
                 // 등록 즉시 방문객에게 열어 준다. 닫아 두려면 목록에서 상태를 바꾼다.
@@ -140,6 +155,22 @@ export default function SurveysPage() {
                 <Label htmlFor="survey-description">안내 문구</Label>
                 <Input id="survey-description" {...field("description")} placeholder="민감정보는 입력하지 마세요." maxLength={1000} />
               </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="survey-linked-store">연결 매장 (선택)</Label>
+              <SelectField
+                value={linkedStore}
+                onValueChange={setLinkedStore}
+                options={[
+                  { value: NO_STORE, label: "매장 무관 (공용 설문)" },
+                  ...storeOptions.map((name) => ({ value: name, label: name })),
+                ]}
+                aria-label="연결 매장"
+              />
+              <p className="text-[0.6875rem] text-muted-foreground">
+                매장을 선택하면 그 매장 스탬프를 적립한 방문객만 이 설문에 응답할 수 있어요.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -204,51 +235,61 @@ export default function SurveysPage() {
       >
         {(rows) => (
           <div className="space-y-3">
-            {rows.map((survey) => (
-              <article key={survey.id} className="rounded-2xl border border-border bg-card p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-bold text-foreground">{survey.title}</h3>
-                      <StatusPill tone={STATUS_TONE[survey.status] ?? "neutral"}>
-                        {SURVEY_STATUS_LABEL[survey.status] ?? survey.status}
-                      </StatusPill>
+            {rows.map((survey) => {
+              const storeName = linkedStoreName(survey.title);
+              const displayTitle = withLinkedStoreName(survey.title, null);
+              return (
+                <article key={survey.id} className="rounded-2xl border border-border bg-card p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-bold text-foreground">{displayTitle}</h3>
+                        <StatusPill tone={STATUS_TONE[survey.status] ?? "neutral"}>
+                          {SURVEY_STATUS_LABEL[survey.status] ?? survey.status}
+                        </StatusPill>
+                        {storeName && (
+                          <Badge variant="outline" className="gap-1 text-[0.625rem]">
+                            <Store className="size-3" /> {storeName}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
+                        문항 {survey.questions.length}개 · 응답 {survey.responseCount}건
+                        {survey.preventDuplicates && " · 1인 1회"}
+                        {storeName && " · 매장 스탬프 완료자만 참여"}
+                      </p>
                     </div>
-                    <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
-                      문항 {survey.questions.length}개 · 응답 {survey.responseCount}건
-                      {survey.preventDuplicates && " · 1인 1회"}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setOpenSummary(openSummary === survey.id ? null : survey.id)}
-                    >
-                      <BarChart3 className="size-3.5" /> 결과
-                    </Button>
-                    {survey.status === "DRAFT" && (
-                      <Button size="sm" disabled={change.isPending} onClick={() => change.mutate({ surveyId: survey.id, version: survey.version, status: "ACTIVE" })}>
-                        진행
-                      </Button>
-                    )}
-                    {survey.status === "ACTIVE" && (
-                      <ConfirmButton
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
                         size="sm"
                         variant="outline"
-                        title="설문을 종료할까요?"
-                        description={`"${survey.title}"이(가) 방문객 화면에서 즉시 내려갑니다. 모인 응답은 그대로 남아요.`}
-                        confirmLabel="종료"
-                        onConfirm={() => change.mutate({ surveyId: survey.id, version: survey.version, status: "CLOSED" })}
+                        onClick={() => setOpenSummary(openSummary === survey.id ? null : survey.id)}
                       >
-                        종료
-                      </ConfirmButton>
-                    )}
+                        <BarChart3 className="size-3.5" /> 결과
+                      </Button>
+                      {survey.status === "DRAFT" && (
+                        <Button size="sm" disabled={change.isPending} onClick={() => change.mutate({ surveyId: survey.id, version: survey.version, status: "ACTIVE" })}>
+                          진행
+                        </Button>
+                      )}
+                      {survey.status === "ACTIVE" && (
+                        <ConfirmButton
+                          size="sm"
+                          variant="outline"
+                          title="설문을 종료할까요?"
+                          description={`"${displayTitle}"이(가) 방문객 화면에서 즉시 내려갑니다. 모인 응답은 그대로 남아요.`}
+                          confirmLabel="종료"
+                          onConfirm={() => change.mutate({ surveyId: survey.id, version: survey.version, status: "CLOSED" })}
+                        >
+                          종료
+                        </ConfirmButton>
+                      )}
+                    </div>
                   </div>
-                </div>
-                {openSummary === survey.id && <SummaryPanel surveyId={survey.id} />}
-              </article>
-            ))}
+                  {openSummary === survey.id && <SummaryPanel surveyId={survey.id} />}
+                </article>
+              );
+            })}
           </div>
         )}
       </QueryState>

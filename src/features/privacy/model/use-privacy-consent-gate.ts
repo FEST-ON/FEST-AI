@@ -19,9 +19,14 @@ export function usePrivacyConsentGate() {
   const items = notice.data?.items ?? [];
   const requiredItems = items.filter((item) => !item.withdrawable);
   const canEnter = notice.isError || requiredItems.every((item) => checked[item.key]);
+  const allChecked = items.length > 0 && items.every((item) => checked[item.key]);
 
   function toggle(key: string, value: boolean) {
     setChecked((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggleAll(value: boolean) {
+    setChecked(Object.fromEntries(items.map((item) => [item.key, value])));
   }
 
   function handleEnter() {
@@ -44,6 +49,8 @@ export function usePrivacyConsentGate() {
     requiredItems,
     checked,
     toggle,
+    allChecked,
+    toggleAll,
     canEnter,
     isLoading: notice.isLoading,
     isError: notice.isError,
