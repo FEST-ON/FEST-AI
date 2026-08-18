@@ -115,17 +115,32 @@ export default function SurveyPage() {
           empty={t.common.empty}
         >
           {(allQuestions) => {
+            const stampReady = stampSpots.isSuccess;
             const questions = allQuestions.filter(isUnlocked);
-            const lockedStoreNames = Array.from(
-              new Set(
-                allQuestions
-                  .filter((q) => !isUnlocked(q))
-                  .map((q) => q.linkedStoreName!),
-              ),
-            );
+            const lockedStoreNames = stampReady
+              ? Array.from(
+                  new Set(
+                    allQuestions
+                      .filter((q) => !isUnlocked(q))
+                      .map((q) => q.linkedStoreName!),
+                  ),
+                )
+              : [];
 
             return (
               <>
+                {stampSpots.isError && (
+                  <p className="mt-4 rounded-xl bg-muted/40 p-3 text-center text-xs text-muted-foreground">
+                    {t.common.loadFailed}{" "}
+                    <button
+                      type="button"
+                      onClick={() => stampSpots.refetch()}
+                      className="font-semibold text-primary underline"
+                    >
+                      {t.common.retry}
+                    </button>
+                  </p>
+                )}
                 {questions.length > 0 && (
                   <Form
                     className="mt-4 space-y-5"
