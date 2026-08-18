@@ -47,6 +47,7 @@ export function PersoAiGuide() {
   const { largeText, voiceGuide, visitorMode, languageSource, setLanguage } = useAccessibilityStore();
   const { languages } = useFestivalLanguages();
   const [draft, setDraft] = useState("");
+  const [isVoiceConfirmation, setIsVoiceConfirmation] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
@@ -126,6 +127,12 @@ export function PersoAiGuide() {
   // AI-05: 키오스크에서 방문객이 언어를 직접 고르기 전까지는 발화 언어를 따라간다.
   // 판별 실패·미지원 언어면 detectLocale이 null을 주고 기존(축제 기본) 언어를 유지한다.
   const handleVoiceResult = useCallback((transcript: string) => {
+    setDraft(transcript);
+    setIsVoiceConfirmation(true);
+    setShowTextInput(true);
+  }, []);
+
+  const submitVoiceQuestion = useCallback((transcript: string) => {
     const autoLocale = visitorMode === "kiosk" && languageSource !== "MANUAL"
       ? detectLocale(transcript, languages)
       : null;
@@ -160,6 +167,7 @@ export function PersoAiGuide() {
     error: speechError,
     interimTranscript,
     isListening,
+    isPreparing,
     isSupported: isSpeechSupported,
     startListening,
     stopListening,
@@ -177,7 +185,15 @@ export function PersoAiGuide() {
     if (!question || isTyping || isListening) return;
 
     setDraft("");
-    handleAsk(question);
+    if (isVoiceConfirmation) submitVoiceQuestion(question);
+    else handleAsk(question);
+    setIsVoiceConfirmation(false);
+  }
+
+  function startNewRecording() {
+    setDraft("");
+    setIsVoiceConfirmation(false);
+    void startListening();
   }
 
   return (
@@ -334,8 +350,8 @@ export function PersoAiGuide() {
               <span aria-hidden="true" />
               <button
                 type="button"
-                onClick={isListening ? stopListening : startListening}
-                disabled={isTyping || !isSpeechSupported}
+                onClick={isListening ? stopListening : startNewRecording}
+                disabled={isTyping || isPreparing || !isSpeechSupported}
                 aria-label={isListening ? t.aiGuide.micStopAria : t.aiGuide.micStartAria}
                 aria-pressed={isListening}
                 className={cn(
@@ -351,7 +367,7 @@ export function PersoAiGuide() {
                 <button
                   type="button"
                   onClick={() => setShowTextInput((visible) => !visible)}
-                  disabled={isListening}
+                  disabled={isListening || isVoiceConfirmation}
                   aria-label={textInputOpen ? t.aiGuide.keyboardCloseAria : t.aiGuide.keyboardOpenAria}
                   aria-expanded={textInputOpen}
                   aria-controls="perso-text-question"
@@ -368,7 +384,13 @@ export function PersoAiGuide() {
             </div>
 
             <p className="mt-1.5 min-h-4 text-center text-[0.625rem] font-semibold text-foreground/80">
-              {isListening ? interimTranscript || t.aiGuide.listeningPlaceholder : t.aiGuide.idlePrompt}
+              {isListening
+                ? interimTranscript || t.aiGuide.listeningPlaceholder
+                : isPreparing
+                  ? t.aiGuide.preparingMicrophone
+                  : isVoiceConfirmation
+                    ? t.aiGuide.confirmVoicePrompt
+                    : t.aiGuide.idlePrompt}
             </p>
 
             {textInputOpen && (
@@ -386,10 +408,21 @@ export function PersoAiGuide() {
                   placeholder={t.aiGuide.textInputPlaceholder}
                   className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/75"
                 />
+                {isVoiceConfirmation && (
+                  <button
+                    type="button"
+                    onClick={startNewRecording}
+                    disabled={isTyping || isPreparing}
+                    aria-label={t.aiGuide.retryVoiceAria}
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-muted disabled:opacity-30"
+                  >
+                    <RotateCcw className="size-4" />
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={!draft.trim() || isTyping}
-                  aria-label={t.aiGuide.sendAria}
+                  aria-label={isVoiceConfirmation ? t.aiGuide.confirmVoiceAria : t.aiGuide.sendAria}
                   className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <SendHorizontal className="size-4" />
@@ -407,8 +440,12 @@ export function PersoAiGuide() {
             )}
           >
             {speechError ??
-              (isListening
-                ? t.aiGuide.statusListening
+              (isPreparing
+                ? t.aiGuide.preparingMicrophone
+                : isListening
+                  ? t.aiGuide.statusListening
+                  : isVoiceConfirmation
+                    ? t.aiGuide.statusConfirmVoice
                 : isSpeechSupported
                   ? t.aiGuide.statusIdleSupported
                   : t.aiGuide.statusUnsupported)}
