@@ -193,8 +193,7 @@ export default function AdminPloggingPage() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-foreground">최근 인증 활동</h2>
-            <p className="mt-1 text-[11px] text-muted-foreground">인증 완료 건은 방문객 화면에 즉시 반영됩니다.</p>
-          </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">(데모: localStorage) 인증 완료 내역은 이 기기/브라우저에서만 즉시 반영됩니다.</p>
           <Badge variant="outline" className="gap-1 text-[10px]"><QrCode className="size-3" /> TRASH_PICKUP</Badge>
         </div>
         {submissions.length === 0 ? (
