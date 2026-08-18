@@ -118,6 +118,10 @@ export interface KioskCameraReport {
   };
   counts: Record<string, number>;
   models: { modelVersion: string; count: number; lastSeenAt: string }[];
+  estimateResults: {
+    counts: Record<"SENIOR" | "OTHER" | "UNAVAILABLE", number>;
+    recent: { result: "SENIOR" | "OTHER" | "UNAVAILABLE"; modelVersion: string; createdAt: string }[];
+  };
   rates: {
     consentAcceptRate: number | null;
     estimateFailureRate: number | null;

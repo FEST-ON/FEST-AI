@@ -1,5 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+@keyframes visitor-notification-toast {
+  0% { opacity: 0; transform: translateY(-14px); }
+  12% { opacity: 1; transform: translateY(0); }
+  78% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-34px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-visitor-notification-toast { animation: none; }
+}
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));

@@ -94,10 +94,16 @@ export function KioskLargeTextPrompt() {
     void estimateAgeBand().then((result) => {
       if (cancelled) return;
       if (result.status === "senior") {
+        void recordKioskAssist("ESTIMATE_RESULT", AGE_MODEL_VERSION, "SENIOR");
         setPhase("suggest");
         void recordKioskAssist("SUGGESTED", AGE_MODEL_VERSION);
         return;
       }
+      void recordKioskAssist(
+        "ESTIMATE_RESULT",
+        AGE_MODEL_VERSION,
+        result.status === "unavailable" ? "UNAVAILABLE" : "OTHER",
+      );
       setPhase("done");
       if (result.status === "unavailable") void recordKioskAssist("ESTIMATE_FAILED", AGE_MODEL_VERSION);
     });
