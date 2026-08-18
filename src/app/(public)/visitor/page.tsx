@@ -49,7 +49,7 @@ const QUICK_MENU: {
     kiosk: false,
   },
   { href: "/visitor/map", labelKey: "map", icon: MapPin, kiosk: true },
-  { href: "/visitor/course", labelKey: "course", icon: Route, kiosk: true },
+
   {
     href: "/visitor/reservation",
     labelKey: "reservation",
@@ -71,20 +71,12 @@ const QUICK_MENU: {
     kiosk: false,
     menuKey: "coupons",
   },
-
   {
     href: "/visitor/nearby",
     labelKey: "nearby",
     icon: Store,
     kiosk: true,
     menuKey: "nearby",
-  },
-  {
-    href: "/visitor/survey",
-    labelKey: "survey",
-    icon: ClipboardList,
-    kiosk: false,
-    menuKey: "survey",
   },
   {
     href: "/visitor/coupons/plogging",
@@ -191,7 +183,7 @@ export default function VisitorHomePage() {
         className={
           visitorMode === "kiosk"
             ? "grid grid-cols-2 gap-3"
-            : "grid grid-cols-3 gap-3"
+            : "grid grid-cols-2 gap-3"
         }
       >
         {quickMenu.map(({ href, labelKey, icon: Icon }) => {
@@ -208,13 +200,13 @@ export default function VisitorHomePage() {
               <span
                 className={
                   esg
-                    ? "inline-flex size-9 items-center justify-center rounded-full bg-esg/12 text-esg-tint"
-                    : "inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"
+                    ? "inline-flex size-10 items-center justify-center rounded-full bg-esg/12 text-esg-tint"
+                    : "inline-flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary"
                 }
               >
-                <Icon className="size-4.5" />
+                <Icon className="size-5" />
               </span>
-              <span className="text-[0.6875rem] font-semibold text-foreground">
+              <span className="text-[0.8rem] font-semibold text-foreground">
                 {t.home.quickMenu[labelKey]}
               </span>
             </Link>
