@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { WheelchairIcon } from "@/shared/ui/wheelchair-icon";
-import { Bus, Car, TrainFront } from "lucide-react";
+import { Bike, Bus, Car, Footprints, TrainFront } from "lucide-react";
 import {
   fetchFacilities,
   fetchTransport,
@@ -25,6 +25,8 @@ const TRANSPORT_ICON = {
   버스: Bus,
   셔틀: Bus,
   주차: Car,
+  자전거: Bike,
+  도보: Footprints,
 } as const;
 
 const STATUS_TONE = {
