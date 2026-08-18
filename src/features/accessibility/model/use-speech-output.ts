@@ -42,7 +42,8 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
     }
     if (!text || spokenRef.current === text) return;
 
-    spokenRef.current = text;
+    const spokenText = text;
+    spokenRef.current = spokenText;
     const controller = new AbortController();
     let cancelled = false;
 
@@ -84,13 +85,13 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
         };
         audio.onerror = () => {
           stopAudio(audioRef, audioUrlRef);
-          browserFallback(text);
+          browserFallback(spokenText);
         };
         setStatus("playing");
         await audio.play();
       } catch (error) {
         if (cancelled || (error instanceof DOMException && error.name === "AbortError")) return;
-        browserFallback(text);
+        browserFallback(spokenText);
       }
     }
 

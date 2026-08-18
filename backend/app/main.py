@@ -13,7 +13,7 @@ from .errors import AppError
 from .http import client_ip, meta
 from .jobs import start_worker
 from .routes import (admin_content, admin_core, admin_esg, admin_ops, auth, insights, merchant,
-                     p2_admin, p2_visitor, public, visitor)
+                     p2_admin, p2_visitor, public, visitor, voice)
 
 
 @asynccontextmanager
@@ -39,6 +39,8 @@ counts: dict[tuple[str, str, int], int] = defaultdict(int)
 
 def rate_limit(path: str, method: str) -> int | None:
     if "/visitor/ai/" in path:
+        return 20
+    if path.endswith("/voice/synthesize"):
         return 20
     if path.endswith("/visitor/complaints"):
         return 10
@@ -116,5 +118,5 @@ def ready(request: Request):
     return {"data": {"status": "UP"}, "meta": meta(request)}
 
 
-for route in (auth, public, visitor, p2_visitor, admin_core, admin_content, admin_ops, admin_esg, p2_admin, merchant, insights):
+for route in (auth, public, visitor, p2_visitor, admin_core, admin_content, admin_ops, admin_esg, p2_admin, merchant, insights, voice):
     app.include_router(route.router, prefix="/api/v1")
