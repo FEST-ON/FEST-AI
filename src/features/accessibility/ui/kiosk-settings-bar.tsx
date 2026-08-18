@@ -1,6 +1,7 @@
 "use client";
 
 import { ALargeSmall, Contrast, Volume2 } from "lucide-react";
+import { recordKioskAssist } from "@/features/kiosk-age-assist/api/kiosk-assist";
 import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 import { useAccessibilityStore } from "../model/store";
@@ -22,8 +23,15 @@ export function KioskSettingsBar() {
     toggleVoiceGuide,
   } = useAccessibilityStore();
 
+  // 카메라 제안을 중지해도 수동 전환만으로 접근성 이용이 유지되는지 확인해야 한다(ESG-G-08).
+  // 켜는 순간만 센다 — 껐다 켰다를 모두 세면 수동 전환율이 부풀려진다.
+  const manualLargeText = () => {
+    if (!largeText) void recordKioskAssist("MANUAL_LARGE_TEXT");
+    toggleLargeText();
+  };
+
   const toggles = [
-    { key: "largeText", icon: ALargeSmall, label: t.accessibility.largeTextLabel, on: largeText, onClick: toggleLargeText },
+    { key: "largeText", icon: ALargeSmall, label: t.accessibility.largeTextLabel, on: largeText, onClick: manualLargeText },
     { key: "highContrast", icon: Contrast, label: t.accessibility.highContrastLabel, on: highContrast, onClick: toggleHighContrast },
     { key: "voiceGuide", icon: Volume2, label: t.accessibility.voiceGuideLabel, on: voiceGuide, onClick: toggleVoiceGuide },
   ];

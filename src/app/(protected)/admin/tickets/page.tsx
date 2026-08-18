@@ -26,7 +26,7 @@ import { seoulDateTime } from "@/shared/lib/utils";
 
 const TYPES: (TicketType | "전체")[] = ["전체", "민원", "사고"];
 const TYPE_ICON = { 민원: MessageSquareWarning, 사고: AlertTriangle } as const;
-const STATUS_DOT = { 접수: "bg-slate-400", 배정됨: "bg-primary", 처리중: "bg-amber-500", 해결됨: "bg-teal-500", 완료: "bg-emerald-500" } as const;
+const STATUS_DOT = { 접수: "bg-slate-400", 배정됨: "bg-primary", 처리중: "bg-amber-500", 해결됨: "bg-emerald-500", 완료: "bg-muted-foreground" } as const;
 
 const STATUS_FILTERS = ["처리 필요", "진행 중", "완료", "전체"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -253,7 +253,7 @@ export default function TicketsPage() {
                           </button>
                         </div>
                         {ticket.aiTag && (
-                          <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/8 px-2 py-1 text-[0.625rem] font-semibold text-primary dark:bg-primary/20 dark:text-primary-tint">
+                          <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/8 px-2 py-1 text-[0.625rem] font-semibold text-primary">
                             <Sparkles className="size-3" /> {ticket.aiTag}
                           </div>
                         )}

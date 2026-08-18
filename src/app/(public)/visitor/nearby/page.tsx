@@ -18,7 +18,7 @@ import { useTranslation } from "@/shared/lib/i18n";
 
 function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; sponsored?: boolean; label: string }) {
   return (
-    <article className={`rounded-xl border p-3 ${sponsored ? "border-amber-300 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20" : "border-border bg-card"}`}>
+    <article className={`rounded-xl border p-3 ${sponsored ? "border-amber-300 bg-amber-50/60" : "border-border bg-card"}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-foreground">{item.name}</p>

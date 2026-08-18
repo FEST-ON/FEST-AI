@@ -46,15 +46,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
     document.documentElement.dataset.highContrast = String(highContrast);
   }, [highContrast]);
 
-  // 첫 페인트는 layout.tsx의 인라인 스크립트가 맞춰 두고, 여기서는 이후의 시스템 설정 변경만 따라간다.
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => document.documentElement.classList.toggle("dark", media.matches);
-    apply();
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       {children}

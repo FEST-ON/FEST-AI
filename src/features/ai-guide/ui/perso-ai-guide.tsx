@@ -47,6 +47,7 @@ export function PersoAiGuide() {
   const { largeText, voiceGuide, visitorMode, languageSource, setLanguage } = useAccessibilityStore();
   const { languages } = useFestivalLanguages();
   const [draft, setDraft] = useState("");
+  const [isVoiceConfirmation, setIsVoiceConfirmation] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
@@ -126,6 +127,12 @@ export function PersoAiGuide() {
   // AI-05: 키오스크에서 방문객이 언어를 직접 고르기 전까지는 발화 언어를 따라간다.
   // 판별 실패·미지원 언어면 detectLocale이 null을 주고 기존(축제 기본) 언어를 유지한다.
   const handleVoiceResult = useCallback((transcript: string) => {
+    setDraft(transcript);
+    setIsVoiceConfirmation(true);
+    setShowTextInput(true);
+  }, []);
+
+  const submitVoiceQuestion = useCallback((transcript: string) => {
     const autoLocale = visitorMode === "kiosk" && languageSource !== "MANUAL"
       ? detectLocale(transcript, languages)
       : null;
@@ -160,6 +167,7 @@ export function PersoAiGuide() {
     error: speechError,
     interimTranscript,
     isListening,
+    isPreparing,
     isSupported: isSpeechSupported,
     startListening,
     stopListening,
@@ -177,7 +185,15 @@ export function PersoAiGuide() {
     if (!question || isTyping || isListening) return;
 
     setDraft("");
-    handleAsk(question);
+    if (isVoiceConfirmation) submitVoiceQuestion(question);
+    else handleAsk(question);
+    setIsVoiceConfirmation(false);
+  }
+
+  function startNewRecording() {
+    setDraft("");
+    setIsVoiceConfirmation(false);
+    void startListening();
   }
 
   return (
@@ -193,7 +209,7 @@ export function PersoAiGuide() {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
 
       <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 backdrop-blur-md">
-        <Volume2 className="size-3.5 text-cyan-300" />
+        <Volume2 className="size-3.5 text-primary-tint" />
         {t.aiGuide.voiceReadyBadge}
       </div>
 
@@ -211,11 +227,11 @@ export function PersoAiGuide() {
 
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[min-height,max-height] duration-300 ease-out dark:bg-slate-950/68",
+          "absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[min-height,max-height] duration-300 ease-out",
           chatPanelHeight,
         )}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-linear-to-b from-white/90 via-white/40 to-transparent dark:from-slate-950/85 dark:via-slate-950/35" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-linear-to-b from-white/90 via-white/40 to-transparent" />
 
         <div
           ref={threadRef}
@@ -236,7 +252,7 @@ export function PersoAiGuide() {
             ) : (
               <div
                 key={message.id}
-                className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/72"
+                className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md"
               >
                 <span className="mb-1 flex items-center gap-1 text-[0.625rem] font-bold text-primary">
                   <Sparkles className="size-3" /> {t.aiGuide.assistantLabel}
@@ -259,14 +275,14 @@ export function PersoAiGuide() {
                 )}
 
                 {message.needsFallbackChannel && (
-                  <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
+                  <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900">
                     <p className="flex items-center gap-1 text-[0.625rem] font-bold">
                       <Headset className="size-3" /> {t.aiGuide.fallbackChannelTitle}
                     </p>
                     <p className="mt-1 text-[0.625rem] leading-4">{t.aiGuide.fallbackChannelDescription}</p>
                     <a
                       href={SUPPORT_PHONE_HREF}
-                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[0.625rem] font-bold text-white dark:bg-amber-100 dark:text-amber-950"
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[0.625rem] font-bold text-white"
                     >
                       <Phone className="size-3" /> {t.aiGuide.fallbackCallAction(SUPPORT_PHONE)}
                     </a>
@@ -334,8 +350,8 @@ export function PersoAiGuide() {
               <span aria-hidden="true" />
               <button
                 type="button"
-                onClick={isListening ? stopListening : startListening}
-                disabled={isTyping || !isSpeechSupported}
+                onClick={isListening ? stopListening : startNewRecording}
+                disabled={isTyping || isPreparing || !isSpeechSupported}
                 aria-label={isListening ? t.aiGuide.micStopAria : t.aiGuide.micStartAria}
                 aria-pressed={isListening}
                 className={cn(
@@ -351,15 +367,15 @@ export function PersoAiGuide() {
                 <button
                   type="button"
                   onClick={() => setShowTextInput((visible) => !visible)}
-                  disabled={isListening}
+                  disabled={isListening || isVoiceConfirmation}
                   aria-label={textInputOpen ? t.aiGuide.keyboardCloseAria : t.aiGuide.keyboardOpenAria}
                   aria-expanded={textInputOpen}
                   aria-controls="perso-text-question"
                   className={cn(
                     "flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-white/75 shadow-sm backdrop-blur-md transition active:scale-95 disabled:opacity-40",
                     textInputOpen
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                      : "bg-white/82 text-slate-700 hover:bg-white dark:bg-slate-900/78 dark:text-white",
+                      ? "bg-slate-900 text-white"
+                      : "bg-white/82 text-slate-700 hover:bg-white",
                   )}
                 >
                   <Keyboard className="size-6" />
@@ -368,14 +384,20 @@ export function PersoAiGuide() {
             </div>
 
             <p className="mt-1.5 min-h-4 text-center text-[0.625rem] font-semibold text-foreground/80">
-              {isListening ? interimTranscript || t.aiGuide.listeningPlaceholder : t.aiGuide.idlePrompt}
+              {isListening
+                ? interimTranscript || t.aiGuide.listeningPlaceholder
+                : isPreparing
+                  ? t.aiGuide.preparingMicrophone
+                  : isVoiceConfirmation
+                    ? t.aiGuide.confirmVoicePrompt
+                    : t.aiGuide.idlePrompt}
             </p>
 
             {textInputOpen && (
               <Form
                 id="perso-text-question"
                 onSubmit={handleSubmit}
-                className="mt-2 flex w-full items-center gap-1.5 rounded-2xl border border-white/65 bg-white/88 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/82"
+                className="mt-2 flex w-full items-center gap-1.5 rounded-2xl border border-white/65 bg-white/88 p-1.5 shadow-sm backdrop-blur-md"
               >
                 <input
                   autoFocus
@@ -386,10 +408,21 @@ export function PersoAiGuide() {
                   placeholder={t.aiGuide.textInputPlaceholder}
                   className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/75"
                 />
+                {isVoiceConfirmation && (
+                  <button
+                    type="button"
+                    onClick={startNewRecording}
+                    disabled={isTyping || isPreparing}
+                    aria-label={t.aiGuide.retryVoiceAria}
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-muted disabled:opacity-30"
+                  >
+                    <RotateCcw className="size-4" />
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={!draft.trim() || isTyping}
-                  aria-label={t.aiGuide.sendAria}
+                  aria-label={isVoiceConfirmation ? t.aiGuide.confirmVoiceAria : t.aiGuide.sendAria}
                   className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <SendHorizontal className="size-4" />
@@ -402,13 +435,17 @@ export function PersoAiGuide() {
             aria-live="polite"
             className={cn(
               "min-h-4 px-1 pt-1 text-[0.5625rem] font-medium text-muted-foreground",
-              speechError && "text-red-600 dark:text-red-300",
-              isListening && "text-red-600 dark:text-red-300",
+              speechError && "text-red-600",
+              isListening && "text-red-600",
             )}
           >
             {speechError ??
-              (isListening
-                ? t.aiGuide.statusListening
+              (isPreparing
+                ? t.aiGuide.preparingMicrophone
+                : isListening
+                  ? t.aiGuide.statusListening
+                  : isVoiceConfirmation
+                    ? t.aiGuide.statusConfirmVoice
                 : isSpeechSupported
                   ? t.aiGuide.statusIdleSupported
                   : t.aiGuide.statusUnsupported)}
@@ -427,7 +464,7 @@ export function PersoAiGuide() {
                   disabled={isTyping}
                   onClick={() => handleAsk(label)}
                   className={cn(
-                    "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[0.6875rem] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/68",
+                    "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[0.6875rem] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50",
                     largeText && "text-sm",
                   )}
                 >

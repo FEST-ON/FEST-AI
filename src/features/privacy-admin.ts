@@ -104,3 +104,33 @@ export interface DeliveryReport {
 export function fetchDeliveryReport() {
   return festivalApi<DeliveryReport>(`/notification-deliveries`);
 }
+
+/** ESG-G-08 카메라·AI 투명성: 공개 안내, 중지 스위치, 익명 효과 지표. */
+export interface KioskCameraReport {
+  enabled: boolean;
+  stopReason: string | null;
+  notice: {
+    purpose: string;
+    choice: string;
+    processingLocation: string;
+    retention: string;
+    prohibitedUse: string;
+  };
+  counts: Record<string, number>;
+  models: { modelVersion: string; count: number; lastSeenAt: string }[];
+  rates: {
+    consentAcceptRate: number | null;
+    estimateFailureRate: number | null;
+    suggestionAcceptRate: number | null;
+    manualLargeTextCount: number;
+    taskCompletedCount: number;
+  };
+}
+
+export function fetchKioskCameraReport() {
+  return festivalApi<KioskCameraReport>("/kiosk-camera");
+}
+
+export function updateKioskCamera({ enabled, stopReason }: { enabled: boolean; stopReason?: string }) {
+  return festivalApi<KioskCameraReport>("/kiosk-camera", json("PATCH", { enabled, stopReason }));
+}

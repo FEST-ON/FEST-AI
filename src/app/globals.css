@@ -69,6 +69,9 @@
   --esg-tint: #0e8a3e;
   /* 브랜드↔ESG 그라데이션 — AI·ESG 두 축을 함께 가리키는 장식 면에만 */
   --gradient-brand: linear-gradient(135deg, var(--brand) 0%, var(--esg) 100%);
+  /* 같은 그라데이션의 글자용 변형. #1DCA5E 끝은 흰 글자가 2.2:1이라 히어로처럼 글자가
+     얹히는 면에는 못 쓴다 — 초록 끝만 어둡게 내려 흰 글자 5.4:1을 지킨다. */
+  --gradient-brand-ink: linear-gradient(135deg, var(--brand) 0%, #0a7a36 100%);
 
   --background: #ffffff;
   --foreground: #1d1d1f;
@@ -160,8 +163,14 @@
   background-image: var(--gradient-brand);
 }
 
+/* 강조 면 중 글자가 얹히는 것(히어로 등). 색은 같은 브랜드↔ESG 축이고 초록 끝만 어둡다. */
+.bg-brand-gradient-ink {
+  background-image: var(--gradient-brand-ink);
+}
+
 /* 고대비 모드에서 그라데이션은 대비를 예측할 수 없다 — 단색 브랜드로 접는다. */
-html[data-high-contrast="true"] .bg-brand-gradient {
+html[data-high-contrast="true"] .bg-brand-gradient,
+html[data-high-contrast="true"] .bg-brand-gradient-ink {
   background-image: none;
   background-color: var(--primary);
 }

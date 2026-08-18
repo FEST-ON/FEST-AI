@@ -73,7 +73,7 @@ export default function VisitorHomePage() {
         </h1>
       </div>
 
-      <div className="overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
+      <div className="bg-brand-gradient-ink overflow-hidden rounded-2xl p-5 text-primary-foreground">
         {/* 값이 없을 때 배지에 " ~ "만 남아 깨져 보이던 자리 — 도착 전에는 자리표시자를 둔다. */}
         {!festival ? (
           <div className="space-y-2" aria-busy={festivalQuery.isLoading}>
@@ -114,18 +114,28 @@ export default function VisitorHomePage() {
       </div>
 
       <div className={visitorMode === "kiosk" ? "grid grid-cols-2 gap-3" : "grid grid-cols-3 gap-3"}>
-        {quickMenu.map(({ href, labelKey, icon: Icon }) => (
+        {quickMenu.map(({ href, labelKey, icon: Icon }) => {
+          // 스탬프 투어는 ESG 적립 기능 — 나머지 일반 기능과 색으로 갈라 둔다.
+          const esg = href === "/visitor/stamp-tour";
+          return (
           <Link
             key={href}
             href={href}
             className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card py-3.5 text-center"
           >
-            <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <span
+              className={
+                esg
+                  ? "inline-flex size-9 items-center justify-center rounded-full bg-esg/12 text-esg-tint"
+                  : "inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"
+              }
+            >
               <Icon className="size-4.5" />
             </span>
             <span className="text-[0.6875rem] font-semibold text-foreground">{t.home.quickMenu[labelKey]}</span>
           </Link>
-        ))}
+          );
+        })}
       </div>
 
       <section>

@@ -50,6 +50,7 @@ const { canAccessPath, mobileNavItems, visibleNavItems } = await importTypeScrip
 const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
 const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
 const { detectLocale } = await importTypeScript("../src/shared/lib/i18n/detect-locale.ts");
+const { isSeniorAge } = await importTypeScript("../src/features/kiosk-age-assist/model/estimate-age.ts");
 
 class MemoryStorage {
   #values = new Map();
@@ -562,4 +563,16 @@ test("멱등키는 crypto.randomUUID가 없는 http 접속에서도 만들어진
   } finally {
     Object.defineProperty(crypto, "randomUUID", { configurable: true, writable: true, value: original });
   }
+});
+
+
+test("연령대 판정은 표본이 모자라거나 흔들리면 제안하지 않는다", () => {
+  // 한 프레임 추정은 몇 살씩 튀므로 중앙값으로 본다 — 68이 하나 섞여도 제안하지 않는다.
+  assert.equal(isSeniorAge([34, 41, 68]), false);
+  assert.equal(isSeniorAge([64, 67, 71]), true);
+  // 기준(62) 바로 아래는 제안하지 않는다.
+  assert.equal(isSeniorAge([58, 61, 61]), false);
+  // 표본이 모자라면 값이 아무리 높아도 판정하지 않는다.
+  assert.equal(isSeniorAge([80, 82]), false);
+  assert.equal(isSeniorAge([]), false);
 });

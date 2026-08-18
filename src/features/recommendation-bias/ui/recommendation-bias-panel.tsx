@@ -93,7 +93,7 @@ export function RecommendationBiasPanel() {
       </div>
 
       {query.isError ? (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           추천 편향 API에 연결할 수 없습니다. {queryErrorMessage(query.error)}
         </div>
       ) : (

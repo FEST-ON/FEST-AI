@@ -85,7 +85,7 @@ export default function VisitorPrivacyPage() {
                             {t.privacy.retentionLabel}: {translated[`${item.key}.retention`] ?? item.retention}
                           </p>
                           {item.notice && (
-                            <p className="mt-1 text-[0.6875rem] font-medium text-amber-700 dark:text-amber-400">
+                            <p className="mt-1 text-[0.6875rem] font-medium text-amber-700">
                               {translated[`${item.key}.notice`] ?? item.notice}
                             </p>
                           )}
@@ -132,7 +132,7 @@ export default function VisitorPrivacyPage() {
       <section className="mt-6">
         <h2 className="text-sm font-bold text-foreground">{t.privacy.requestTitle}</h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{t.privacy.requestDescription}</p>
-        <p className="mt-1 text-[0.6875rem] leading-5 text-amber-700 dark:text-amber-400">{t.privacy.requestExcluded}</p>
+        <p className="mt-1 text-[0.6875rem] leading-5 text-amber-700">{t.privacy.requestExcluded}</p>
         <Textarea
           value={detail}
           onChange={(event) => setDetail(event.target.value)}

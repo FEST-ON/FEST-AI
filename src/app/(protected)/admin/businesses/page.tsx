@@ -454,7 +454,7 @@ export default function BusinessesPage() {
                       {business.boothNo && ` · 부스 ${business.boothNo}`}
                     </p>
                     {business.description && <p className="mt-1 text-xs text-muted-foreground">{business.description}</p>}
-                    {business.reviewComment && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">검토 의견: {business.reviewComment}</p>}
+                    {business.reviewComment && <p className="mt-1 text-xs text-amber-700">검토 의견: {business.reviewComment}</p>}
                   </div>
                   <Button size="sm" variant="outline" onClick={() => setOpenCoupons(openCoupons === business.id ? null : business.id)}>
                     <BadgePercent className="size-3.5" /> 쿠폰

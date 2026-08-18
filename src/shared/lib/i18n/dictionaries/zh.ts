@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 91cc20270fff9260
+// ko.ts sha256: 9164cf0330c761d0
 import type { ko } from "./ko";
 
 export const zh: typeof ko = {
@@ -224,6 +224,22 @@ export const zh: typeof ko = {
     highContrastLabel: "高对比度模式",
     highContrastHelper: "将文字与背景的对比度调到最高",
   },
+  kioskAssist: {
+    consentTitle: "需要把屏幕文字调大吗？",
+    consentDescription: "摄像头会短暂检测并推荐合适的字号。不使用也可以正常使用全部功能。",
+    consentAccept: "用摄像头检测",
+    consentDecline: "不用了，直接使用",
+    manualLargeText: "直接使用大字",
+    checking: "检测中…",
+    noticeOnDevice: "检测只在本机进行，图像不会传出设备。",
+    noticeDiscard: "不保存影像和面部信息，检测后立即删除。",
+    noticeNoIdentity: "不识别身份，也不用于价格或使用资格。",
+    noticeOptional: "不使用摄像头也可以通过下方按钮开启大字模式。",
+    suggestTitle: "要切换为大字吗？",
+    suggestDescription: "文字和按钮会变大。保持当前画面也可以。",
+    suggestAccept: "使用大字",
+    suggestDecline: "保持现在这样",
+  },
   complaint: {
     ariaLabel: "提交投诉",
     shortLabel: "投诉",
@@ -298,12 +314,17 @@ export const zh: typeof ko = {
     keyboardCloseAria: "关闭键盘输入",
     keyboardOpenAria: "使用键盘提问",
     listeningPlaceholder: "正在聆听…",
+    preparingMicrophone: "正在准备降噪麦克风…",
     idlePrompt: "点击麦克风开始提问",
+    confirmVoicePrompt: "请确认或修改识别到的问题",
     textInputAria: "向Alan AI输入文字提问",
     textInputPlaceholder: "请输入您的问题",
     sendAria: "发送问题",
-    statusListening: "正在识别语音，提问结束后将自动发送。",
-    statusIdleSupported: "点击麦克风提问，识别后会自动发送。",
+    confirmVoiceAria: "确认并发送识别到的问题",
+    retryVoiceAria: "重新录制语音",
+    statusListening: "正在启用麦克风降噪并识别语音。",
+    statusConfirmVoice: "请确认结果后发送，或重新录制。",
+    statusIdleSupported: "点击麦克风提问，然后确认识别结果。",
     statusUnsupported: "当前浏览器请使用文字提问。",
     expectedQuestionsLabel: "推荐问题",
     voiceGuideOnAnnouncement: "语音引导已开启。",

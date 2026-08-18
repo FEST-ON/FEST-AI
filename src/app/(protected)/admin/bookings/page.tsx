@@ -40,12 +40,12 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  CONFIRMED: "bg-primary/10 text-primary dark:bg-primary/25 dark:text-primary-tint",
-  WAITING: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  CALLED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  COMPLETED: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  CANCELLED: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
-  NO_SHOW: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+  CONFIRMED: "bg-primary/10 text-primary",
+  WAITING: "bg-amber-100 text-amber-700",
+  CALLED: "bg-emerald-100 text-emerald-700",
+  COMPLETED: "bg-slate-100 text-slate-700",
+  CANCELLED: "bg-slate-100 text-slate-500",
+  NO_SHOW: "bg-red-100 text-red-700",
 };
 
 function formatMoment(value: string | null) {
@@ -107,7 +107,7 @@ export default function AdminBookingsPage() {
       {overdue.length > 0 && (
         <div
           role="alert"
-          className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+          className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs font-medium text-amber-900"
         >
           <AlertTriangle className="size-4 shrink-0" />
           호출 후 {BOOKING_NO_SHOW_GRACE_MINUTES}분이 지난 예약이 {overdue.length}건 있어요. 입장 여부를 확인해 주세요.
@@ -175,7 +175,7 @@ function BookingRow({
   return (
     <article
       className={`flex flex-wrap items-center gap-3 rounded-2xl border p-3 ${
-        noShowDue ? "border-amber-300 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20" : "border-border bg-card"
+        noShowDue ? "border-amber-300 bg-amber-50/60" : "border-border bg-card"
       }`}
     >
       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${STATUS_STYLE[booking.status]}`}>

@@ -1,15 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Fingerprint, Radio, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, Camera, Fingerprint, Radio, ShieldCheck, Trash2 } from "lucide-react";
 import {
   PRIVACY_REQUEST_STATUS_LABEL,
   fetchAdminPrivacyRequests,
   fetchDeliveryReport,
   fetchIdentityReview,
+  fetchKioskCameraReport,
   fetchPrivacyPolicy,
   handlePrivacyRequest,
   runPrivacyPurge,
+  updateKioskCamera,
 } from "@/features/privacy-admin";
 import { useAdminSessionStore } from "@/features/admin-auth/model/store";
 import { Badge } from "@/shared/ui/badge";
@@ -21,6 +24,7 @@ import { SkeletonList } from "@/shared/ui/skeleton";
 import { StatCard } from "@/shared/ui/stat-card";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
+import { Textarea } from "@/shared/ui/textarea";
 
 const STATUS_TONE: Record<string, Tone> = {
   RECEIVED: "warning",
@@ -34,6 +38,11 @@ const MODE_LABEL: Record<string, string> = {
   MANUAL: "수동 관리",
   NOT_COLLECTED: "수집 안 함",
 };
+
+/** 분모가 없는 비율은 0%가 아니라 "아직 없음"이다. 섞으면 중지 판단을 잘못하게 된다. */
+function percent(value: number | null) {
+  return value === null ? "집계 전" : `${Math.round(value * 100)}%`;
+}
 
 function time(value: string | null | undefined) {
   return value ? new Date(value).toLocaleString("ko-KR") : "-";
@@ -66,12 +75,19 @@ export default function AdminPrivacyPage() {
   const requests = useQuery({ queryKey: ["privacy-requests-admin"], queryFn: fetchAdminPrivacyRequests });
   const identity = useQuery({ queryKey: ["visitor-identity"], queryFn: fetchIdentityReview });
   const deliveries = useQuery({ queryKey: ["notification-deliveries"], queryFn: fetchDeliveryReport });
+  const kioskCamera = useQuery({ queryKey: ["kiosk-camera-report"], queryFn: fetchKioskCameraReport });
+  const [stopReason, setStopReason] = useState("");
 
   const handle = useWrite(handlePrivacyRequest, {
     success: "요구 처리 상태를 변경했어요.", invalidates: ["privacy-requests-admin"],
   });
   const purge = useWrite(runPrivacyPurge, {
     success: "보유기간이 지난 개인정보를 파기했어요.", invalidates: ["privacy-policy"],
+  });
+  const camera = useWrite(updateKioskCamera, {
+    success: "키오스크 카메라 제안 설정을 변경했어요.",
+    invalidates: ["kiosk-camera-report"],
+    onSuccess: () => setStopReason(""),
   });
 
   return (
@@ -266,6 +282,78 @@ export default function AdminPrivacyPage() {
                 </Table>
               )}
             </>
+          )}
+        </QueryState>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-foreground">
+          <Camera className="size-4 text-primary" /> 키오스크 카메라·AI 투명성
+        </h2>
+        <p className="mb-3 text-[0.6875rem] text-muted-foreground">
+          연령대 추정으로 큰 글씨 모드를 제안하는 기능(KIOSK-A11Y-01)의 처리 원칙과 효과를 확인하고,
+          편향·오탐이 확인되면 여기서 중지해요. 중지해도 방문객은 수동 큰 글씨·음성 안내를 그대로 쓸 수 있어요.
+        </p>
+        <QueryState query={kioskCamera} skeleton={<SkeletonList count={3} className="h-10 rounded-lg" wrapperClassName="space-y-2" />}>
+          {(data) => (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-3">
+                <div className="min-w-0">
+                  <StatusPill tone={data.enabled ? "success" : "muted"}>
+                    {data.enabled ? "카메라 제안 사용 중" : "카메라 제안 중지됨"}
+                  </StatusPill>
+                  {!data.enabled && data.stopReason && (
+                    <p className="mt-1 text-[0.6875rem] text-muted-foreground">중지 사유 · {data.stopReason}</p>
+                  )}
+                </div>
+                {data.enabled ? (
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                    <Textarea
+                      rows={1}
+                      value={stopReason}
+                      onChange={(event) => setStopReason(event.target.value)}
+                      placeholder="중지 사유 (예: 고령층 오탐 확인)"
+                      className="sm:w-72"
+                    />
+                    <ConfirmButton
+                      size="sm"
+                      variant="destructive"
+                      disabled={!stopReason.trim()}
+                      title="카메라 제안을 중지할까요?"
+                      description="키오스크에서 카메라 동의 요청과 연령대 추정이 즉시 사라지고, 수동 접근성 모드만 남습니다. 사유는 감사 로그에 남습니다."
+                      confirmLabel="중지"
+                      onConfirm={() => camera.mutate({ enabled: false, stopReason })}
+                    >
+                      제안 중지
+                    </ConfirmButton>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => camera.mutate({ enabled: true })}>
+                    제안 사용
+                  </Button>
+                )}
+              </div>
+
+              <ul className="list-disc space-y-1 rounded-xl bg-muted/60 py-3 pr-3 pl-8 text-[0.6875rem] leading-5 text-muted-foreground">
+                <li>{data.notice.purpose}</li>
+                <li>{data.notice.choice}</li>
+                <li>{data.notice.processingLocation}</li>
+                <li>{data.notice.retention}</li>
+                <li>{data.notice.prohibitedUse}</li>
+              </ul>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <StatCard label="동의 수락률" value={percent(data.rates.consentAcceptRate)} helper={`요청 ${data.counts.CONSENT_SHOWN ?? 0}건`} />
+                <StatCard label="추정 실패율" value={percent(data.rates.estimateFailureRate)} helper={`동의 ${data.counts.CONSENT_GRANTED ?? 0}건`} />
+                <StatCard label="제안 수락률" value={percent(data.rates.suggestionAcceptRate)} helper={`제안 ${data.counts.SUGGESTED ?? 0}건`} />
+                <StatCard label="수동 전환" value={`${data.rates.manualLargeTextCount}건`} helper="카메라 없이 큰 글씨" />
+                <StatCard label="안내 화면 도달" value={`${data.rates.taskCompletedCount}건`} helper="이용 흐름당 1건" />
+                <StatCard label="모델" value={data.models[0]?.modelVersion ?? "-"} helper={data.models.length > 1 ? `외 ${data.models.length - 1}개` : "단일 버전"} />
+              </div>
+              <p className="text-[0.6875rem] text-muted-foreground">
+                지표는 방문객 세션과 연결하지 않은 건수 집계예요 — 누가 어떤 추정을 받았는지는 조회할 수 없어요.
+              </p>
+            </div>
           )}
         </QueryState>
       </section>

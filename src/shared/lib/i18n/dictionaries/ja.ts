@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 91cc20270fff9260
+// ko.ts sha256: 9164cf0330c761d0
 import type { ko } from "./ko";
 
 export const ja: typeof ko = {
@@ -224,6 +224,22 @@ export const ja: typeof ko = {
     highContrastLabel: "ハイコントラストモード",
     highContrastHelper: "文字と背景のコントラストを最大にします",
   },
+  kioskAssist: {
+    consentTitle: "画面の文字を大きくしますか？",
+    consentDescription: "カメラで少し確認して、ちょうどよい文字サイズをご提案します。使わなくてもすべての機能をご利用いただけます。",
+    consentAccept: "カメラで確認",
+    consentDecline: "大丈夫です、このまま使います",
+    manualLargeText: "すぐ大きな文字に",
+    checking: "確認中…",
+    noticeOnDevice: "確認はこのキオスク内だけで行われ、画像が外部に出ることはありません。",
+    noticeDiscard: "映像と顔の情報は保存せず、確認後すぐに消去します。",
+    noticeNoIdentity: "誰かを特定せず、料金や利用資格にも使いません。",
+    noticeOptional: "カメラを使わなくても、下のボタンで大きな文字にできます。",
+    suggestTitle: "大きな文字にしますか？",
+    suggestDescription: "文字とボタンを大きく表示します。今の画面のままでも大丈夫です。",
+    suggestAccept: "大きな文字で見る",
+    suggestDecline: "今のままでいいです",
+  },
   complaint: {
     ariaLabel: "苦情の送信",
     shortLabel: "苦情",
@@ -298,12 +314,17 @@ export const ja: typeof ko = {
     keyboardCloseAria: "キーボード入力を閉じる",
     keyboardOpenAria: "キーボードで質問する",
     listeningPlaceholder: "聞き取り中…",
+    preparingMicrophone: "ノイズ抑制マイクを準備しています…",
     idlePrompt: "マイクを押して質問してください",
+    confirmVoicePrompt: "認識された質問を確認または修正してください",
     textInputAria: "Alan AIにテキストで質問する",
     textInputPlaceholder: "質問を入力してください",
     sendAria: "質問を送信",
-    statusListening: "音声を認識しています。質問が終わると自動的に送信されます。",
-    statusIdleSupported: "マイクを押して質問すると、認識後に自動で送信されます。",
+    confirmVoiceAria: "認識された質問を確認して送信",
+    retryVoiceAria: "音声を録音し直す",
+    statusListening: "ノイズを抑えながら音声を認識しています。",
+    statusConfirmVoice: "認識結果を確認して送信するか、録音し直してください。",
+    statusIdleSupported: "マイクを押して質問し、認識結果を確認してください。",
     statusUnsupported: "現在のブラウザではテキストで質問してください。",
     expectedQuestionsLabel: "おすすめの質問",
     voiceGuideOnAnnouncement: "音声案内がオンになりました。",

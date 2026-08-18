@@ -268,9 +268,9 @@ export default function EsgPage() {
 
       {/* 서버가 계속 내려주던 데이터 품질 경고. 화면이 버리고 있어서 미승인·미등록 지표가 드러나지 않았다. */}
       {(dashboard.data?.dataQualityWarnings.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" /> 데이터 품질 경고
+            <AlertTriangle className="size-4 text-amber-600" /> 데이터 품질 경고
           </h2>
           <ul className="mt-2 space-y-1">
             {/* 지표가 많은 축제에서 경고가 수십 줄로 늘어지면 오히려 안 읽힌다. 앞부분만 펼친다. */}
@@ -578,7 +578,7 @@ export default function EsgPage() {
                     <Download className="size-3.5" /> {reportArtifact.fileName} 내려받기 ({formatBytes(reportArtifact.byteSize)})
                   </Button>
                   {reportArtifact.textLossWarning && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400" role="alert">{reportArtifact.textLossWarning}</p>
+                    <p className="text-xs text-amber-600" role="alert">{reportArtifact.textLossWarning}</p>
                   )}
                 </>
               )}
