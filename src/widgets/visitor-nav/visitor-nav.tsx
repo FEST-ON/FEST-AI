@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sparkles, MapPin, Ticket, BadgePercent } from "lucide-react";
+import { Home, Sparkles, MapPin, Ticket, Recycle } from "lucide-react";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useVisitorMenus } from "@/features/visitor-menu-settings";
 import type { VisitorMenuKey } from "@/features/visitor-menu-settings";
@@ -19,10 +19,10 @@ export const NAV_ITEMS: {
   menuKey?: VisitorMenuKey;
 }[] = [
   { href: "/visitor", labelKey: "home", icon: Home, kiosk: true },
+  { href: "/visitor/coupons", labelKey: "coupons", icon: Recycle, kiosk: false, menuKey: "coupons" },
   { href: "/visitor/ai-guide", labelKey: "aiGuide", icon: Sparkles, kiosk: true },
-  { href: "/visitor/map", labelKey: "map", icon: MapPin, kiosk: true },
   { href: "/visitor/reservation", labelKey: "reservation", icon: Ticket, kiosk: false, menuKey: "reservation" },
-  { href: "/visitor/coupons", labelKey: "coupons", icon: BadgePercent, kiosk: false, menuKey: "coupons" },
+  { href: "/visitor/map", labelKey: "map", icon: MapPin, kiosk: true },
 ];
 
 export function VisitorNav() {
@@ -40,18 +40,37 @@ export function VisitorNav() {
     <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex max-w-md items-stretch justify-between px-2 py-1.5">
         {navItems.map(({ href, labelKey, icon: Icon }) => {
-          const active = href === "/visitor" ? pathname === href : pathname.startsWith(href);
+          const isAi = href === "/visitor/ai-guide";
+          const isEsg = href === "/visitor/coupons";
+          const active = isEsg
+            ? pathname.startsWith("/visitor/coupons") || pathname === "/visitor/stamp-tour"
+            : href === "/visitor"
+              ? pathname === href
+              : pathname.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium transition-colors",
-                active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                isAi && "gap-0 pt-0",
+                active ? (isEsg ? "text-esg-text" : "text-primary") : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className={cn("size-5", active && "fill-primary/15")} strokeWidth={active ? 2.4 : 2} />
-              {t.nav[labelKey]}
+              <span
+                className={cn(
+                  "grid place-items-center",
+                  isAi
+                    ? cn(
+                        "-mt-5 size-12 rounded-full border-4 border-card shadow-md",
+                        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                      )
+                    : "size-5",
+                )}
+              >
+                <Icon className={cn("size-5", isEsg && active && "text-esg")} strokeWidth={active ? 2.4 : 2} />
+              </span>
+              {labelKey === "coupons" ? "ESG" : t.nav[labelKey]}
             </Link>
           );
         })}

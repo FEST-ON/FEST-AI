@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { KeyRound, ShieldAlert } from "lucide-react";
 import { acceptMerchantInvitation, lookupMerchantInvitation } from "@/shared/lib/api";
-import { Button } from "@/shared/ui/button";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Logo } from "@/shared/ui/logo";
@@ -61,12 +61,9 @@ function InviteForm() {
   const needsPassword = !preview.data.hasAccount;
 
   return (
-    <form
+    <Form
       className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        accept.mutate();
-      }}
+      onSubmit={() => accept.mutate()}
     >
       <Logo />
       <div>
@@ -106,11 +103,11 @@ function InviteForm() {
         </p>
       )}
 
-      {accept.error && <p className="text-sm text-destructive">{queryErrorMessage(accept.error, "초대를 수락하지 못했어요.")}</p>}
-      <Button type="submit" className="w-full" disabled={accept.isPending}>
-        {accept.isPending ? "처리 중..." : "초대 수락하고 시작하기"}
-      </Button>
-    </form>
+      <ErrorText error={accept.error} fallback="초대를 수락하지 못했어요." className="text-sm" />
+      <SubmitButton mutation={accept} size="default" pending="처리 중..." className="w-full">
+        초대 수락하고 시작하기
+      </SubmitButton>
+    </Form>
   );
 }
 

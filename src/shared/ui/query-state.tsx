@@ -8,7 +8,7 @@ import { cn } from "@/shared/lib/utils";
 
 // 로딩·빈 데이터·오류를 구분해서 보여주기 위한 공용 상태 표시. 문구는 화면(다국어)에서 넘긴다.
 export function ErrorState({
-  message = "데이터를 불러오지 못했습니다.",
+  message = "데이터를 불러오지 못했어요.",
   retryLabel = "다시 시도",
   onRetry,
   className,
@@ -44,7 +44,7 @@ export function EmptyState({ message, className }: { message: string; className?
   );
 }
 
-export function queryErrorMessage(error: unknown, fallback = "데이터를 불러오지 못했습니다.") {
+export function queryErrorMessage(error: unknown, fallback = "데이터를 불러오지 못했어요.") {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
@@ -80,6 +80,8 @@ export function QueryState<T>({
   children: (data: T) => ReactNode;
 }) {
   if (query.isLoading) return skeleton ?? <Skeleton className={cn("h-24 w-full rounded-xl", className)} />;
+  // 데이터가 끝내 도착하지 않은 경우(오류·오프라인으로 멈춘 조회)는 빈 목록이 아니라 실패다.
+  // 여기서 빈 상태를 보여주면 통신 장애가 "행사 없음"으로 읽힌다.
   if (query.isError || query.data === undefined) {
     return (
       <ErrorState

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Leaf, Users, Scale, Sparkles, FileCheck2, CheckCircle2, CircleDashed, Download, Paperclip } from "lucide-react";
 import { fetchEsgMetrics, generateEsgReport } from "@/entities/esg";
 import type { EsgPillar } from "@/entities/esg";
@@ -30,20 +30,22 @@ import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Meter } from "@/shared/ui/meter";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { SelectField } from "@/shared/ui/select-field";
 import { Switch } from "@/shared/ui/switch";
 import { Textarea } from "@/shared/ui/textarea";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
+import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { useForm } from "@/shared/lib/use-form";
-import { cn, datetimeLocal, seoulDate, seoulDateTime } from "@/shared/lib/utils";
+import { isPendingFor, useWrite } from "@/shared/lib/use-write";
+import { cn, datetimeLocal, seoulDate, seoulDateTime, toIso } from "@/shared/lib/utils";
 import { artifactOf, downloadArtifact, formatBytes } from "@/shared/lib/download-artifact";
 
 const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
-  환경: { icon: Leaf, tone: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300" },
-  사회: { icon: Users, tone: "text-primary bg-primary/10 dark:bg-primary/25 dark:text-primary-tint" },
-  거버넌스: { icon: Scale, tone: "text-foreground bg-muted dark:bg-muted dark:text-foreground" },
+  환경: { icon: Leaf, tone: "text-esg-tint bg-esg/12" },
+  사회: { icon: Users, tone: "text-primary bg-primary/10" },
+  거버넌스: { icon: Scale, tone: "text-foreground bg-muted" },
 };
 
 const PILLARS: EsgPillar[] = ["환경", "사회", "거버넌스"];
@@ -61,6 +63,8 @@ function emptyMeasurement(): NewMeasurement {
 
 const CATEGORY_LABEL: Record<string, string> = { E: "환경", S: "사회", G: "거버넌스" };
 
+const CATEGORY_OPTIONS = (["E", "S", "G"] as const).map((value) => ({ value, label: `${value} · ${CATEGORY_LABEL[value]}` }));
+
 /**
  * ESG-01 지표 정의.
  *
@@ -69,7 +73,6 @@ const CATEGORY_LABEL: Record<string, string> = { E: "환경", S: "사회", G: "�
  * 어떤 산식으로 집계된 실적인지 추적할 수 있게 합니다.
  */
 function MetricDefinitionPanel() {
-  const queryClient = useQueryClient();
   const [openVersionFor, setOpenVersionFor] = useState<string | null>(null);
   const definitions = useQuery({ queryKey: ["esg-metric-definitions"], queryFn: fetchMetricDefinitions });
   const { form: metricForm, set: setMetric, field: metricField, reset: resetMetric } =
@@ -77,21 +80,14 @@ function MetricDefinitionPanel() {
   const { form: versionForm, set: setVersion, field: versionField, reset: resetVersion } =
     useForm({ formula: "", unit: "", target: "", source: "", evidenceRequired: false });
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["esg-metric-definitions"] });
-    queryClient.invalidateQueries({ queryKey: ["esg-metric-versions"] });
-    queryClient.invalidateQueries({ queryKey: ["esg-metrics"] });
-    queryClient.invalidateQueries({ queryKey: ["esg-dashboard"] });
-  };
-  const addMetric = useMutation({
-    mutationFn: createMetric,
-    meta: { success: "지표를 등록했어요. 산식·단위 버전을 이어서 등록해 주세요." },
-    onSuccess: (metric) => { invalidate(); resetMetric(); setOpenVersionFor(metric.id); },
+  const invalidates = ["esg-metric-definitions", "esg-metric-versions", "esg-metrics", "esg-dashboard"];
+  const addMetric = useWrite(createMetric, {
+    success: "지표를 등록했어요. 산식·단위 버전을 이어서 등록해 주세요.", invalidates,
+    onSuccess: (metric) => { resetMetric(); setOpenVersionFor(metric.id); },
   });
-  const addVersion = useMutation({
-    mutationFn: createMetricVersion,
-    meta: { success: "지표 버전을 등록했어요." },
-    onSuccess: () => { invalidate(); resetVersion(); setOpenVersionFor(null); },
+  const addVersion = useWrite(createMetricVersion, {
+    success: "지표 버전을 등록했어요.", invalidates,
+    onSuccess: () => { resetVersion(); setOpenVersionFor(null); },
   });
 
   return (
@@ -101,28 +97,23 @@ function MetricDefinitionPanel() {
         산식·단위·목표·증빙 요건을 등록해야 실적을 연결하고 승인할 수 있어요. 정의를 바꿀 때는 새 버전을 등록하면 변경 이력이 남아요.
       </p>
 
-      <form
-        className="mt-3 flex flex-wrap items-end gap-2"
-        onSubmit={(event) => { event.preventDefault(); addMetric.mutate(metricForm); }}
-      >
+      <Form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={() => addMetric.mutate(metricForm)}>
         <div className="min-w-44 flex-1 space-y-1">
           <Label htmlFor="metric-name">지표명</Label>
           <Input id="metric-name" {...metricField("name")} required placeholder="예: 다회용기 사용률" />
         </div>
         <div className="w-32 space-y-1">
           <Label>구분</Label>
-          <Select value={metricForm.category} onValueChange={(value) => setMetric("category")(value as "E" | "S" | "G")}>
-            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {(["E", "S", "G"] as const).map((value) => (
-                <SelectItem key={value} value={value}>{value} · {CATEGORY_LABEL[value]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SelectField
+            value={metricForm.category}
+            onValueChange={(value) => setMetric("category")(value as "E" | "S" | "G")}
+            options={CATEGORY_OPTIONS}
+            aria-label="구분"
+          />
         </div>
-        <Button type="submit" size="sm" disabled={addMetric.isPending}>{addMetric.isPending ? "등록 중..." : "지표 추가"}</Button>
-      </form>
-      {addMetric.error && <p className="mt-2 text-xs text-destructive">{queryErrorMessage(addMetric.error)}</p>}
+        <SubmitButton mutation={addMetric} pending="등록 중...">지표 추가</SubmitButton>
+      </Form>
+      <ErrorText error={addMetric.error} className="mt-2" />
 
       <QueryState
         query={definitions}
@@ -140,10 +131,10 @@ function MetricDefinitionPanel() {
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                         {metric.name}
-                        <Badge variant="outline" className="text-[10px]">{CATEGORY_LABEL[metric.category] ?? metric.category}</Badge>
+                        <Badge variant="outline" className="text-[0.625rem]">{CATEGORY_LABEL[metric.category] ?? metric.category}</Badge>
                         {!latest && <StatusPill tone="warning">정의 미완료</StatusPill>}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                         {latest
                           ? `v${latest.versionNo} · ${latest.formula} · 단위 ${latest.unit}${latest.target !== null ? ` · 목표 ${latest.target}` : ""}${latest.evidenceRequired ? " · 증빙 필수" : ""}`
                           : "산식·단위가 없어 실적 승인 대상이 아니에요."}
@@ -155,10 +146,9 @@ function MetricDefinitionPanel() {
                   </div>
 
                   {openVersionFor === metric.id && (
-                    <form
+                    <Form
                       className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-4"
-                      onSubmit={(event) => {
-                        event.preventDefault();
+                      onSubmit={() =>
                         addVersion.mutate({
                           metricId: metric.id,
                           formula: versionForm.formula,
@@ -167,8 +157,8 @@ function MetricDefinitionPanel() {
                           // 산식과 함께 출처를 남겨야 승인 근거가 성립한다(ESG-01 주요 규칙).
                           sourceRequirements: { source: versionForm.source },
                           evidenceRequired: versionForm.evidenceRequired,
-                        });
-                      }}
+                        })
+                      }
                     >
                       <Input className="sm:col-span-2" placeholder="산식 (예: 다회용기 반납 수 / 대여 수 × 100)" {...versionField("formula")} required />
                       <Input placeholder="단위 (예: %)" {...versionField("unit")} required />
@@ -179,10 +169,10 @@ function MetricDefinitionPanel() {
                         증빙 필수
                       </label>
                       <div className="sm:col-span-4 flex items-center justify-end gap-3">
-                        {addVersion.error && <p className="mr-auto text-[11px] text-destructive">{queryErrorMessage(addVersion.error)}</p>}
-                        <Button type="submit" size="sm" disabled={addVersion.isPending}>버전 등록</Button>
+                        <ErrorText error={addVersion.error} className="mr-auto text-[0.6875rem]" />
+                        <SubmitButton mutation={addVersion}>버전 등록</SubmitButton>
                       </div>
-                    </form>
+                    </Form>
                   )}
                 </div>
               );
@@ -201,17 +191,13 @@ function ReportEditor({ report, onSaved }: { report: EsgReport; onSaved: () => v
     intro: report.editMetadata?.intro ?? "",
     note: report.editMetadata?.note ?? "",
   });
-  const save = useMutation({
-    mutationFn: () => updateReport({ reportId: report.id, editMetadata: form }),
-    meta: { success: "보고서 본문을 저장했어요." },
+  const save = useWrite(() => updateReport({ reportId: report.id, editMetadata: form }), {
+    success: "보고서 본문을 저장했어요.",
     onSuccess: onSaved,
   });
 
   return (
-    <form
-      className="mt-3 space-y-2 border-t border-border pt-3"
-      onSubmit={(event) => { event.preventDefault(); save.mutate(); }}
-    >
+    <Form className="mt-3 space-y-2 border-t border-border pt-3" onSubmit={() => save.mutate()}>
       <div className="space-y-1">
         <Label htmlFor={`report-title-${report.id}`}>보고서 제목</Label>
         <Input id={`report-title-${report.id}`} {...field("title")} required />
@@ -224,14 +210,14 @@ function ReportEditor({ report, onSaved }: { report: EsgReport; onSaved: () => v
         <Label htmlFor={`report-note-${report.id}`}>개선 과제·비고</Label>
         <Textarea id={`report-note-${report.id}`} rows={3} {...field("note")} placeholder="다음 회차 개선 과제와 데이터 한계를 적어 주세요." />
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-[0.6875rem] text-muted-foreground">
         지표 수치와 근거는 승인된 실적 스냅샷이라 편집 대상이 아니에요. 저장한 서술부는 DOCX·PDF 산출물 본문에 그대로 들어갑니다.
       </p>
       <div className="flex items-center justify-end gap-3">
-        {save.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(save.error)}</p>}
-        <Button type="submit" size="sm" disabled={save.isPending}>{save.isPending ? "저장 중..." : "본문 저장"}</Button>
+        <ErrorText error={save.error} className="mr-auto" />
+        <SubmitButton mutation={save} pending="저장 중...">본문 저장</SubmitButton>
       </div>
-    </form>
+    </Form>
   );
 }
 
@@ -250,32 +236,21 @@ export default function EsgPage() {
   // 데이터 품질 경고와 외부 AI 브리핑은 서버가 계속 내려주고 있었는데 화면이 버리고 있었다.
   const dashboard = useQuery({ queryKey: ["esg-dashboard"], queryFn: fetchEsgDashboard });
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["esg-measurements"] });
-    queryClient.invalidateQueries({ queryKey: ["esg-metrics"] });
-    queryClient.invalidateQueries({ queryKey: ["festival-ai-brief"] });
-  };
-
-  const submitMeasurement = useMutation({
-    mutationFn: createMeasurement,
-    meta: { success: "실적을 등록했어요." },
-    onSuccess: () => { invalidate(); reset(); setCorrecting(null); },
+  const invalidates = ["esg-measurements", "esg-metrics", "festival-ai-brief"];
+  const submitMeasurement = useWrite(createMeasurement, {
+    success: "실적을 등록했어요.", invalidates,
+    onSuccess: () => { reset(); setCorrecting(null); },
   });
-  const review = useMutation({
-    mutationFn: reviewMeasurement,
-    meta: { success: "검수 결과를 반영했어요." },
-    onSuccess: invalidate,
-  });
-  const attach = useMutation({
-    mutationFn: addEvidence,
-    meta: { success: "증빙을 등록했어요." },
-    onSuccess: () => { invalidate(); setEvidenceFor(null); resetEvidence(); },
+  const review = useWrite(reviewMeasurement, { success: "검수 결과를 반영했어요.", invalidates });
+  const attach = useWrite(addEvidence, {
+    success: "증빙을 등록했어요.", invalidates,
+    onSuccess: () => { setEvidenceFor(null); resetEvidence(); },
   });
 
   const refreshReports = () => queryClient.invalidateQueries({ queryKey: ["esg-reports"] });
-  const generate = useMutation({ mutationFn: generateEsgReport, meta: { success: "리포트를 생성했어요." }, onSuccess: refreshReports });
-  const approve = useMutation({ mutationFn: approveReport, meta: { success: "리포트를 승인했어요." }, onSuccess: refreshReports });
-  const exportJob = useMutation({ mutationFn: exportReport, meta: { success: "내보내기를 시작했어요." }, onSuccess: refreshReports });
+  const generate = useWrite(generateEsgReport, { success: "리포트를 생성했어요.", invalidates: ["esg-reports"] });
+  const approve = useWrite(approveReport, { success: "리포트를 승인했어요.", invalidates: ["esg-reports"] });
+  const exportJob = useWrite(exportReport, { success: "내보내기를 시작했어요.", invalidates: ["esg-reports"] });
   // 잡 워커가 파일을 만들 때까지 기다린다 — 예전에는 jobId만 찍고 끝나서 산출물을 받을 길이 없었다.
   const exportedJob = useQuery({
     queryKey: ["esg-export-job", exportJob.data?.jobId],
@@ -288,14 +263,14 @@ export default function EsgPage() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
-        환경·사회·거버넌스 실적을 등록하고 검수자가 승인해요. 승인된 실적만 성과 집계와 보고서에 반영되고, 승인 후에는 수정 대신 정정 실적으로 대체합니다.
+        환경·사회·거버넌스 실적을 등록하고 검수자가 승인해요. 승인된 실적만 성과 집계와 보고서에 반영되고, 승인 후에는 수정 대신 정정 실적으로 대체해요.
       </p>
 
       {/* 서버가 계속 내려주던 데이터 품질 경고. 화면이 버리고 있어서 미승인·미등록 지표가 드러나지 않았다. */}
       {(dashboard.data?.dataQualityWarnings.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" /> 데이터 품질 경고
+            <AlertTriangle className="size-4 text-amber-600" /> 데이터 품질 경고
           </h2>
           <ul className="mt-2 space-y-1">
             {/* 지표가 많은 축제에서 경고가 수십 줄로 늘어지면 오히려 안 읽힌다. 앞부분만 펼친다. */}
@@ -347,16 +322,16 @@ export default function EsgPage() {
                       <div key={metric.id} className="rounded-2xl border border-border bg-card p-4">
                         <div className="flex items-start justify-between">
                           <p className="text-xs font-semibold text-foreground">{metric.name}</p>
-                          {metric.approved ? <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" /> : <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />}
+                          {metric.approved ? <CheckCircle2 className="size-3.5 shrink-0 text-esg-tint" /> : <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />}
                         </div>
                         <p className="mt-2 text-xl font-extrabold text-foreground">
                           {metric.value.toLocaleString()}
                           <span className="ml-0.5 text-xs font-medium text-muted-foreground">{metric.unit}</span>
                         </p>
-                        <Meter percent={pct} className="mt-2 h-1.5" />
-                        <p className="mt-1 text-[10px] text-muted-foreground">목표 {metric.target.toLocaleString()}{metric.unit} 대비 {pct}%</p>
-                        <p className="mt-2 truncate text-[10px] text-muted-foreground">출처: {metric.source}</p>
-                        <p className="text-[10px] text-muted-foreground">{metric.approved ? `${metric.approvedAt} 승인` : "승인 대기중"}</p>
+                        <Meter percent={pct} tone="esg" className="mt-2 h-1.5" />
+                        <p className="mt-1 text-[0.625rem] text-muted-foreground">목표 {metric.target.toLocaleString()}{metric.unit} 대비 {pct}%</p>
+                        <p className="mt-2 truncate text-[0.625rem] text-muted-foreground">출처: {metric.source}</p>
+                        <p className="text-[0.625rem] text-muted-foreground">{metric.approved ? `${metric.approvedAt} 승인` : "승인 대기중"}</p>
                       </div>
                     );
                   })}
@@ -373,29 +348,29 @@ export default function EsgPage() {
         <h2 className="text-sm font-bold text-foreground">{correcting ? "실적 정정 등록" : "실적 등록"}</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {correcting
-            ? "승인된 실적은 직접 수정할 수 없어요. 원본을 참조하는 정정 실적을 새로 등록하면 승인 시 원본이 대체됩니다."
+            ? "승인된 실적은 직접 수정할 수 없어요. 원본을 참조하는 정정 실적을 새로 등록하면 승인 시 원본이 대체돼요."
             : "측정값과 데이터 출처를 남기면 검수자가 승인 여부를 결정해요."}
         </p>
-        <form
+        <Form
           className="mt-3 grid gap-3 sm:grid-cols-5"
-          onSubmit={(event) => {
-            event.preventDefault();
+          onSubmit={() =>
             submitMeasurement.mutate({
               ...form,
               sourceRef: form.sourceRef || undefined,
-              measuredAt: new Date(form.measuredAt).toISOString(),
+              measuredAt: toIso(form.measuredAt),
               supersedesId: correcting ?? undefined,
-            });
-          }}
+            })
+          }
         >
           <div className="space-y-1 sm:col-span-2">
             <Label>지표</Label>
-            <Select value={form.metricVersionId} onValueChange={(value) => set("metricVersionId")(String(value ?? ""))}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="지표 선택" /></SelectTrigger>
-              <SelectContent>
-                {(versions.data ?? []).map((version) => <SelectItem key={version.id} value={version.id}>{version.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <SelectField
+              value={form.metricVersionId}
+              onValueChange={set("metricVersionId")}
+              options={(versions.data ?? []).map((version) => ({ value: version.id, label: version.label }))}
+              placeholder="지표 선택"
+              aria-label="지표"
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="measurement-value">측정값</Label>
@@ -414,13 +389,13 @@ export default function EsgPage() {
             <Input id="source-ref" {...field("sourceRef")} placeholder="예: 다회용기 반납 스테이션 집계표" />
           </div>
           <div className="sm:col-span-5 flex items-center justify-end gap-3">
-            {submitMeasurement.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(submitMeasurement.error)}</p>}
+            <ErrorText error={submitMeasurement.error} className="mr-auto" />
             {correcting && <Button type="button" variant="outline" size="sm" onClick={() => setCorrecting(null)}>정정 취소</Button>}
-            <Button type="submit" size="sm" disabled={!form.metricVersionId || submitMeasurement.isPending}>
-              {submitMeasurement.isPending ? "등록 중..." : correcting ? "정정 실적 등록" : "실적 등록"}
-            </Button>
+            <SubmitButton mutation={submitMeasurement} pending="등록 중..." disabled={!form.metricVersionId}>
+              {correcting ? "정정 실적 등록" : "실적 등록"}
+            </SubmitButton>
           </div>
-        </form>
+        </Form>
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">
@@ -437,10 +412,10 @@ export default function EsgPage() {
                         <StatusPill tone={STATUS_TONE[row.status] ?? "neutral"}>
                           {MEASUREMENT_STATUS_LABEL[row.status] ?? row.status}
                         </StatusPill>
-                        {row.supersedesId && <Badge variant="outline" className="text-[10px]">정정</Badge>}
-                        <Badge variant="outline" className="gap-1 text-[10px]"><Paperclip className="size-3" /> 증빙 {row.evidenceCount}</Badge>
+                        {row.supersedesId && <Badge variant="outline" className="text-[0.625rem]">정정</Badge>}
+                        <Badge variant="outline" className="gap-1 text-[0.625rem]"><Paperclip className="size-3" /> 증빙 {row.evidenceCount}</Badge>
                       </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
+                      <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                         {Number(row.value).toLocaleString()}{row.unit} · {row.sourceType}
                         {row.sourceRef && ` · ${row.sourceRef}`}
                         {" · "}{seoulDateTime(row.measuredAt)}
@@ -452,9 +427,9 @@ export default function EsgPage() {
                           <Button size="sm" variant="outline" onClick={() => setEvidenceFor(evidenceFor === row.id ? null : row.id)}>증빙</Button>
                           <ConfirmButton
                             size="sm"
-                            disabled={review.isPending && review.variables?.measurementId === row.id}
+                            disabled={isPendingFor(review, row.id)}
                             title="실적을 승인할까요?"
-                            description={`${row.metricName} ${Number(row.value).toLocaleString()}${row.unit}이(가) ESG 리포트 집계에 반영됩니다. 승인 후에는 정정으로만 바꿀 수 있어요.`}
+                            description={`${row.metricName} ${Number(row.value).toLocaleString()}${row.unit}이(가) ESG 리포트 집계에 반영돼요. 승인 후에는 정정으로만 바꿀 수 있어요.`}
                             confirmLabel="승인"
                             onConfirm={() => review.mutate({ measurementId: row.id, decision: "APPROVED" })}
                           >
@@ -463,9 +438,9 @@ export default function EsgPage() {
                           <ConfirmButton
                             size="sm"
                             variant="destructive"
-                            disabled={review.isPending && review.variables?.measurementId === row.id}
+                            disabled={isPendingFor(review, row.id)}
                             title="실적을 반려할까요?"
-                            description={`${row.metricName} · 증빙 ${row.evidenceCount}건. 사유는 제출자에게 그대로 전달됩니다.`}
+                            description={`${row.metricName} · 증빙 ${row.evidenceCount}건. 사유는 제출자에게 그대로 전달돼요.`}
                             confirmLabel="반려"
                             reason={{ label: "반려 사유", placeholder: "예: 반납 스테이션 집계표가 측정 시각과 맞지 않아요." }}
                             onConfirm={(comment) => review.mutate({ measurementId: row.id, decision: "REJECTED", comment })}
@@ -483,25 +458,25 @@ export default function EsgPage() {
                   </div>
 
                   {evidenceFor === row.id && (
-                    <form
+                    <Form
                       className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-4"
-                      onSubmit={(event) => { event.preventDefault(); attach.mutate({ measurementId: row.id, ...evidence }); }}
+                      onSubmit={() => attach.mutate({ measurementId: row.id, ...evidence })}
                     >
                       <Input placeholder="파일 ID" {...evidenceField("fileId")} required />
                       <Input placeholder="파일 해시" {...evidenceField("fileHash")} required />
                       <Input placeholder="증빙 유형" {...evidenceField("evidenceType")} required />
-                      <Button type="submit" size="sm" disabled={attach.isPending}>증빙 연결</Button>
-                      <p className="sm:col-span-4 text-[10px] text-muted-foreground">
-                        파일 저장소가 확정되지 않아 외부에 업로드된 파일의 ID와 해시를 연결합니다.
+                      <SubmitButton mutation={attach}>증빙 연결</SubmitButton>
+                      <p className="sm:col-span-4 text-[0.625rem] text-muted-foreground">
+                        파일 저장소가 확정되지 않아 외부에 업로드된 파일의 ID와 해시를 연결해요.
                       </p>
-                    </form>
+                    </Form>
                   )}
                 </div>
               ))}
             </div>
           )}
         </QueryState>
-        {(review.error || attach.error) && <p className="mt-3 text-sm text-destructive">{queryErrorMessage(review.error ?? attach.error)}</p>}
+        <ErrorText error={review.error ?? attach.error} className="mt-3 text-sm" />
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">
@@ -519,7 +494,7 @@ export default function EsgPage() {
           </Button>
         </div>
 
-        {generate.error && <p className="mt-4 text-sm text-destructive">{queryErrorMessage(generate.error)}</p>}
+        <ErrorText error={generate.error} className="mt-4 text-sm" />
 
         {generate.data && (
           <div className="mt-4 space-y-3">
@@ -553,24 +528,24 @@ export default function EsgPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{report.title}</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[0.6875rem] text-muted-foreground">
                     {seoulDate(report.periodFrom)} ~ {seoulDate(report.periodTo)} · {report.format}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={report.status === "APPROVED" || report.status === "EXPORTED" ? "secondary" : "outline"} className="text-[10px]">
+                  <Badge variant={report.status === "APPROVED" || report.status === "EXPORTED" ? "secondary" : "outline"} className="text-[0.625rem]">
                     {report.status}
                   </Badge>
                   {report.status === "DRAFT" && (
-                    <Button size="sm" disabled={approve.isPending && approve.variables === report.id} onClick={() => approve.mutate(report.id)}>보고서 승인</Button>
+                    <Button size="sm" disabled={isPendingFor(approve, report.id)} onClick={() => approve.mutate(report.id)}>보고서 승인</Button>
                   )}
                   {/* 백엔드 PDF는 표준 14폰트(Latin-1)로만 그려서 한글이 깨진다. DOCX는 본문이 UTF-8 XML이라 정확히 나온다. */}
                   {report.status === "APPROVED" && (
                     <>
-                      <Button size="sm" variant="outline" disabled={exportJob.isPending && exportJob.variables?.reportId === report.id} onClick={() => exportJob.mutate({ reportId: report.id, format: "DOCX" })}>
+                      <Button size="sm" variant="outline" disabled={isPendingFor(exportJob, report.id)} onClick={() => exportJob.mutate({ reportId: report.id, format: "DOCX" })}>
                         <Download className="size-3.5" /> DOCX 내보내기
                       </Button>
-                      <Button size="sm" variant="ghost" title="PDF는 한글이 '?'로 깨집니다" disabled={exportJob.isPending && exportJob.variables?.reportId === report.id} onClick={() => exportJob.mutate({ reportId: report.id, format: "PDF" })}>
+                      <Button size="sm" variant="ghost" title="PDF는 한글이 '?'로 깨집니다" disabled={isPendingFor(exportJob, report.id)} onClick={() => exportJob.mutate({ reportId: report.id, format: "PDF" })}>
                         PDF(라틴 문자만)
                       </Button>
                     </>
@@ -588,7 +563,7 @@ export default function EsgPage() {
               </div>
             ))}
           </QueryState>
-          {(approve.error || exportJob.error) && <p className="text-sm text-destructive">{queryErrorMessage(approve.error ?? exportJob.error)}</p>}
+          <ErrorText error={approve.error ?? exportJob.error} className="text-sm" />
           {exportJob.data && (
             <div className="space-y-1.5 rounded-xl border border-border p-3">
               <p className="text-xs text-muted-foreground">
@@ -603,7 +578,7 @@ export default function EsgPage() {
                     <Download className="size-3.5" /> {reportArtifact.fileName} 내려받기 ({formatBytes(reportArtifact.byteSize)})
                   </Button>
                   {reportArtifact.textLossWarning && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400" role="alert">{reportArtifact.textLossWarning}</p>
+                    <p className="text-xs text-amber-600" role="alert">{reportArtifact.textLossWarning}</p>
                   )}
                 </>
               )}

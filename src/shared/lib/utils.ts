@@ -27,13 +27,30 @@ export function seoulShort(value: string | Date) {
   })
 }
 
+// 한국은 서머타임이 없어 연중 +09:00으로 고정이다.
+const SEOUL_OFFSET = "+09:00"
+const DATETIME_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/
+
 /**
  * `<input type="datetime-local">`의 value 형식(YYYY-MM-DDTHH:mm)으로 만든다.
- * 이 입력은 브라우저 로컬 시간 기준이라 UTC로 밀리지 않게 오프셋을 먼저 보정한다.
+ *
+ * 표시(seoulDateTime 등)는 전부 축제 기준 시각인데 입력만 브라우저 로컬이라, KST가 아닌
+ * 노트북에서 10:00을 입력하면 화면에 19:00으로 뜨는 식으로 어긋났다. 입력도 축제 기준으로 맞춘다.
  */
 export function datetimeLocal(value: string | Date = new Date()) {
-  const date = new Date(value)
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(value))
+  const at = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00"
+  return `${at("year")}-${at("month")}-${at("day")}T${at("hour")}:${at("minute")}`
+}
+
+/** datetimeLocal()의 역함수. datetime-local 입력값(축제 기준 시각)을 서버가 받는 ISO로 되돌린다. */
+export function toIso(value: string | Date) {
+  // 타임존이 붙은 값(Date·ISO 문자열)은 그대로 두고, 벽시계 문자열만 축제 기준으로 읽는다.
+  if (typeof value === "string" && DATETIME_LOCAL.test(value)) return new Date(`${value}${SEOUL_OFFSET}`).toISOString()
+  return new Date(value).toISOString()
 }
 
 /**

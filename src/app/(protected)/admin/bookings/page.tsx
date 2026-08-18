@@ -18,7 +18,10 @@ import {
 } from "@/shared/lib/booking-policy";
 import { useNow } from "@/shared/lib/use-now";
 import { Button } from "@/shared/ui/button";
+import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { QueryState } from "@/shared/ui/query-state";
+import { includesKeyword, useListView } from "@/shared/lib/use-list-view";
+import { ListSearch, ShowMore } from "@/shared/ui/list-search";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 
@@ -37,12 +40,12 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  CONFIRMED: "bg-primary/10 text-primary dark:bg-primary/25 dark:text-primary-tint",
-  WAITING: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  CALLED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  COMPLETED: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  CANCELLED: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
-  NO_SHOW: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+  CONFIRMED: "bg-primary/10 text-primary",
+  WAITING: "bg-amber-100 text-amber-700",
+  CALLED: "bg-emerald-100 text-emerald-700",
+  COMPLETED: "bg-slate-100 text-slate-700",
+  CANCELLED: "bg-slate-100 text-slate-500",
+  NO_SHOW: "bg-red-100 text-red-700",
 };
 
 function formatMoment(value: string | null) {
@@ -68,10 +71,14 @@ export default function AdminBookingsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-bookings"] }),
   });
 
-  const rows = useMemo(
+  const byStatus = useMemo(
     () => (bookings.data ?? []).filter((booking) => filter === "전체" || booking.status === filter),
     [bookings.data, filter],
   );
+  const list = useListView(byStatus, (booking, keyword) =>
+    includesKeyword(keyword, booking.programTitle, booking.queueNumber?.toString()),
+  );
+  const rows = list.filtered;
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -100,7 +107,7 @@ export default function AdminBookingsPage() {
       {overdue.length > 0 && (
         <div
           role="alert"
-          className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+          className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs font-medium text-amber-900"
         >
           <AlertTriangle className="size-4 shrink-0" />
           호출 후 {BOOKING_NO_SHOW_GRACE_MINUTES}분이 지난 예약이 {overdue.length}건 있어요. 입장 여부를 확인해 주세요.
@@ -113,12 +120,19 @@ export default function AdminBookingsPage() {
             <TabsTrigger key={value} value={value} className="gap-1.5">
               {STATUS_LABEL[value]}
               {value !== "전체" && (
-                <span className="text-[10px] text-muted-foreground">{counts.get(value) ?? 0}</span>
+                <span className="text-[0.625rem] text-muted-foreground">{counts.get(value) ?? 0}</span>
               )}
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
+
+      <ListSearch
+        value={list.query}
+        onChange={list.setQuery}
+        placeholder="프로그램·대기번호로 검색"
+        count={rows.length}
+      />
 
       <QueryState
         query={bookings}
@@ -128,7 +142,7 @@ export default function AdminBookingsPage() {
       >
         {() => (
           <div className="space-y-2">
-            {rows.map((booking) => (
+            {list.visible.map((booking) => (
               <BookingRow
                 key={booking.id}
                 booking={booking}
@@ -137,6 +151,7 @@ export default function AdminBookingsPage() {
                 onUpdate={(status, note) => mutate.mutate({ bookingId: booking.id, status, note })}
               />
             ))}
+            <ShowMore hidden={list.hidden} onShowMore={list.showMore} />
           </div>
         )}
       </QueryState>
@@ -160,10 +175,10 @@ function BookingRow({
   return (
     <article
       className={`flex flex-wrap items-center gap-3 rounded-2xl border p-3 ${
-        noShowDue ? "border-amber-300 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20" : "border-border bg-card"
+        noShowDue ? "border-amber-300 bg-amber-50/60" : "border-border bg-card"
       }`}
     >
-      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[booking.status]}`}>
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-bold ${STATUS_STYLE[booking.status]}`}>
         {STATUS_LABEL[booking.status] ?? booking.status}
       </span>
 
@@ -190,17 +205,17 @@ function BookingRow({
           </Button>
         )}
         {bookingActionsFor(booking.status).includes("NO_SHOW") && (
-          <Button
+          <ConfirmButton
             size="sm"
             variant="destructive"
             disabled={pending}
-            onClick={() =>
-              window.confirm(`${booking.programTitle} 예약을 노쇼로 처리할까요? 대기 순서가 사라져요.`) &&
-              onUpdate("NO_SHOW", `호출 후 ${BOOKING_NO_SHOW_GRACE_MINUTES}분 경과, 현장 미도착`)
-            }
+            title="노쇼로 처리할까요?"
+            description={`${booking.programTitle} 예약을 노쇼로 처리하면 대기 순서가 사라져요.`}
+            confirmLabel="노쇼 처리"
+            onConfirm={() => onUpdate("NO_SHOW", `호출 후 ${BOOKING_NO_SHOW_GRACE_MINUTES}분 경과, 현장 미도착`)}
           >
             <UserX className="size-3.5" /> 노쇼
-          </Button>
+          </ConfirmButton>
         )}
       </div>
     </article>

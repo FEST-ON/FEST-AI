@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bus,
   CalendarDays,
@@ -23,6 +23,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/shared/lib/support-contact";
 import { LastUpdated } from "@/shared/ui/last-updated";
+import { Form } from "@/shared/ui/form";
 import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useFestivalLanguages } from "@/features/accessibility/model/use-festival-languages";
@@ -46,7 +47,9 @@ export function PersoAiGuide() {
   const { largeText, voiceGuide, visitorMode, languageSource, setLanguage } = useAccessibilityStore();
   const { languages } = useFestivalLanguages();
   const [draft, setDraft] = useState("");
+  const [isVoiceConfirmation, setIsVoiceConfirmation] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
+  const threadRef = useRef<HTMLDivElement>(null);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
   const [switchedFrom, setSwitchedFrom] = useState<Locale | null>(null);
 
@@ -87,13 +90,14 @@ export function PersoAiGuide() {
   }, [locale, welcomeMessage]);
 
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
-  const latestUserMessage = [...messages].reverse().find((message) => message.role === "user");
+
+  // 새 말풍선이 붙으면 가장 최근 대화가 보이도록 맨 아래로 따라간다.
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }, [messages, isTyping]);
 
   useSpeechOutput(latestAssistantMessage?.content, { enabled: voiceGuide, bcp47 });
-
-  // 패널은 내용만큼 자라고 아래 범위 안에서 멈춘다. 넘치면 대화 영역이 스크롤한다.
-  // 글자 수로 높이를 추정하던 자리 — 큰 글씨·줄바꿈에 따라 어긋나던 것을 실제 레이아웃에 맡긴다.
-  const chatPanelHeight = showTextInput ? "min-h-[400px] max-h-[470px]" : "min-h-[340px] max-h-[450px]";
 
   // 자동 전환된 언어로 바로 답해야 해서 사용할 언어를 인자로 받는다(전환 직후 locale은 아직 이전 값).
   const handleAsk = useCallback(async (question: string, askLocale: Locale = locale) => {
@@ -123,6 +127,12 @@ export function PersoAiGuide() {
   // AI-05: 키오스크에서 방문객이 언어를 직접 고르기 전까지는 발화 언어를 따라간다.
   // 판별 실패·미지원 언어면 detectLocale이 null을 주고 기존(축제 기본) 언어를 유지한다.
   const handleVoiceResult = useCallback((transcript: string) => {
+    setDraft(transcript);
+    setIsVoiceConfirmation(true);
+    setShowTextInput(true);
+  }, []);
+
+  const submitVoiceQuestion = useCallback((transcript: string) => {
     const autoLocale = visitorMode === "kiosk" && languageSource !== "MANUAL"
       ? detectLocale(transcript, languages)
       : null;
@@ -157,18 +167,33 @@ export function PersoAiGuide() {
     error: speechError,
     interimTranscript,
     isListening,
+    isPreparing,
     isSupported: isSpeechSupported,
     startListening,
     stopListening,
   } = useSpeechRecognition({ bcp47, t, onFinalResult: handleVoiceResult });
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  // 음성 인식을 못 쓰는 브라우저(또는 소음이 큰 현장)에서는 글로 묻는 게 유일한 길이라 처음부터 열어 둔다.
+  const textInputOpen = showTextInput || !isSpeechSupported;
+
+  // 패널은 내용만큼 자라고 아래 범위 안에서 멈춘다. 넘치면 대화 영역이 스크롤한다.
+  // 글자 수로 높이를 추정하던 자리 — 큰 글씨·줄바꿈에 따라 어긋나던 것을 실제 레이아웃에 맡긴다.
+  const chatPanelHeight = textInputOpen ? "min-h-[400px] max-h-[470px]" : "min-h-[340px] max-h-[450px]";
+
+  function handleSubmit() {
     const question = draft.trim();
     if (!question || isTyping || isListening) return;
 
     setDraft("");
-    handleAsk(question);
+    if (isVoiceConfirmation) submitVoiceQuestion(question);
+    else handleAsk(question);
+    setIsVoiceConfirmation(false);
+  }
+
+  function startNewRecording() {
+    setDraft("");
+    setIsVoiceConfirmation(false);
+    void startListening();
   }
 
   return (
@@ -183,8 +208,8 @@ export function PersoAiGuide() {
       />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
 
-      <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[11px] font-semibold text-white/90 backdrop-blur-md">
-        <Volume2 className="size-3.5 text-cyan-300" />
+      <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 backdrop-blur-md">
+        <Volume2 className="size-3.5 text-primary-tint" />
         {t.aiGuide.voiceReadyBadge}
       </div>
 
@@ -202,76 +227,86 @@ export function PersoAiGuide() {
 
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[min-height,max-height] duration-300 ease-out dark:bg-slate-950/68",
+          "absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[min-height,max-height] duration-300 ease-out",
           chatPanelHeight,
         )}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-linear-to-b from-white/90 via-white/40 to-transparent dark:from-slate-950/85 dark:via-slate-950/35" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-linear-to-b from-white/90 via-white/40 to-transparent" />
 
         <div
+          ref={threadRef}
           className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 pb-3 pt-8"
           style={{
             maskImage: "linear-gradient(to bottom, transparent 0, black 36px, black 100%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent 0, black 36px, black 100%)",
           }}
         >
-          {latestUserMessage && (
-            <p className="text-center text-[10px] font-semibold text-slate-700/75 dark:text-white/65">
-              {t.aiGuide.recognizedQuestionPrefix}“{latestUserMessage.content}”
-            </p>
-          )}
+          {/* 마지막 한 마디만 남기면 앞서 안내받은 시간·장소를 다시 볼 수 없다 — 대화를 통째로 보여준다. */}
+          {messages.map((message) =>
+            message.role === "user" ? (
+              <div key={message.id} className="flex justify-end">
+                <p className="max-w-[82%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[0.8125rem] leading-relaxed whitespace-pre-line text-primary-foreground">
+                  {message.content}
+                </p>
+              </div>
+            ) : (
+              <div
+                key={message.id}
+                className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md"
+              >
+                <span className="mb-1 flex items-center gap-1 text-[0.625rem] font-bold text-primary">
+                  <Sparkles className="size-3" /> {t.aiGuide.assistantLabel}
+                </span>
+                {message.content}
+                {(message.sources?.length || message.freshnessAt) && (
+                  <div className="mt-1.5 space-y-0.5 border-t border-border/70 pt-1.5">
+                    {message.sources && message.sources.length > 0 && (
+                      <p className="text-[0.5625rem] opacity-60">
+                        {t.aiGuide.sourcePrefix}{message.sources.join(", ")}
+                      </p>
+                    )}
+                    <LastUpdated
+                      value={message.freshnessAt}
+                      bcp47={bcp47}
+                      label={t.aiGuide.answerFreshness}
+                      className="text-[0.5625rem] opacity-60"
+                    />
+                  </div>
+                )}
 
-          {latestAssistantMessage && (
-            <div className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/72">
-              <span className="mb-1 flex items-center gap-1 text-[10px] font-bold text-primary">
-                <Sparkles className="size-3" /> {t.aiGuide.assistantLabel}
-              </span>
-              {latestAssistantMessage.content}
-              {(latestAssistantMessage.sources?.length || latestAssistantMessage.freshnessAt) && (
-                <div className="mt-1.5 space-y-0.5 border-t border-border/70 pt-1.5">
-                  {latestAssistantMessage.sources && latestAssistantMessage.sources.length > 0 && (
-                    <p className="text-[9px] opacity-60">
-                      {t.aiGuide.sourcePrefix}{latestAssistantMessage.sources.join(", ")}
+                {message.needsFallbackChannel && (
+                  <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900">
+                    <p className="flex items-center gap-1 text-[0.625rem] font-bold">
+                      <Headset className="size-3" /> {t.aiGuide.fallbackChannelTitle}
                     </p>
-                  )}
-                  <LastUpdated
-                    value={latestAssistantMessage.freshnessAt}
-                    bcp47={bcp47}
-                    label={t.aiGuide.answerFreshness}
-                    className="text-[9px] opacity-60"
-                  />
-                </div>
-              )}
-
-              {latestAssistantMessage.needsFallbackChannel && (
-                <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-                  <p className="flex items-center gap-1 text-[10px] font-bold">
-                    <Headset className="size-3" /> {t.aiGuide.fallbackChannelTitle}
-                  </p>
-                  <p className="mt-1 text-[10px] leading-4">{t.aiGuide.fallbackChannelDescription}</p>
-                  <a
-                    href={SUPPORT_PHONE_HREF}
-                    className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[10px] font-bold text-white dark:bg-amber-100 dark:text-amber-950"
-                  >
-                    <Phone className="size-3" /> {t.aiGuide.fallbackCallAction(SUPPORT_PHONE)}
-                  </a>
-                </div>
-              )}
-              {latestAssistantMessage.backendMessageId && (
-                <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => void reportLatestAnswer()}
-                    disabled={reportStatus === "pending" || reportStatus === "done"}
-                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-60"
-                  >
-                    {reportStatus === "done" ? <CheckCircle2 className="size-3" /> : <Flag className="size-3" />}
-                    {reportStatus === "pending" ? t.aiGuide.reportPending : reportStatus === "done" ? t.aiGuide.reportDone : t.aiGuide.reportAction}
-                  </button>
-                </div>
-              )}
-              {reportStatus === "error" && <p className="mt-1 text-right text-[9px] text-red-600">{t.aiGuide.reportFailed}</p>}
-            </div>
+                    <p className="mt-1 text-[0.625rem] leading-4">{t.aiGuide.fallbackChannelDescription}</p>
+                    <a
+                      href={SUPPORT_PHONE_HREF}
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[0.625rem] font-bold text-white"
+                    >
+                      <Phone className="size-3" /> {t.aiGuide.fallbackCallAction(SUPPORT_PHONE)}
+                    </a>
+                  </div>
+                )}
+                {/* 신고 상태는 한 벌뿐이라 방금 받은 답변에만 붙인다. */}
+                {message.backendMessageId && message.id === latestAssistantMessage?.id && (
+                  <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => void reportLatestAnswer()}
+                      disabled={reportStatus === "pending" || reportStatus === "done"}
+                      className="inline-flex min-h-9 items-center gap-1 text-[0.625rem] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-60"
+                    >
+                      {reportStatus === "done" ? <CheckCircle2 className="size-3" /> : <Flag className="size-3" />}
+                      {reportStatus === "pending" ? t.aiGuide.reportPending : reportStatus === "done" ? t.aiGuide.reportDone : t.aiGuide.reportAction}
+                    </button>
+                  </div>
+                )}
+                {reportStatus === "error" && message.id === latestAssistantMessage?.id && (
+                  <p className="mt-1 text-right text-[0.5625rem] text-red-600">{t.aiGuide.reportFailed}</p>
+                )}
+              </div>
+            ),
           )}
 
           {isTyping && (
@@ -293,7 +328,7 @@ export function PersoAiGuide() {
           {switchedFrom && (
             <div
               aria-live="polite"
-              className="mb-2 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-[11px] font-semibold text-foreground"
+              className="mb-2 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-[0.6875rem] font-semibold text-foreground"
             >
               <Languages className="size-3.5 shrink-0 text-primary" />
               <span className="min-w-0 flex-1">{t.aiGuide.autoSwitchNotice(LANGUAGE_BY_LOCALE[locale])}</span>
@@ -315,8 +350,8 @@ export function PersoAiGuide() {
               <span aria-hidden="true" />
               <button
                 type="button"
-                onClick={isListening ? stopListening : startListening}
-                disabled={isTyping || !isSpeechSupported}
+                onClick={isListening ? stopListening : startNewRecording}
+                disabled={isTyping || isPreparing || !isSpeechSupported}
                 aria-label={isListening ? t.aiGuide.micStopAria : t.aiGuide.micStartAria}
                 aria-pressed={isListening}
                 className={cn(
@@ -332,31 +367,37 @@ export function PersoAiGuide() {
                 <button
                   type="button"
                   onClick={() => setShowTextInput((visible) => !visible)}
-                  disabled={isListening}
-                  aria-label={showTextInput ? t.aiGuide.keyboardCloseAria : t.aiGuide.keyboardOpenAria}
-                  aria-expanded={showTextInput}
+                  disabled={isListening || isVoiceConfirmation}
+                  aria-label={textInputOpen ? t.aiGuide.keyboardCloseAria : t.aiGuide.keyboardOpenAria}
+                  aria-expanded={textInputOpen}
                   aria-controls="perso-text-question"
                   className={cn(
-                    "flex size-13 shrink-0 items-center justify-center rounded-full border-2 border-white/75 shadow-sm backdrop-blur-md transition active:scale-95 disabled:opacity-40",
-                    showTextInput
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                      : "bg-white/82 text-slate-700 hover:bg-white dark:bg-slate-900/78 dark:text-white",
+                    "flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-white/75 shadow-sm backdrop-blur-md transition active:scale-95 disabled:opacity-40",
+                    textInputOpen
+                      ? "bg-slate-900 text-white"
+                      : "bg-white/82 text-slate-700 hover:bg-white",
                   )}
                 >
-                  <Keyboard className="size-5" />
+                  <Keyboard className="size-6" />
                 </button>
               </div>
             </div>
 
-            <p className="mt-1.5 min-h-4 text-center text-[10px] font-semibold text-foreground/80">
-              {isListening ? interimTranscript || t.aiGuide.listeningPlaceholder : t.aiGuide.idlePrompt}
+            <p className="mt-1.5 min-h-4 text-center text-[0.625rem] font-semibold text-foreground/80">
+              {isListening
+                ? interimTranscript || t.aiGuide.listeningPlaceholder
+                : isPreparing
+                  ? t.aiGuide.preparingMicrophone
+                  : isVoiceConfirmation
+                    ? t.aiGuide.confirmVoicePrompt
+                    : t.aiGuide.idlePrompt}
             </p>
 
-            {showTextInput && (
-              <form
+            {textInputOpen && (
+              <Form
                 id="perso-text-question"
                 onSubmit={handleSubmit}
-                className="mt-2 flex w-full items-center gap-1.5 rounded-2xl border border-white/65 bg-white/88 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/82"
+                className="mt-2 flex w-full items-center gap-1.5 rounded-2xl border border-white/65 bg-white/88 p-1.5 shadow-sm backdrop-blur-md"
               >
                 <input
                   autoFocus
@@ -365,37 +406,52 @@ export function PersoAiGuide() {
                   disabled={isTyping}
                   aria-label={t.aiGuide.textInputAria}
                   placeholder={t.aiGuide.textInputPlaceholder}
-                  className="min-w-0 flex-1 bg-transparent px-2 text-[12px] font-medium text-foreground outline-none placeholder:text-muted-foreground/75"
+                  className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/75"
                 />
+                {isVoiceConfirmation && (
+                  <button
+                    type="button"
+                    onClick={startNewRecording}
+                    disabled={isTyping || isPreparing}
+                    aria-label={t.aiGuide.retryVoiceAria}
+                    className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-muted disabled:opacity-30"
+                  >
+                    <RotateCcw className="size-4" />
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={!draft.trim() || isTyping}
-                  aria-label={t.aiGuide.sendAria}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label={isVoiceConfirmation ? t.aiGuide.confirmVoiceAria : t.aiGuide.sendAria}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <SendHorizontal className="size-4" />
                 </button>
-              </form>
+              </Form>
             )}
           </div>
 
           <p
             aria-live="polite"
             className={cn(
-              "min-h-4 px-1 pt-1 text-[9px] font-medium text-muted-foreground",
-              speechError && "text-red-600 dark:text-red-300",
-              isListening && "text-red-600 dark:text-red-300",
+              "min-h-4 px-1 pt-1 text-[0.5625rem] font-medium text-muted-foreground",
+              speechError && "text-red-600",
+              isListening && "text-red-600",
             )}
           >
             {speechError ??
-              (isListening
-                ? t.aiGuide.statusListening
+              (isPreparing
+                ? t.aiGuide.preparingMicrophone
+                : isListening
+                  ? t.aiGuide.statusListening
+                  : isVoiceConfirmation
+                    ? t.aiGuide.statusConfirmVoice
                 : isSpeechSupported
                   ? t.aiGuide.statusIdleSupported
                   : t.aiGuide.statusUnsupported)}
           </p>
 
-          <p className={cn("mb-1.5 text-[10px] font-bold tracking-[0.12em] text-muted-foreground", largeText && "text-xs")}>
+          <p className={cn("mb-1.5 text-[0.625rem] font-bold tracking-[0.12em] text-muted-foreground", largeText && "text-xs")}>
             {t.aiGuide.expectedQuestionsLabel}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -408,7 +464,7 @@ export function PersoAiGuide() {
                   disabled={isTyping}
                   onClick={() => handleAsk(label)}
                   className={cn(
-                    "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[11px] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/68",
+                    "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[0.6875rem] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50",
                     largeText && "text-sm",
                   )}
                 >

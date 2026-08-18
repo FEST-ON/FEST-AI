@@ -1,12 +1,13 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Flag, ShieldCheck } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { seoulDateTime } from "@/shared/lib/utils";
+import { isPendingFor, useWrite } from "@/shared/lib/use-write";
 import { aiReviewsQuery, decideAiReview } from "../api/ai-reviews";
 
 const DECISIONS = [
@@ -17,13 +18,10 @@ const DECISIONS = [
 
 /** 방문객이 신고한 AI 답변 검수 큐. */
 export function AiReviewQueue() {
-  const queryClient = useQueryClient();
   const reviewsQuery = useQuery(aiReviewsQuery);
   const reviews = reviewsQuery.data ?? [];
-  const decide = useMutation({
-    mutationFn: decideAiReview,
-    meta: { success: "검수 결과를 반영했어요." },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: aiReviewsQuery.queryKey }),
+  const decide = useWrite(decideAiReview, {
+    success: "검수 결과를 반영했어요.", invalidates: [aiReviewsQuery.queryKey],
   });
 
   return (
@@ -48,7 +46,7 @@ export function AiReviewQueue() {
           <div className="space-y-3">
             {reviews.map((review) => (
               <article key={review.id} className="rounded-xl border border-border p-4">
-                <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-[0.625rem] text-muted-foreground">
                   <Badge variant="destructive" className="gap-1"><Flag className="size-3" /> 사용자 신고</Badge>
                   <span>{review.safetyStatus}</span>
                   {review.modelVersion && <span>모델 {review.modelVersion}</span>}
@@ -65,7 +63,7 @@ export function AiReviewQueue() {
                       key={decision}
                       size="sm"
                       variant={variant}
-                      disabled={decide.isPending && decide.variables?.id === review.id}
+                      disabled={isPendingFor(decide, review.id)}
                       onClick={() => decide.mutate({ id: review.id, decision })}
                     >
                       {label}

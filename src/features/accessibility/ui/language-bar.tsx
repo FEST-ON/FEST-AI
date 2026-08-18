@@ -21,11 +21,13 @@ export function LanguageBar({ className, buttonClassName }: { className?: string
       {/* 번역에 실패하면 원문(한국어)이 그대로 나간다 — 조용히 두면 외국어 방문객은
           왜 한국어가 보이는지 알 수 없다. */}
       {degraded && language !== "ko" && (
-        <p className="rounded-lg bg-muted px-2 py-1.5 text-[11px] text-muted-foreground" role="status">
+        <p className="rounded-lg bg-muted px-2 py-1.5 text-[0.6875rem] text-muted-foreground" role="status">
           {t.common.translationUnavailable}
         </p>
       )}
       <div
+        role="group"
+        aria-label={t.accessibility.languageLabel}
         className="grid gap-2"
         style={{ gridTemplateColumns: `repeat(${languages.length}, minmax(0, 1fr))` }}
       >

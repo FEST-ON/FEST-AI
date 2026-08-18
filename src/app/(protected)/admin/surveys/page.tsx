@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { BarChart3, ClipboardList, Plus, Trash2 } from "lucide-react";
 import {
   QUESTION_TYPE_LABEL,
@@ -19,13 +19,16 @@ import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Meter } from "@/shared/ui/meter";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { SelectField } from "@/shared/ui/select-field";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
+import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { useForm } from "@/shared/lib/use-form";
+import { useWrite } from "@/shared/lib/use-write";
 
 const QUESTION_TYPES: SurveyQuestionType[] = ["RATING", "SINGLE_CHOICE", "MULTIPLE_CHOICE", "TEXT"];
+const QUESTION_TYPE_OPTIONS = QUESTION_TYPES.map((type) => ({ value: type, label: QUESTION_TYPE_LABEL[type] }));
 
 const STATUS_TONE: Record<string, Tone> = { DRAFT: "neutral", ACTIVE: "success", CLOSED: "muted" };
 
@@ -43,7 +46,7 @@ function SummaryPanel({ surveyId }: { surveyId: string }) {
     <QueryState query={summary} skeleton={<SkeletonList count={2} className="h-16 rounded-xl" wrapperClassName="mt-3 space-y-2" />}>
       {(data) => (
         <div className="mt-3 space-y-2 border-t border-border pt-3">
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[0.6875rem] text-muted-foreground">
             응답 {data.responseCount}건 · 익명 저장{data.duplicatePrevention ? " · 1인 1회" : ""}
           </p>
           {data.questions.map((question) => {
@@ -52,21 +55,21 @@ function SummaryPanel({ surveyId }: { surveyId: string }) {
               <div key={question.questionId} className="rounded-xl border border-border p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs font-semibold text-foreground">{question.prompt}</p>
-                  <Badge variant="outline" className="text-[10px]">{QUESTION_TYPE_LABEL[question.questionType]}</Badge>
+                  <Badge variant="outline" className="text-[0.625rem]">{QUESTION_TYPE_LABEL[question.questionType]}</Badge>
                 </div>
                 {question.averageRating !== null && (
                   <p className="mt-1 text-sm font-bold text-foreground">평균 {question.averageRating}점</p>
                 )}
                 {Object.entries(question.optionCounts).map(([option, count]) => (
                   <div key={option} className="mt-1.5">
-                    <div className="flex justify-between text-[11px] text-muted-foreground">
+                    <div className="flex justify-between text-[0.6875rem] text-muted-foreground">
                       <span>{option}</span><span>{count}건</span>
                     </div>
                     <Meter percent={total ? Math.round((count / total) * 100) : 0} className="mt-0.5 h-1.5" />
                   </div>
                 ))}
                 {question.questionType === "TEXT" && (
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                     주관식 응답 {question.responseCount}건 — 개별 내용은 익명 보장을 위해 표시하지 않아요.
                   </p>
                 )}
@@ -80,20 +83,17 @@ function SummaryPanel({ surveyId }: { surveyId: string }) {
 }
 
 export default function SurveysPage() {
-  const queryClient = useQueryClient();
   const surveys = useQuery({ queryKey: ["admin-surveys"], queryFn: fetchSurveys });
   const [creating, setCreating] = useState(false);
   const [openSummary, setOpenSummary] = useState<string | null>(null);
   const [questions, setQuestions] = useState<NewSurveyQuestion[]>([emptyQuestion()]);
   const { form, field, reset } = useForm({ title: "", description: "", preventDuplicates: true });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-surveys"] });
-  const create = useMutation({
-    mutationFn: createSurvey,
-    meta: { success: "설문을 등록했어요." },
-    onSuccess: () => { invalidate(); reset(); setQuestions([emptyQuestion()]); setCreating(false); },
+  const create = useWrite(createSurvey, {
+    success: "설문을 등록했어요.", invalidates: ["admin-surveys"],
+    onSuccess: () => { reset(); setQuestions([emptyQuestion()]); setCreating(false); },
   });
-  const change = useMutation({ mutationFn: updateSurvey, meta: { success: "설문 상태를 변경했어요." }, onSuccess: invalidate });
+  const change = useWrite(updateSurvey, { success: "설문 상태를 변경했어요.", invalidates: ["admin-surveys"] });
 
   const updateQuestion = (index: number, patch: Partial<NewSurveyQuestion>) =>
     setQuestions((current) => current.map((question, position) => (position === index ? { ...question, ...patch } : question)));
@@ -118,10 +118,9 @@ export default function SurveysPage() {
         </div>
 
         {creating && (
-          <form
+          <Form
             className="mt-3 space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault();
+            onSubmit={() =>
               create.mutate({
                 title: form.title,
                 description: form.description || undefined,
@@ -129,8 +128,8 @@ export default function SurveysPage() {
                 // 등록 즉시 방문객에게 열어 준다. 닫아 두려면 목록에서 상태를 바꾼다.
                 status: "ACTIVE",
                 questions,
-              });
-            }}
+              })
+            }
           >
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
@@ -154,15 +153,12 @@ export default function SurveysPage() {
                     aria-label={`${index + 1}번 질문`}
                     required
                   />
-                  <Select
+                  <SelectField
                     value={question.questionType}
                     onValueChange={(value) => updateQuestion(index, { questionType: value as SurveyQuestionType, options: [] })}
-                  >
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {QUESTION_TYPES.map((type) => <SelectItem key={type} value={type}>{QUESTION_TYPE_LABEL[type]}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                    options={QUESTION_TYPE_OPTIONS}
+                    aria-label={`${index + 1}번 문항 유형`}
+                  />
                   <Button
                     type="button"
                     size="sm"
@@ -192,14 +188,12 @@ export default function SurveysPage() {
             </div>
 
             <div className="flex items-center justify-end gap-3">
-              {create.error && <p className="mr-auto text-xs text-destructive">{queryErrorMessage(create.error)}</p>}
+              <ErrorText error={create.error} className="mr-auto" />
               {incomplete && <p className="mr-auto text-xs text-muted-foreground">질문과 선택형 보기를 모두 채워주세요.</p>}
               <Button type="button" variant="outline" size="sm" onClick={() => setCreating(false)}>취소</Button>
-              <Button type="submit" size="sm" disabled={create.isPending || incomplete}>
-                {create.isPending ? "등록 중..." : "등록"}
-              </Button>
+              <SubmitButton mutation={create} pending="등록 중..." disabled={incomplete}>등록</SubmitButton>
             </div>
-          </form>
+          </Form>
         )}
       </section>
 
@@ -220,7 +214,7 @@ export default function SurveysPage() {
                         {SURVEY_STATUS_LABEL[survey.status] ?? survey.status}
                       </StatusPill>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="mt-0.5 text-[0.6875rem] text-muted-foreground">
                       문항 {survey.questions.length}개 · 응답 {survey.responseCount}건
                       {survey.preventDuplicates && " · 1인 1회"}
                     </p>

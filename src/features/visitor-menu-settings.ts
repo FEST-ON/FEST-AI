@@ -10,7 +10,7 @@ export type VisitorMenus = Record<VisitorMenuKey, boolean>;
 export const VISITOR_MENU_ITEMS: { key: VisitorMenuKey; label: string; description: string }[] = [
   { key: "reservation", label: "예약·대기", description: "방문객 앱의 예약·모바일 대기표 메뉴 노출 여부" },
   { key: "stampTour", label: "스탬프투어", description: "방문객 앱의 스탬프투어 메뉴 노출 여부" },
-  { key: "coupons", label: "쿠폰·포인트", description: "방문객 앱의 쿠폰·ESG 포인트 메뉴 노출 여부" },
+  { key: "coupons", label: "ESG 순환", description: "방문객 앱의 다회용기 대여·반납·스탬프 메뉴 노출 여부" },
   { key: "nearby", label: "지역상권", description: "방문객 앱의 주변 상권 추천 메뉴 노출 여부" },
   { key: "survey", label: "만족도조사", description: "방문객 앱의 만족도조사 메뉴 노출 여부" },
 ];

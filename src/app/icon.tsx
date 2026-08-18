@@ -14,13 +14,13 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0147FF",
+          background: "linear-gradient(135deg, #0147FF 0%, #1DCA5E 100%)",
         }}
       >
         <div
           style={{
-            width: 14,
-            height: 14,
+            width: 20,
+            height: 20,
             background: "white",
             clipPath:
               "polygon(50% 0%, 62% 40%, 100% 50%, 62% 60%, 50% 100%, 38% 60%, 0% 50%, 38% 40%)",

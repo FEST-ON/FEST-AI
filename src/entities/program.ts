@@ -194,7 +194,7 @@ export async function fetchOperationResources(): Promise<OperationResource[]> {
     location: "배치 구역",
     time: timeRange(assignment.startsAt, assignment.endsAt),
     status: assignment.acknowledgedAt ? "운영중" : "이슈",
-    note: assignment.acknowledgedAt ? (assignment.task ?? "") : "배정 확인 대기 중입니다.",
+    note: assignment.acknowledgedAt ? (assignment.task ?? "") : "배정 확인 대기 중이에요.",
   }));
 
   return [...programRows, ...businessRows, ...staffRows];

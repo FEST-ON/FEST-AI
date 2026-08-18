@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminSidebar } from "@/widgets/admin-sidebar/admin-sidebar";
+import { AdminBottomNav, AdminSidebar } from "@/widgets/admin-sidebar/admin-sidebar";
 import { AdminTopbar } from "@/widgets/admin-sidebar/admin-topbar";
 import { AdminAuthGate } from "@/features/admin-auth/ui/admin-auth-gate";
 
@@ -13,7 +13,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <AdminSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopbar />
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main id="main" className="flex-1 p-4 lg:p-6">{children}</main>
+        <AdminBottomNav />
       </div>
     </div>
   </AdminAuthGate>;

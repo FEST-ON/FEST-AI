@@ -10,7 +10,7 @@ import { fetchAreas } from "@/features/map/api/map-locations";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { SelectField } from "@/shared/ui/select-field";
 import { fetchTickets, PRIORITY_TONE } from "@/entities/ticket";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { fetchOperationResources } from "@/entities/program";
@@ -50,16 +50,12 @@ export default function AdminDashboardPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-40 space-y-1">
             <Label>구역</Label>
-            <Select
+            <SelectField
               value={filters.areaId || "all"}
-              onValueChange={(value) => setFilters((current) => ({ ...current, areaId: value === "all" ? "" : String(value) }))}
-            >
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체 구역</SelectItem>
-                {(areasQuery.data ?? []).map((area) => <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+              onValueChange={(value) => setFilters((current) => ({ ...current, areaId: value === "all" ? "" : value }))}
+              options={[{ value: "all", label: "전체 구역" }, ...(areasQuery.data ?? []).map((area) => ({ value: area.id, label: area.name }))]}
+              aria-label="구역"
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="ops-from">시작</Label>
@@ -84,7 +80,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
         {/* 숫자만 보여주면 어느 시점 어떤 원천인지 알 수 없어 현장 판단에 쓸 수 없다. */}
-        <p className="mt-3 text-[11px] text-muted-foreground">
+        <p className="mt-3 text-[0.6875rem] text-muted-foreground">
           출처 {ops?.sources.join(", ") ?? "-"} · 혼잡 기준 시각{" "}
           {ops?.updatedAt ? new Date(ops.updatedAt).toLocaleString("ko-KR") : "기록 없음"}
           {filters.areaId && " · 방문 세션·포인트는 구역과 연결되지 않아 전체 값으로 표시돼요."}
@@ -93,7 +89,8 @@ export default function AdminDashboardPage() {
 
       <QueryState
         query={opsQuery}
-        skeleton={<SkeletonList count={4} className="h-24 rounded-2xl" wrapperClassName="grid grid-cols-2 gap-3 space-y-0 lg:grid-cols-4" />}
+        // 자리표시자는 실제 카드와 같은 개수·같은 열 수여야 도착한 뒤 화면이 튀지 않는다.
+        skeleton={<SkeletonList count={6} className="h-24 rounded-2xl" wrapperClassName="grid grid-cols-2 gap-3 space-y-0 lg:grid-cols-3" />}
       >
         {(ops) => (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -102,7 +99,7 @@ export default function AdminDashboardPage() {
             <StatCard label="처리 필요 티켓" value={ops.openTickets.toLocaleString()} helper="미해결 민원·사고" icon={TicketIcon} href="/admin/tickets" />
             <StatCard label="승인 참여업체" value={ops.approvedBusinesses.toLocaleString()} helper="축제 참여 승인 완료" icon={Store} href="/admin/businesses" />
             <StatCard label="쿠폰 발급" value={ops.couponIssues.toLocaleString()} helper="참여업체 쿠폰 누적 발급" icon={TicketIcon} href="/admin/businesses" />
-            <StatCard label="ESG 포인트 발급" value={`${ops.pointsIssued.toLocaleString()}P`} helper="리워드 캠페인 누적 지급" icon={Leaf} href="/admin/rewards" />
+            <StatCard label="ESG 포인트 발급" value={`${ops.pointsIssued.toLocaleString()}P`} helper="리워드 캠페인 누적 지급" icon={Leaf} tone="esg" href="/admin/rewards" />
           </div>
         )}
       </QueryState>
@@ -168,7 +165,7 @@ export default function AdminDashboardPage() {
                       <p className="truncate text-sm font-semibold text-foreground">{r.name}</p>
                       <p className="text-xs text-muted-foreground">{r.category} · {r.location}</p>
                     </div>
-                    <Badge variant="destructive" className="shrink-0 text-[10px]">{r.note}</Badge>
+                    <Badge variant="destructive" className="shrink-0 text-[0.625rem]">{r.note}</Badge>
                   </Link>
                 ))
               )}
@@ -197,11 +194,11 @@ export default function AdminDashboardPage() {
                     {CROWD_LABEL[zone.crowdLevel]}
                   </StatusPill>
                 </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                   {zone.peopleCount !== null && `${zone.peopleCount.toLocaleString()}명 · `}
                   {zone.estimatedWaitMin !== null ? `예상 대기 ${zone.estimatedWaitMin}분` : "대기 정보 없음"}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[0.6875rem] text-muted-foreground">
                   {new Date(zone.capturedAt).toLocaleString("ko-KR")} 기준{zone.stale && " · 오래된 값"}
                 </p>
               </div>

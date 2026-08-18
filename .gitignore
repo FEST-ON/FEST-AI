@@ -45,3 +45,6 @@ next-env.d.ts
 # claude code skills (local-only)
 .agents/
 skills-lock.json
+
+# local backend checkout (separate repository)
+/backend/

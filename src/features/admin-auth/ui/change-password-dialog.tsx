@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { changeAdminPassword } from "@/shared/lib/api";
-import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { queryErrorMessage } from "@/shared/ui/query-state";
+import { Form, SubmitButton } from "@/shared/ui/form";
 
 const MIN_LENGTH = 8;
 
@@ -36,8 +36,7 @@ export function ChangePasswordDialog({ className }: { className?: string }) {
     },
   });
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
+  function submit() {
     setLocalError("");
     if (next !== confirm) return setLocalError("새 비밀번호가 서로 달라요.");
     if (next === current) return setLocalError("현재 비밀번호와 다른 값을 입력해 주세요.");
@@ -53,10 +52,10 @@ export function ChangePasswordDialog({ className }: { className?: string }) {
         <DialogHeader>
           <DialogTitle>비밀번호 변경</DialogTitle>
           <DialogDescription>
-            변경하면 다른 기기의 로그인 세션이 모두 끊겨요. 이 창은 그대로 유지됩니다.
+            변경하면 다른 기기의 로그인 세션이 모두 끊겨요. 이 창은 그대로 유지돼요.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={submit} className="space-y-3">
+        <Form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="current-password">현재 비밀번호</Label>
             <Input id="current-password" type="password" autoComplete="current-password" required
@@ -75,10 +74,8 @@ export function ChangePasswordDialog({ className }: { className?: string }) {
           {(localError || change.error) && (
             <p className="text-sm text-destructive" role="alert">{localError || queryErrorMessage(change.error)}</p>
           )}
-          <Button type="submit" className="w-full" disabled={change.isPending}>
-            {change.isPending ? "변경 중..." : "비밀번호 변경"}
-          </Button>
-        </form>
+          <SubmitButton mutation={change} size="default" pending="변경 중..." className="w-full">비밀번호 변경</SubmitButton>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -18,11 +18,11 @@ export function Logo({ className, withTagline = false, tone = "default" }: LogoP
         )}
       >
         F<span className="text-primary">:</span>
-        <span className="font-black text-primary">EST</span>
+        <span className="bg-brand-gradient bg-clip-text font-black text-transparent">EST</span>
         <span className="ml-1">AI</span>
       </span>
       {withTagline && (
-        <span className={cn("mt-0.5 text-[11px] font-medium", isDark ? "text-white/60" : "text-muted-foreground")}>
+        <span className={cn("mt-0.5 text-[0.6875rem] font-medium", isDark ? "text-white/60" : "text-muted-foreground")}>
           AI·ESG 지역축제 DX 플랫폼
         </span>
       )}

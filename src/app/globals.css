@@ -36,6 +36,8 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-primary-tint: var(--primary-tint);
+  --color-esg: var(--esg);
+  --color-esg-text: var(--esg-text);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -58,6 +60,12 @@
 
   /* 브랜드 단일 액센트 — 모든 인터랙티브 요소는 이 색 하나만 쓴다 */
   --brand: #0147ff;
+  --esg: #1dca5e;
+  --esg-foreground: #ffffff;
+  --esg-text: #0e8a3e;
+  --esg-tint: var(--esg-text);
+  --gradient-brand: linear-gradient(135deg, var(--brand) 0%, var(--esg) 100%);
+  --gradient-brand-ink: linear-gradient(135deg, var(--brand) 0%, #0a7a36 100%);
 
   --background: #ffffff;
   --foreground: #1d1d1f;
@@ -96,6 +104,8 @@
 }
 
 .dark {
+  --esg: #1dca5e;
+  --esg-text: #0e8a3e;
   --background: #000000;
   --foreground: #ffffff;
   --card: #1d1d1f;
@@ -128,6 +138,20 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgb(255 255 255 / 12%);
   --sidebar-ring: #7aa5ff;
+}
+
+.bg-brand-gradient {
+  background-image: var(--gradient-brand);
+}
+
+.bg-brand-gradient-ink {
+  background-image: var(--gradient-brand-ink);
+}
+
+html[data-high-contrast="true"] .bg-brand-gradient,
+html[data-high-contrast="true"] .bg-brand-gradient-ink {
+  background-image: none;
+  background-color: var(--primary);
 }
 
 @layer base {

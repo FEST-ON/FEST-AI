@@ -29,6 +29,11 @@ const issueAnalysisUrl = await transpile("../src/features/complaint-insight/api/
   "@/shared/lib/api": apiUrl,
 });
 const { operatingStatus } = await importTypeScript("../src/features/map/lib/operating-status.ts");
+const { datetimeLocal, toIso } = await importTypeScript("../src/shared/lib/utils.ts", {
+  clsx: moduleUrl("export const clsx = (...a) => a.join(' ');"),
+  "tailwind-merge": moduleUrl("export const twMerge = (v) => v;"),
+});
+const { isCancelDeadlinePassed } = await importTypeScript("../src/shared/lib/booking-policy.ts");
 const { buildImprovementTasks, buildRecurringIssues, buildTopicBreakdown } = await import(issueAnalysisUrl);
 // 엔티티는 규칙(model)과 조회(data)가 한 파일이라 조회 쪽 의존성도 함께 연결해 준다.
 // 표시 서식은 규칙 테스트와 무관해서 스텁으로 끊는다.
@@ -41,10 +46,11 @@ const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/e
 const { nextTicketStatus } = await importTypeScript("../src/entities/ticket.ts", entity);
 const { canClose, validatePublishInput } = await importTypeScript("../src/entities/announcement.ts", entity);
 const { contentAction, contentPreview } = await importTypeScript("../src/features/content-review/model/content.ts");
-const { canAccessPath, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
+const { canAccessPath, mobileNavItems, visibleNavItems } = await importTypeScript("../src/shared/lib/permissions.ts");
 const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
 const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
 const { detectLocale } = await importTypeScript("../src/shared/lib/i18n/detect-locale.ts");
+const { isSeniorAge } = await importTypeScript("../src/features/kiosk-age-assist/model/estimate-age.ts");
 
 class MemoryStorage {
   #values = new Map();
@@ -498,6 +504,22 @@ test("번역이 실패하면 원문을 돌려주되 degraded로 알린다", asyn
   assert.equal(client.isTranslationDegraded(), false);
 });
 
+test("모바일 하단 탭은 볼 수 있는 화면만, 사이드바와 같은 권한으로 노출한다", () => {
+  const hrefs = (role) => mobileNavItems(role).map((item) => item.href);
+
+  // 현장 운영자가 폰으로 여는 화면이 전부 들어 있고, 순서가 유지된다.
+  assert.deepEqual(hrefs("FIELD_OPERATOR"), [
+    "/admin", "/admin/field", "/admin/bookings", "/admin/coupons", "/admin/tickets",
+  ]);
+  // 권한 없는 항목은 탭에도 없어야 한다 — 들어가 봐야 403만 본다.
+  for (const role of ["FIELD_OPERATOR", "REVIEWER", "MERCHANT", "SUPER_ADMIN"]) {
+    for (const href of hrefs(role)) assert.ok(canAccessPath(role, href), `${role}이 ${href}에 못 들어갑니다.`);
+  }
+  // 현장 화면이 거의 없는 역할·비로그인은 탭바 자체를 띄우지 않는다.
+  assert.deepEqual(hrefs("REVIEWER"), []);
+  assert.deepEqual(hrefs(undefined), []);
+});
+
 test("사이드바 항목은 모두 아이콘이 등록돼 있다", async () => {
   // 아이콘을 빠뜨리면 관리자 화면 전체가 렌더 중 죽는다(undefined 컴포넌트).
   // 렌더 시에는 기본 아이콘으로 받아내지만, 등록 자체를 잊지 않도록 여기서 잡는다.
@@ -507,4 +529,50 @@ test("사이드바 항목은 모두 아이콘이 등록돼 있다", async () => 
   for (const item of ADMIN_NAV_ITEMS) {
     assert.ok(registered.has(item.href), `${item.href} 아이콘이 NAV_ICONS에 없습니다.`);
   }
+});
+
+test("일시 입력은 브라우저 타임존과 무관하게 축제 기준(Asia/Seoul) 시각으로 오간다", () => {
+  // 2026-09-12T01:00Z = KST 10:00. UTC 노트북에서 열어도 입력칸에는 10:00이 떠야 한다.
+  assert.equal(datetimeLocal("2026-09-12T01:00:00Z"), "2026-09-12T10:00");
+  // 입력한 벽시계 시각은 KST로 읽어 서버에 보낸다(왕복해도 그대로다).
+  assert.equal(toIso("2026-09-12T10:00"), "2026-09-12T01:00:00.000Z");
+  assert.equal(datetimeLocal(toIso("2026-09-12T10:00")), "2026-09-12T10:00");
+  // 타임존이 붙은 값은 건드리지 않는다.
+  assert.equal(toIso("2026-09-12T01:00:00Z"), "2026-09-12T01:00:00.000Z");
+});
+
+test("예약 셀프 취소는 시작 30분 전에 닫힌다(서버 규칙과 같은 표)", () => {
+  const startsAt = "2026-09-12T10:00:00Z";
+  const at = (iso) => new Date(iso).getTime();
+  assert.equal(isCancelDeadlinePassed(startsAt, at("2026-09-12T09:29:00Z")), false);
+  assert.equal(isCancelDeadlinePassed(startsAt, at("2026-09-12T09:30:00Z")), true);
+  assert.equal(isCancelDeadlinePassed(startsAt, at("2026-09-12T10:30:00Z")), true);
+  // 시각을 읽지 못하면 버튼을 막지 않는다 — 서버가 최종 판정한다.
+  assert.equal(isCancelDeadlinePassed("nope", at("2026-09-12T09:30:00Z")), false);
+});
+
+test("멱등키는 crypto.randomUUID가 없는 http 접속에서도 만들어진다", async () => {
+  const original = crypto.randomUUID;
+  try {
+    // 보안 컨텍스트가 아니면 randomUUID 자체가 없다(현장 폰이 http://<LAN IP>로 열 때).
+    Reflect.deleteProperty(crypto, "randomUUID");
+    const { idempotencyKey } = await import(apiUrl);
+    const key = idempotencyKey();
+    assert.equal(typeof key, "string");
+    assert.ok(key.length > 8 && key !== idempotencyKey());
+  } finally {
+    Object.defineProperty(crypto, "randomUUID", { configurable: true, writable: true, value: original });
+  }
+});
+
+
+test("연령대 판정은 표본이 모자라거나 흔들리면 제안하지 않는다", () => {
+  // 한 프레임 추정은 몇 살씩 튀므로 중앙값으로 본다 — 68이 하나 섞여도 제안하지 않는다.
+  assert.equal(isSeniorAge([34, 41, 68]), false);
+  assert.equal(isSeniorAge([64, 67, 71]), true);
+  // 기준(62) 바로 아래는 제안하지 않는다.
+  assert.equal(isSeniorAge([58, 61, 61]), false);
+  // 표본이 모자라면 값이 아무리 높아도 판정하지 않는다.
+  assert.equal(isSeniorAge([80, 82]), false);
+  assert.equal(isSeniorAge([]), false);
 });

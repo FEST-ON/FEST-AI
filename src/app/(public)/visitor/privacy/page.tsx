@@ -10,6 +10,7 @@ import {
   updateConsents,
 } from "@/features/privacy/api/privacy";
 import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
+import { useWrite } from "@/shared/lib/use-write";
 import { Button } from "@/shared/ui/button";
 import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
 import { Switch } from "@/shared/ui/switch";
@@ -29,10 +30,10 @@ export default function VisitorPrivacyPage() {
   const requests = useQuery({ queryKey: ["privacy-requests"], queryFn: fetchPrivacyRequests });
   const [detail, setDetail] = useState("");
 
-  const consent = useMutation({
-    mutationFn: (next: Record<string, boolean>) => updateConsents(next),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["privacy-notice"] }),
+  const consent = useWrite((next: Record<string, boolean>) => updateConsents(next), {
+    invalidates: ["privacy-notice"],
   });
+  // 접수 결과가 목록에 바로 드러나므로 알림은 띄우지 않는다(meta.silent).
   const request = useMutation({
     mutationFn: (type: "ACCESS" | "DELETE") => createPrivacyRequest(type, detail || undefined),
     meta: { silent: true },
@@ -75,16 +76,16 @@ export default function VisitorPrivacyPage() {
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground">
                             {translated[`${item.key}.label`] ?? item.label}
-                            <span className="ml-1.5 text-[10px] font-medium text-muted-foreground">{item.featureId}</span>
+                            <span className="ml-1.5 text-[0.625rem] font-medium text-muted-foreground">{item.featureId}</span>
                           </p>
                           <p className="mt-1 text-xs leading-5 text-muted-foreground">
                             {translated[`${item.key}.basis`] ?? item.basis}
                           </p>
-                          <p className="mt-1 text-[11px] text-muted-foreground">
+                          <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                             {t.privacy.retentionLabel}: {translated[`${item.key}.retention`] ?? item.retention}
                           </p>
                           {item.notice && (
-                            <p className="mt-1 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                            <p className="mt-1 text-[0.6875rem] font-medium text-amber-700">
                               {translated[`${item.key}.notice`] ?? item.notice}
                             </p>
                           )}
@@ -96,7 +97,7 @@ export default function VisitorPrivacyPage() {
                             aria-label={item.label}
                           />
                         ) : (
-                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-bold text-muted-foreground">
                             {t.privacy.required}
                           </span>
                         )}
@@ -106,7 +107,7 @@ export default function VisitorPrivacyPage() {
                 })}
               </div>
               {consent.data && Object.values(consent.data.purged).some((count) => count > 0) && (
-                <p className="mt-2 text-[11px] font-medium text-primary">{t.privacy.purgedNotice}</p>
+                <p className="mt-2 text-[0.6875rem] font-medium text-primary">{t.privacy.purgedNotice}</p>
               )}
             </section>
 
@@ -131,7 +132,7 @@ export default function VisitorPrivacyPage() {
       <section className="mt-6">
         <h2 className="text-sm font-bold text-foreground">{t.privacy.requestTitle}</h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">{t.privacy.requestDescription}</p>
-        <p className="mt-1 text-[11px] leading-5 text-amber-700 dark:text-amber-400">{t.privacy.requestExcluded}</p>
+        <p className="mt-1 text-[0.6875rem] leading-5 text-amber-700">{t.privacy.requestExcluded}</p>
         <Textarea
           value={detail}
           onChange={(event) => setDetail(event.target.value)}
@@ -165,16 +166,16 @@ export default function VisitorPrivacyPage() {
                     <span className="font-semibold text-foreground">
                       {row.requestType === "DELETE" ? t.privacy.requestDelete : t.privacy.requestAccess}
                     </span>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-bold text-muted-foreground">
                       {t.privacy.status[row.status]}
                     </span>
                   </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                     {new Date(row.createdAt).toLocaleString(bcp47)}
                     {row.handledAt && ` → ${new Date(row.handledAt).toLocaleString(bcp47)}`}
                   </p>
                   {row.result?.collected && (
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                       {Object.entries(row.result.collected)
                         .map(([key, value]) => `${key} ${value}`)
                         .join(" · ")}

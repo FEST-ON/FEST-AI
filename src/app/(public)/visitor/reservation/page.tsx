@@ -1,27 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Clock, Info, MapPin, Ticket, Users, X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
+import { useWrite } from "@/shared/lib/use-write";
 import { Badge } from "@/shared/ui/badge";
 import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { cancelBooking, createBooking, fetchBookableSessions, fetchVisitorBookings, MAX_PARTY_SIZE, type VisitorBooking } from "@/features/reservation";
-import { BOOKING_CANCEL_DEADLINE_MINUTES, BOOKING_NO_SHOW_GRACE_MINUTES } from "@/shared/lib/booking-policy";
+import { BOOKING_CANCEL_DEADLINE_MINUTES, BOOKING_NO_SHOW_GRACE_MINUTES, isCancelDeadlinePassed } from "@/shared/lib/booking-policy";
+import { useNow } from "@/shared/lib/use-now";
 import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
 import type { Dictionary } from "@/shared/lib/i18n";
 
 export default function ReservationPage() {
   const { t, locale, bcp47 } = useTranslation();
-  const queryClient = useQueryClient();
   const bookings = useQuery({ queryKey: ["visitor-bookings"], queryFn: fetchVisitorBookings });
   const sessions = useQuery({ queryKey: ["bookable-sessions"], queryFn: fetchBookableSessions });
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["visitor-bookings"] });
-  const issue = useMutation({ mutationFn: createBooking, onSuccess: refresh });
+  const issue = useWrite(createBooking, { invalidates: ["visitor-bookings"] });
   // 예약 인원은 정원 계산에 그대로 들어간다. 예전에는 화면이 항상 1명으로 고정해 보냈다.
   const [partySizes, setPartySizes] = useState<Record<string, number>>({});
-  const cancel = useMutation({ mutationFn: cancelBooking, onSuccess: refresh });
+  // 취소 마감(시작 30분 전)이 지나면 버튼이 스스로 닫혀야 한다 — 서버도 같은 시각에 거절한다.
+  const now = useNow(60_000);
+  const cancel = useWrite(cancelBooking, { invalidates: ["visitor-bookings"] });
 
   // 프로그램·구역명은 운영자가 등록한 값이라 사전에 없다 — 요청 시점에 자동 번역한다.
   const { translated: text } = useAutoTranslate(
@@ -61,6 +63,7 @@ export default function ReservationPage() {
                 areaName={text[`${booking.id}.area`] ?? booking.areaName}
                 t={t}
                 bcp47={bcp47}
+                now={now}
                 onCancel={() => cancel.mutate(booking.id)}
               />
             ))}
@@ -121,19 +124,21 @@ export default function ReservationPage() {
       </ul>
     </section>
 
-    <Badge variant="outline" className="mt-3 w-full justify-center py-2 text-[11px] text-muted-foreground">{t.reservation.autoRefreshNotice}</Badge>
+    <Badge variant="outline" className="mt-3 w-full justify-center py-2 text-[0.6875rem] text-muted-foreground">{t.reservation.autoRefreshNotice}</Badge>
   </div>;
 }
 
-function BookingCard({ booking, title, areaName, t, bcp47, onCancel }: {
+function BookingCard({ booking, title, areaName, t, bcp47, now, onCancel }: {
   booking: VisitorBooking;
   title: string;
   areaName: string;
   t: Dictionary;
   bcp47: string;
+  now: number;
   onCancel: () => void;
 }) {
-  const canCancel = booking.status === "CONFIRMED" || booking.status === "WAITING";
+  const cancellableStatus = booking.status === "CONFIRMED" || booking.status === "WAITING";
+  const canCancel = cancellableStatus && !isCancelDeadlinePassed(booking.startsAt, now);
   return <article className="rounded-2xl border border-border bg-card p-4">
     <div className="flex items-start justify-between gap-3">
       <div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-2xl font-extrabold text-primary">{booking.queueNumber ? t.reservation.ticketNumber(booking.queueNumber) : t.reservation.bookedWithoutNumber}</p></div>

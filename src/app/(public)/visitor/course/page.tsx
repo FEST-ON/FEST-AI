@@ -73,21 +73,21 @@ export default function VisitorCoursePage() {
             <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
               <Route className="size-4" /> {t.course.resultTitle}
             </h2>
-            <Badge variant="outline" className="text-[10px]">{t.course.resultCount(plan.data.items.length)}</Badge>
+            <Badge variant="outline" className="text-[0.625rem]">{t.course.resultCount(plan.data.items.length)}</Badge>
           </div>
           <ol className="space-y-2">
             {plan.data.items.map((item) => (
               <li key={item.id} className="flex gap-3 rounded-xl border border-border bg-card p-3">
-                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-primary text-[0.6875rem] font-bold text-primary-foreground">
                   {item.sequenceNo}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-foreground">{item.program.title}</p>
-                  <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                  <div className="mt-1 flex flex-wrap gap-3 text-[0.6875rem] text-muted-foreground">
                     <span className="flex items-center gap-1"><Clock className="size-3" /> {time(item.program.startsAt)} - {time(item.program.endsAt)}</span>
                     <span className="flex items-center gap-1"><MapPin className="size-3" /> {item.program.areaName}</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-primary">{item.recommendationReason}</p>
+                  <p className="mt-1 text-[0.6875rem] text-primary">{item.recommendationReason}</p>
                 </div>
               </li>
             ))}

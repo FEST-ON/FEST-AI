@@ -17,7 +17,7 @@ export function FestivalHero() {
   });
 
   return (
-    <section className="mt-12 rounded-2xl bg-primary p-8 text-primary-foreground sm:p-10 lg:mt-16">
+    <section className="bg-brand-gradient-ink mt-12 rounded-2xl p-8 text-primary-foreground sm:p-10 lg:mt-16">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-primary-foreground/70">

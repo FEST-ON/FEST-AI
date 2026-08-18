@@ -30,9 +30,9 @@ export function EmergencyAnnouncementBanner() {
   if (emergencyNotices.length === 0) return null;
 
   return (
-    <div className="sticky top-0 z-40 flex flex-col divide-y divide-red-200 border-b border-red-200 bg-red-50 dark:divide-red-900 dark:border-red-900 dark:bg-red-950/40">
+    <div className="sticky top-0 z-40 flex flex-col divide-y divide-red-200 border-b border-red-200 bg-red-50">
       {emergencyNotices.map((notice) => (
-        <div key={notice.id} className="flex items-start gap-2.5 px-4 py-2.5 text-red-800 dark:text-red-200">
+        <div key={notice.id} className="flex items-start gap-2.5 px-4 py-2.5 text-red-800">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-wide">{t.notification.emergencyBadge}</p>
@@ -45,7 +45,7 @@ export function EmergencyAnnouncementBanner() {
             type="button"
             aria-label={t.notification.emergencyDismissAria}
             onClick={() => setDismissedIds((current) => [...current, notice.id])}
-            className="shrink-0 rounded-full p-1 hover:bg-red-200/60 dark:hover:bg-red-900/60"
+            className="shrink-0 rounded-full p-1 hover:bg-red-200/60"
           >
             <X className="size-4" />
           </button>

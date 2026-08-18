@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Eye, EyeOff, MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   MAP_LOCATION_CATEGORIES,
@@ -14,11 +14,14 @@ import {
   type MapLocationInput,
 } from "@/features/map/api/map-locations";
 import { Button } from "@/shared/ui/button";
+import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
+import { Form, SubmitButton } from "@/shared/ui/form";
 import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
+import { useWrite } from "@/shared/lib/use-write";
 import {
   Dialog,
   DialogContent,
@@ -77,7 +80,6 @@ function LocationForm({ value, onChange }: { value: MapLocationInput; onChange: 
 }
 
 export function MapLocationAdminPanel() {
-  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MapLocation | null>(null);
   const [form, setForm] = useState<MapLocationInput>(EMPTY_FORM);
@@ -86,16 +88,15 @@ export function MapLocationAdminPanel() {
     queryFn: () => fetchMapLocations({ includeHidden: true }),
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-map-locations"] });
-  const saveMutation = useMutation({
-    mutationFn: () => editing ? updateMapLocation(editing.id, form) : createMapLocation(form),
-    onSuccess: () => { refresh(); setDialogOpen(false); },
+  const invalidates = ["admin-map-locations"];
+  const saveMutation = useWrite(() => (editing ? updateMapLocation(editing.id, form) : createMapLocation(form)), {
+    invalidates, onSuccess: () => setDialogOpen(false),
   });
-  const deleteMutation = useMutation({ mutationFn: deleteMapLocation, onSuccess: refresh });
-  const visibilityMutation = useMutation({
-    mutationFn: (location: MapLocation) => updateMapLocation(location.id, { ...location, isVisible: !location.isVisible }),
-    onSuccess: refresh,
-  });
+  const deleteMutation = useWrite(deleteMapLocation, { invalidates });
+  const visibilityMutation = useWrite(
+    (location: MapLocation) => updateMapLocation(location.id, { ...location, isVisible: !location.isVisible }),
+    { invalidates },
+  );
 
   function openCreate() {
     setEditing(null);
@@ -117,8 +118,7 @@ export function MapLocationAdminPanel() {
     setDialogOpen(true);
   }
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  function handleSubmit() {
     if (!form.name.trim() || !Number.isFinite(form.latitude) || !Number.isFinite(form.longitude)) return;
     saveMutation.mutate();
   }
@@ -128,7 +128,7 @@ export function MapLocationAdminPanel() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2"><MapPinned className="size-5 text-primary" /><h2 className="text-base font-bold text-foreground">지도 부스 지점 관리</h2></div>
-          <p className="mt-1 text-xs text-muted-foreground">DB에 저장된 좌표를 방문객 카카오맵 마커로 표시합니다.</p>
+          <p className="mt-1 text-xs text-muted-foreground">DB에 저장된 좌표를 방문객 카카오맵 마커로 표시해요.</p>
         </div>
         <Button onClick={openCreate}><Plus />지점 추가</Button>
       </div>
@@ -146,19 +146,19 @@ export function MapLocationAdminPanel() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{categoryLabel(location.category)}</span>
-                      {!location.isVisible && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">비공개</span>}
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[0.625rem] font-bold text-primary">{categoryLabel(location.category)}</span>
+                      {!location.isVisible && <span className="rounded-full bg-muted px-2 py-0.5 text-[0.625rem] font-bold text-muted-foreground">비공개</span>}
                     </div>
                     <h3 className="mt-2 truncate text-sm font-bold text-foreground">{location.name}</h3>
                   </div>
                   <MapPinned className="size-5 shrink-0 text-muted-foreground" />
                 </div>
-                <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{location.description || "등록된 안내 문구가 없습니다."}</p>
-                <p className="mt-2 font-mono text-[10px] text-muted-foreground">{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
+                <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{location.description || "등록된 안내 문구가 없어요."}</p>
+                <p className="mt-2 font-mono text-[0.625rem] text-muted-foreground">{location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</p>
                 <div className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-3">
                   <Button variant="ghost" size="sm" onClick={() => visibilityMutation.mutate(location)} aria-label={location.isVisible ? "지도에서 숨기기" : "지도에 공개하기"}>{location.isVisible ? <Eye /> : <EyeOff />}{location.isVisible ? "공개" : "비공개"}</Button>
                   <Button variant="ghost" size="icon-sm" onClick={() => openEdit(location)} aria-label="지점 수정"><Pencil /></Button>
-                  <Button variant="destructive" size="icon-sm" onClick={() => window.confirm(`${location.name} 지점을 삭제할까요?`) && deleteMutation.mutate(location.id)} aria-label="지점 삭제"><Trash2 /></Button>
+                  <ConfirmButton variant="destructive" size="icon-sm" title="지점을 삭제할까요?" description={`${location.name} 지점을 지우면 방문객 지도에서도 사라져요.`} confirmLabel="삭제" onConfirm={() => deleteMutation.mutate(location.id)} aria-label="지점 삭제"><Trash2 /></ConfirmButton>
                 </div>
               </article>
             ))}
@@ -168,12 +168,12 @@ export function MapLocationAdminPanel() {
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleSubmit}>
+          <Form onSubmit={handleSubmit}>
             <DialogHeader><DialogTitle>{editing ? "부스 지점 수정" : "새 부스 지점 추가"}</DialogTitle><DialogDescription>카카오맵에 표시할 좌표와 방문객 안내 정보를 입력하세요.</DialogDescription></DialogHeader>
             <LocationForm value={form} onChange={setForm} />
-            {saveMutation.isError && <p className="mb-3 text-xs font-medium text-destructive">저장하지 못했습니다. 백엔드 API 연결 상태를 확인해주세요.</p>}
-            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>취소</Button><Button type="submit" disabled={saveMutation.isPending}>{saveMutation.isPending ? "저장 중…" : "저장"}</Button></DialogFooter>
-          </form>
+            {saveMutation.isError && <p className="mb-3 text-xs font-medium text-destructive">저장하지 못했어요. 백엔드 API 연결 상태를 확인해 주세요.</p>}
+            <DialogFooter><Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>취소</Button><SubmitButton mutation={saveMutation} size="default" pending="저장 중…">저장</SubmitButton></DialogFooter>
+          </Form>
         </DialogContent>
       </Dialog>
     </section>

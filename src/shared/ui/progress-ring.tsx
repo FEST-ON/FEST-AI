@@ -7,6 +7,7 @@ interface ProgressRingProps {
   className?: string;
   label?: string;
   sublabel?: string;
+  tone?: "primary" | "esg";
 }
 
 export function ProgressRing({
@@ -16,6 +17,7 @@ export function ProgressRing({
   className,
   label,
   sublabel,
+  tone = "primary",
 }: ProgressRingProps) {
   const clamped = Math.min(100, Math.max(0, value));
   const radius = (size - strokeWidth) / 2;
@@ -40,7 +42,7 @@ export function ProgressRing({
           fill="none"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          className="stroke-primary transition-[stroke-dashoffset] duration-700 ease-out"
+          className={`${tone === "esg" ? "stroke-esg" : "stroke-primary"} transition-[stroke-dashoffset] duration-700 ease-out`}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
         />

@@ -9,16 +9,11 @@ import { useForm } from "@/shared/lib/use-form";
 import { cn } from "@/shared/lib/utils";
 import { queryErrorMessage } from "@/shared/ui/query-state";
 import { Button } from "@/shared/ui/button";
+import { iconTileClass, iconTileLabelClass } from "@/shared/ui/icon-tile";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
+import { SelectField } from "@/shared/ui/select-field";
 import {
   Sheet,
   SheetContent,
@@ -69,16 +64,10 @@ export function ComplaintSheet({
       }}
     >
       <SheetTrigger
-        render={
-          <Button
-            variant="outline"
-            size="icon"
-            className={cn("rounded-full", triggerClassName)}
-            aria-label={t.complaint.ariaLabel}
-          />
-        }
+        render={<Button variant="ghost" className={cn(iconTileClass, triggerClassName)} aria-label={t.complaint.ariaLabel} />}
       >
-        <MessageSquareWarning className="size-3.5" />
+        <MessageSquareWarning className="size-5" />
+        <span className={iconTileLabelClass}>{t.complaint.shortLabel}</span>
       </SheetTrigger>
       <SheetContent side="bottom" className="mx-auto max-w-md rounded-t-3xl">
         {submit.isSuccess ? (
@@ -120,23 +109,12 @@ export function ComplaintSheet({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-semibold">{t.complaint.categoryLabel}</Label>
-                <Select
+                <SelectField
                   value={form.category}
-                  onValueChange={(v) => set("category")(v as (typeof CATEGORIES)[number])}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue>
-                      {(value: unknown) => t.complaint.categories[value as string] ?? value}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {t.complaint.categories[c]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onValueChange={(value) => set("category")(value as (typeof CATEGORIES)[number])}
+                  options={CATEGORIES.map((c) => ({ value: c, label: t.complaint.categories[c] }))}
+                  aria-label={t.complaint.categoryLabel}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label
@@ -156,7 +134,7 @@ export function ComplaintSheet({
             <SheetFooter>
               {submit.error && (
                 <p className="text-xs text-destructive" role="alert">
-                  {queryErrorMessage(submit.error, "민원 접수에 실패했습니다.")}
+                  {queryErrorMessage(submit.error, "민원을 접수하지 못했어요.")}
                 </p>
               )}
               <Button disabled={!canSubmit || submit.isPending} onClick={() => submit.mutate()}>

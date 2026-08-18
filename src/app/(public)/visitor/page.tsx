@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { BadgePercent, CalendarDays, MapPin, Route, Sparkles, Store, Ticket, Stamp, ClipboardList, ArrowRight, ShieldCheck } from "lucide-react";
+import { CalendarDays, MapPin, Route, Recycle, Sparkles, Store, Ticket, Stamp, ClipboardList, ArrowRight, ShieldCheck } from "lucide-react";
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { CrowdList } from "@/features/crowd/ui/crowd-list";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
@@ -29,7 +29,7 @@ const QUICK_MENU: {
   { href: "/visitor/course", labelKey: "course", icon: Route, kiosk: true },
   { href: "/visitor/reservation", labelKey: "reservation", icon: Ticket, kiosk: false, menuKey: "reservation" },
   { href: "/visitor/stamp-tour", labelKey: "stampTour", icon: Stamp, kiosk: false, menuKey: "stampTour" },
-  { href: "/visitor/coupons", labelKey: "coupons", icon: BadgePercent, kiosk: false, menuKey: "coupons" },
+  { href: "/visitor/coupons", labelKey: "coupons", icon: Recycle, kiosk: false, menuKey: "coupons" },
   { href: "/visitor/nearby", labelKey: "nearby", icon: Store, kiosk: true, menuKey: "nearby" },
   { href: "/visitor/survey", labelKey: "survey", icon: ClipboardList, kiosk: false, menuKey: "survey" },
 ];
@@ -115,7 +115,7 @@ export default function VisitorHomePage() {
             <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Icon className="size-4.5" />
             </span>
-            <span className="text-[11px] font-semibold text-foreground">{t.home.quickMenu[labelKey]}</span>
+            <span className="text-[11px] font-semibold text-foreground">{labelKey === "coupons" ? "ESG 순환" : t.home.quickMenu[labelKey]}</span>
           </Link>
         ))}
       </div>

@@ -13,7 +13,7 @@ interface SpeechRecognitionLike {
   onresult: ((event: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
   onerror: ((event: { error: string }) => void) | null;
   onend: (() => void) | null;
-  start: () => void;
+  start: (audioTrack?: MediaStreamTrack) => void;
   stop: () => void;
   abort: () => void;
 }
@@ -35,10 +35,12 @@ interface UseSpeechRecognitionOptions {
 
 export function useSpeechRecognition({ bcp47, t, onFinalResult }: UseSpeechRecognitionOptions) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const microphoneRef = useRef<MediaStream | null>(null);
   const finalTranscriptRef = useRef("");
   const onFinalResultRef = useRef(onFinalResult);
   const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -52,13 +54,21 @@ export function useSpeechRecognition({ bcp47, t, onFinalResult }: UseSpeechRecog
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  useEffect(() => () => recognitionRef.current?.abort(), []);
+  const releaseMicrophone = useCallback(() => {
+    microphoneRef.current?.getTracks().forEach((track) => track.stop());
+    microphoneRef.current = null;
+  }, []);
+
+  useEffect(() => () => {
+    recognitionRef.current?.abort();
+    releaseMicrophone();
+  }, [releaseMicrophone]);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const Recognition = getRecognitionConstructor();
     if (!Recognition) {
       setError(t.aiGuide.errors.unsupported);
@@ -69,6 +79,24 @@ export function useSpeechRecognition({ bcp47, t, onFinalResult }: UseSpeechRecog
     finalTranscriptRef.current = "";
     setInterimTranscript("");
     setError(null);
+    setIsPreparing(true);
+
+    try {
+      releaseMicrophone();
+      microphoneRef.current = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          noiseSuppression: { ideal: true },
+          echoCancellation: { ideal: true },
+          autoGainControl: { ideal: true },
+          channelCount: { ideal: 1 },
+        },
+      });
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : "";
+      setError(name === "NotAllowedError" ? t.aiGuide.errors.notAllowed : t.aiGuide.errors.audioCapture);
+      setIsPreparing(false);
+      return;
+    }
 
     const recognition = new Recognition();
     recognition.lang = bcp47;
@@ -101,6 +129,7 @@ export function useSpeechRecognition({ bcp47, t, onFinalResult }: UseSpeechRecog
       setIsListening(false);
       setInterimTranscript("");
       recognitionRef.current = null;
+      releaseMicrophone();
 
       const transcript = finalTranscriptRef.current.trim();
       finalTranscriptRef.current = "";
@@ -110,13 +139,16 @@ export function useSpeechRecognition({ bcp47, t, onFinalResult }: UseSpeechRecog
     recognitionRef.current = recognition;
 
     try {
-      recognition.start();
+      recognition.start(microphoneRef.current.getAudioTracks()[0]);
     } catch {
       recognitionRef.current = null;
+      releaseMicrophone();
       setIsListening(false);
       setError(t.aiGuide.errors.startFailed);
+    } finally {
+      setIsPreparing(false);
     }
-  }, [bcp47, t]);
+  }, [bcp47, releaseMicrophone, t]);
 
-  return { error, interimTranscript, isListening, isSupported, startListening, stopListening };
+  return { error, interimTranscript, isListening, isPreparing, isSupported, startListening, stopListening };
 }

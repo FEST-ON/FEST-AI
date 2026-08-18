@@ -1,10 +1,11 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: ca3412d10928fdf8
+// ko.ts sha256: 9164cf0330c761d0
 import type { ko } from "./ko";
 
 export const ja: typeof ko = {
   common: {
     loadFailed: "読み込めませんでした。しばらくしてからもう一度お試しください。",
+    back: "戻る",
     retry: "再試行",
     empty: "表示する内容がありません。",
     close: "閉じる",
@@ -173,6 +174,7 @@ export const ja: typeof ko = {
   },
   area: {
     ariaLabel: "現在のエリア設定",
+    shortLabel: "エリア",
     title: "現在のエリア",
     description: "エリアを選ぶと、そのエリア向けのお知らせも届きます。",
     unknown: "エリア未設定",
@@ -203,7 +205,8 @@ export const ja: typeof ko = {
     status: { RECEIVED: "受付", IN_PROGRESS: "処理中", COMPLETED: "完了", REJECTED: "却下" },
   },
   accessibility: {
-    ariaLabel: "アクセシビリティ設定",
+    ariaLabel: "言語とアクセシビリティ設定",
+    shortLabel: "言語・設定",
     sheetTitle: "利用環境・アクセシビリティ",
     sheetDescription: "デバイスの利用方法、言語、文字サイズ、音声案内を設定できます。",
     kioskLabel: "キオスク簡易モード",
@@ -221,8 +224,25 @@ export const ja: typeof ko = {
     highContrastLabel: "ハイコントラストモード",
     highContrastHelper: "文字と背景のコントラストを最大にします",
   },
+  kioskAssist: {
+    consentTitle: "画面の文字を大きくしますか？",
+    consentDescription: "カメラで少し確認して、ちょうどよい文字サイズをご提案します。使わなくてもすべての機能をご利用いただけます。",
+    consentAccept: "カメラで確認",
+    consentDecline: "大丈夫です、このまま使います",
+    manualLargeText: "すぐ大きな文字に",
+    checking: "確認中…",
+    noticeOnDevice: "確認はこのキオスク内だけで行われ、画像が外部に出ることはありません。",
+    noticeDiscard: "映像と顔の情報は保存せず、確認後すぐに消去します。",
+    noticeNoIdentity: "誰かを特定せず、料金や利用資格にも使いません。",
+    noticeOptional: "カメラを使わなくても、下のボタンで大きな文字にできます。",
+    suggestTitle: "大きな文字にしますか？",
+    suggestDescription: "文字とボタンを大きく表示します。今の画面のままでも大丈夫です。",
+    suggestAccept: "大きな文字で見る",
+    suggestDecline: "今のままでいいです",
+  },
   complaint: {
     ariaLabel: "苦情の送信",
+    shortLabel: "苦情",
     thanksTitle: "苦情を受け付けました",
     thanksDescription: "担当者の割り当て後、順次対応します。受付状況は運営チームが確認します。",
     closeButton: "閉じる",
@@ -246,6 +266,7 @@ export const ja: typeof ko = {
   notification: {
     pinnedBadge: "緊急固定",
     autoCloseAt: (value: string) => `${value} に自動解除`,
+    shortLabel: "通知",
     ariaLabel: (n: number) => `通知${n}件`,
     sheetTitle: "通知",
     sheetDescription: "お知らせと予約呼び出し履歴を確認できます。",
@@ -293,18 +314,23 @@ export const ja: typeof ko = {
     keyboardCloseAria: "キーボード入力を閉じる",
     keyboardOpenAria: "キーボードで質問する",
     listeningPlaceholder: "聞き取り中…",
+    preparingMicrophone: "ノイズ抑制マイクを準備しています…",
     idlePrompt: "マイクを押して質問してください",
+    confirmVoicePrompt: "認識された質問を確認または修正してください",
     textInputAria: "Alan AIにテキストで質問する",
     textInputPlaceholder: "質問を入力してください",
     sendAria: "質問を送信",
-    statusListening: "音声を認識しています。質問が終わると自動的に送信されます。",
-    statusIdleSupported: "マイクを押して質問すると、認識後に自動で送信されます。",
+    confirmVoiceAria: "認識された質問を確認して送信",
+    retryVoiceAria: "音声を録音し直す",
+    statusListening: "ノイズを抑えながら音声を認識しています。",
+    statusConfirmVoice: "認識結果を確認して送信するか、録音し直してください。",
+    statusIdleSupported: "マイクを押して質問し、認識結果を確認してください。",
     statusUnsupported: "現在のブラウザではテキストで質問してください。",
     expectedQuestionsLabel: "おすすめの質問",
     voiceGuideOnAnnouncement: "音声案内がオンになりました。",
     autoSwitchNotice: (language: string) => `音声を認識し、案内を${language}に切り替えました。`,
     autoSwitchRevertAria: (language: string) => `${language}の案内に戻す`,
-    welcomeContent: "こんにちは！Perso AIフェスティバルガイドです。日程、交通、施設、安全情報などお気軽にお尋ねください。",
+    welcomeContent: "こんにちは！Alan AIフェスティバルガイドです。日程、交通、施設、安全情報などお気軽にお尋ねください。",
     welcomeTimestamp: "たった今",
     welcomeSource: "フェスティバル運営承認情報",
     replyFailed: "案内情報を取得できませんでした。しばらくしてからもう一度お試しください。",

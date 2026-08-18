@@ -97,13 +97,13 @@ export default function VisitorMapPage() {
                     <p className="text-xs text-muted-foreground">{f.location}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <Badge variant="outline" className="text-[10px]">
+                    <Badge variant="outline" className="text-[0.625rem]">
                       {t.festivalData.facilityType[f.type] ?? f.type}
                     </Badge>
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-[0.6875rem] text-muted-foreground">
                       {open === null ? hours ?? t.map.facilityHoursUnknown : open ? t.map.facilityOpen : t.map.facilityClosed}
                     </span>
-                    {open !== null && hours && <span className="text-[10px] text-muted-foreground">{hours}</span>}
+                    {open !== null && hours && <span className="text-[0.625rem] text-muted-foreground">{hours}</span>}
                   </div>
                 </div>
               );
@@ -112,7 +112,7 @@ export default function VisitorMapPage() {
         </TabsContent>
 
         <TabsContent value="transport" className="mt-3 space-y-2">
-          <p className="rounded-xl border border-dashed border-border p-2.5 text-center text-[11px] text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border p-2.5 text-center text-[0.6875rem] text-muted-foreground">
             {t.map.transportNotice}
           </p>
           {tLoading || !transport ? (
@@ -125,7 +125,7 @@ export default function VisitorMapPage() {
                   key={option.id}
                   className="flex items-start gap-3 rounded-xl border border-border bg-card p-3"
                 >
-                  <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/25">
+                  <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">

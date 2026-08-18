@@ -7,8 +7,8 @@ import { Star, CheckCircle2 } from "lucide-react";
 import { fetchSurveyQuestions, hasSurveyAnswer, submitSurvey } from "@/entities/visitor";
 import type { SurveyAnswer, SurveyQuestion } from "@/entities/visitor";
 import { useTranslation } from "@/shared/lib/i18n";
-import { Button } from "@/shared/ui/button";
-import { QueryState, queryErrorMessage } from "@/shared/ui/query-state";
+import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
+import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
@@ -25,7 +25,7 @@ export default function SurveyPage() {
   if (submit.isSuccess) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-        <span className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950">
+        <span className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
           <CheckCircle2 className="size-7" />
         </span>
         <h2 className="text-base font-bold text-foreground">{t.survey.thanksTitle}</h2>
@@ -40,7 +40,7 @@ export default function SurveyPage() {
       <p className="text-xs text-muted-foreground">{t.survey.subtitle}</p>
 
       {/* VIS-10·OPS-11: 익명 처리와 열람·삭제 요구 제외 범위를 수집 시점에 고지한다. */}
-      <p className="mt-3 rounded-xl bg-muted/60 p-3 text-[11px] leading-5 text-muted-foreground">
+      <p className="mt-3 rounded-xl bg-muted/60 p-3 text-[0.6875rem] leading-5 text-muted-foreground">
         {t.survey.anonymousNotice}{" "}
         <Link href="/visitor/privacy" className="font-semibold text-primary underline">
           {t.privacy.title}
@@ -56,13 +56,7 @@ export default function SurveyPage() {
         empty={t.common.empty}
       >
         {(questions) => (
-          <form
-            className="mt-4 space-y-5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              submit.mutate(questions);
-            }}
-          >
+          <Form className="mt-4 space-y-5" onSubmit={() => submit.mutate(questions)}>
             {questions.map((q) => (
               <div key={q.id} className="rounded-xl border border-border bg-card p-4">
                 <p className="text-sm font-semibold text-foreground">{q.question}</p>
@@ -145,15 +139,17 @@ export default function SurveyPage() {
                 )}
               </div>
             ))}
-            {submit.error && <p className="text-sm text-destructive">{queryErrorMessage(submit.error, t.survey.submitError)}</p>}
-            <Button
-              type="submit"
+            <ErrorText error={submit.error} fallback={t.survey.submitError} className="text-sm" />
+            <SubmitButton
+              mutation={submit}
+              size="default"
               className="w-full"
-              disabled={submit.isPending || questions.some((question) => question.required && !hasSurveyAnswer(answers[question.id]))}
+              pending={t.survey.submitting}
+              disabled={questions.some((question) => question.required && !hasSurveyAnswer(answers[question.id]))}
             >
-              {submit.isPending ? t.survey.submitting : t.survey.submit}
-            </Button>
-          </form>
+              {t.survey.submit}
+            </SubmitButton>
+          </Form>
         )}
       </QueryState>
     </div>
