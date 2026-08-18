@@ -35,7 +35,8 @@ export function fetchBusinessRecommendations({ latitude, longitude, category, ac
     params.set("longitude", String(longitude));
   }
   if (category) params.set("category", category);
-  if (accessibilityRequired) params.set("accessibilityRequired", "true");
+  // 서버 쿼리 이름은 snake_case다 — camelCase로 보내면 FastAPI가 조용히 무시한다.
+  if (accessibilityRequired) params.set("accessibility_required", "true");
   return publicApi<RecommendationResult>(`/public/festivals/${FESTIVAL_CODE}/business-recommendations?${params}`);
 }
 

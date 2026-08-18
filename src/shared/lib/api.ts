@@ -285,6 +285,14 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
   return result;
 }
 
+/**
+ * 멱등키. crypto.randomUUID는 보안 컨텍스트(https·localhost)에서만 존재해서, 현장에서
+ * 폰이 http://<LAN IP>로 접속하면 예약·쿠폰 발급·스탬프가 전부 TypeError로 죽었다.
+ */
+export function idempotencyKey() {
+  return crypto.randomUUID?.() ?? `k-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 /** JSON 본문 요청 init. `{ method, body: JSON.stringify(...) }` 반복을 줄인다. */
 export function json(method: "POST" | "PATCH" | "PUT" | "DELETE", body: unknown): RequestInit {
   return { method, body: JSON.stringify(body) };

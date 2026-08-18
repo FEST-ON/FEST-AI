@@ -43,9 +43,9 @@ import { cn, datetimeLocal, seoulDate, seoulDateTime, toIso } from "@/shared/lib
 import { artifactOf, downloadArtifact, formatBytes } from "@/shared/lib/download-artifact";
 
 const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
-  환경: { icon: Leaf, tone: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300" },
-  사회: { icon: Users, tone: "text-primary bg-primary/10 dark:bg-primary/25 dark:text-primary-tint" },
-  거버넌스: { icon: Scale, tone: "text-foreground bg-muted dark:bg-muted dark:text-foreground" },
+  환경: { icon: Leaf, tone: "text-esg-tint bg-esg/12" },
+  사회: { icon: Users, tone: "text-primary bg-primary/10" },
+  거버넌스: { icon: Scale, tone: "text-foreground bg-muted" },
 };
 
 const PILLARS: EsgPillar[] = ["환경", "사회", "거버넌스"];
@@ -268,9 +268,9 @@ export default function EsgPage() {
 
       {/* 서버가 계속 내려주던 데이터 품질 경고. 화면이 버리고 있어서 미승인·미등록 지표가 드러나지 않았다. */}
       {(dashboard.data?.dataQualityWarnings.length ?? 0) > 0 && (
-        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+        <section className="rounded-2xl border border-amber-300 bg-amber-50/70 p-4">
           <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" /> 데이터 품질 경고
+            <AlertTriangle className="size-4 text-amber-600" /> 데이터 품질 경고
           </h2>
           <ul className="mt-2 space-y-1">
             {/* 지표가 많은 축제에서 경고가 수십 줄로 늘어지면 오히려 안 읽힌다. 앞부분만 펼친다. */}
@@ -322,13 +322,13 @@ export default function EsgPage() {
                       <div key={metric.id} className="rounded-2xl border border-border bg-card p-4">
                         <div className="flex items-start justify-between">
                           <p className="text-xs font-semibold text-foreground">{metric.name}</p>
-                          {metric.approved ? <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" /> : <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />}
+                          {metric.approved ? <CheckCircle2 className="size-3.5 shrink-0 text-esg-tint" /> : <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />}
                         </div>
                         <p className="mt-2 text-xl font-extrabold text-foreground">
                           {metric.value.toLocaleString()}
                           <span className="ml-0.5 text-xs font-medium text-muted-foreground">{metric.unit}</span>
                         </p>
-                        <Meter percent={pct} className="mt-2 h-1.5" />
+                        <Meter percent={pct} tone="esg" className="mt-2 h-1.5" />
                         <p className="mt-1 text-[0.625rem] text-muted-foreground">목표 {metric.target.toLocaleString()}{metric.unit} 대비 {pct}%</p>
                         <p className="mt-2 truncate text-[0.625rem] text-muted-foreground">출처: {metric.source}</p>
                         <p className="text-[0.625rem] text-muted-foreground">{metric.approved ? `${metric.approvedAt} 승인` : "승인 대기중"}</p>
@@ -578,7 +578,7 @@ export default function EsgPage() {
                     <Download className="size-3.5" /> {reportArtifact.fileName} 내려받기 ({formatBytes(reportArtifact.byteSize)})
                   </Button>
                   {reportArtifact.textLossWarning && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400" role="alert">{reportArtifact.textLossWarning}</p>
+                    <p className="text-xs text-amber-600" role="alert">{reportArtifact.textLossWarning}</p>
                   )}
                 </>
               )}

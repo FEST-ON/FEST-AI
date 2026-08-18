@@ -125,7 +125,7 @@ export default function VisitorMapPage() {
                   key={option.id}
                   className="flex items-start gap-3 rounded-xl border border-border bg-card p-3"
                 >
-                  <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/25">
+                  <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">

@@ -25,16 +25,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   // 하단 탭바가 아이폰 홈 인디케이터와 겹치지 않으려면 safe-area 값을 받아야 한다.
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0147FF" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
-  ],
+  themeColor: "#0147FF",
 };
 
 /**
  * 접근성 설정은 zustand persist(localStorage)라 하이드레이션 뒤에야 반영된다 —
  * 고대비·큰 글씨 사용자가 매번 기본 화면을 한 번 보고 나서 바뀌는 깜빡임을 없애려고
- * 첫 페인트 전에 같은 값을 직접 읽어 붙인다. 다크는 시스템 설정을 따른다.
+ * 첫 페인트 전에 같은 값을 직접 읽어 붙인다.
  */
 const THEME_SCRIPT = `(function(){try{
 var d=document.documentElement;
@@ -42,7 +39,6 @@ var s=JSON.parse(localStorage.getItem("festai-accessibility")||"{}").state||{};
 d.dataset.largeText=String(!!s.largeText);
 d.dataset.highContrast=String(!!s.highContrast);
 if(s.language)d.lang=s.language;
-if(window.matchMedia("(prefers-color-scheme: dark)").matches)d.classList.add("dark");
 }catch(e){}})()`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

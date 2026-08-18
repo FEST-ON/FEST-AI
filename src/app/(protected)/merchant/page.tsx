@@ -102,7 +102,7 @@ function BusinessPanel({ business }: { business: MerchantBusiness }) {
         </StatusPill>
         {business.boothNo && <Badge variant="outline" className="text-[0.625rem]">부스 {business.boothNo}</Badge>}
       </div>
-      {business.reviewComment && <p className="text-xs text-amber-700 dark:text-amber-300">검토 의견: {business.reviewComment}</p>}
+      {business.reviewComment && <p className="text-xs text-amber-700">검토 의견: {business.reviewComment}</p>}
 
       <PerformanceCard businessId={business.id} />
 

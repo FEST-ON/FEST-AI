@@ -80,7 +80,7 @@ export default function AdminCouponsPage() {
           <div className="space-y-2">
             {history.map((redemption) => (
               <div key={redemption.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
-                <BadgeCheck className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <BadgeCheck className="size-4 shrink-0 text-emerald-600" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">{redemption.couponName}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">

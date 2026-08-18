@@ -43,9 +43,9 @@ export default function StampTourPage() {
       <p className="text-xs text-muted-foreground">{t.stampTour.subtitle}</p>
 
       <div className="mt-4 flex flex-col items-center rounded-2xl border border-border bg-card py-6">
-        <ProgressRing value={total ? (collected / total) * 100 : 0} label={`${collected}/${total}`} sublabel={t.stampTour.collectionSubLabel} />
+        <ProgressRing tone="esg" value={total ? (collected / total) * 100 : 0} label={`${collected}/${total}`} sublabel={t.stampTour.collectionSubLabel} />
         {complete && (
-          <Badge className="mt-3 gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
+          <Badge className="mt-3 gap-1 bg-esg/12 text-esg-tint hover:bg-esg/12">
             <PartyPopper className="size-3.5" /> {t.stampTour.completeBadge}
           </Badge>
         )}
@@ -65,7 +65,7 @@ export default function StampTourPage() {
                 <div className="flex items-center gap-3">
                   <span
                     className={`flex size-9 items-center justify-center rounded-full ${
-                      done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                      done ? "bg-esg text-esg-foreground" : "bg-muted text-muted-foreground"
                     }`}
                   >
                     <Stamp className="size-4" />
@@ -159,7 +159,7 @@ export default function StampTourPage() {
             {(points?.ledger ?? []).slice(0, 5).map((entry) => (
               <li key={entry.id} className="flex items-center justify-between text-xs">
                 <span className="truncate text-muted-foreground">{entry.reason}</span>
-                <span className="shrink-0 font-bold text-primary">+{entry.pointsDelta}P</span>
+                <span className="shrink-0 font-bold text-esg-tint">+{entry.pointsDelta}P</span>
               </li>
             ))}
             {(points?.ledger.length ?? 0) === 0 && (
@@ -186,7 +186,7 @@ export default function StampTourPage() {
               <Link
                 key={coupon.id}
                 href="/visitor/coupons"
-                className={`block rounded-xl border p-3 ${usable ? "border-primary/30 bg-primary/6 dark:bg-primary/15" : "border-border bg-muted/50"}`}
+                className={`block rounded-xl border p-3 ${usable ? "border-primary/30 bg-primary/6" : "border-border bg-muted/50"}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate text-sm font-bold text-foreground">{coupon.businessName}</p>

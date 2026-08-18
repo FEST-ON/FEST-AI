@@ -29,8 +29,11 @@ export default function Home() {
       <main id="main" className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 pb-16 pt-6 lg:pt-10 items-center justify-center">
         <section className="lg:text-center">
           <div className="flex flex-col gap-5 lg:items-center">
-            <p className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold uppercase tracking-[0.1em] text-primary">
-              <Sparkles className="size-3.5" />
+            <p className="inline-flex w-fit items-center gap-2 text-sm font-semibold uppercase tracking-[0.1em] text-primary">
+              {/* AI(브랜드 블루)와 ESG(그린) 두 축을 한 마크로 — 아이콘은 장식이라 그라데이션 위 대비를 타지 않는다. */}
+              <span className="bg-brand-gradient inline-flex size-6 items-center justify-center rounded-full text-white">
+                <Sparkles className="size-3.5" />
+              </span>
               AI · ESG 기반 지역축제 DX 플랫폼
             </p>
             <h1 className="max-w-xl text-[40px] font-semibold leading-[1.07] tracking-[-0.022em] text-foreground sm:text-[56px]">

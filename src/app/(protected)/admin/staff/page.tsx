@@ -152,7 +152,7 @@ export default function StaffPage() {
                   </p>
                 </div>
                 {assignment.acknowledgedAt ? (
-                  <Badge className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300">
+                  <Badge className="gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                     <CheckCircle2 className="size-3" /> 확인 완료
                   </Badge>
                 ) : (

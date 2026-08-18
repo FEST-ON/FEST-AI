@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
             <StatCard label="처리 필요 티켓" value={ops.openTickets.toLocaleString()} helper="미해결 민원·사고" icon={TicketIcon} href="/admin/tickets" />
             <StatCard label="승인 참여업체" value={ops.approvedBusinesses.toLocaleString()} helper="축제 참여 승인 완료" icon={Store} href="/admin/businesses" />
             <StatCard label="쿠폰 발급" value={ops.couponIssues.toLocaleString()} helper="참여업체 쿠폰 누적 발급" icon={TicketIcon} href="/admin/businesses" />
-            <StatCard label="ESG 포인트 발급" value={`${ops.pointsIssued.toLocaleString()}P`} helper="리워드 캠페인 누적 지급" icon={Leaf} href="/admin/rewards" />
+            <StatCard label="ESG 포인트 발급" value={`${ops.pointsIssued.toLocaleString()}P`} helper="리워드 캠페인 누적 지급" icon={Leaf} tone="esg" href="/admin/rewards" />
           </div>
         )}
       </QueryState>

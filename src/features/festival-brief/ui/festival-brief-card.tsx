@@ -65,7 +65,7 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
             </div>
 
             {data?.metricLabel && (
-              <div className="flex w-fit items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+              <div className="flex w-fit items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
                 <AlertTriangle className="size-4" />
                 <div>
                   <p className="text-[0.625rem] font-semibold">{data.metricLabel}</p>
@@ -76,9 +76,9 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
 
             {/* 급증 경보는 evidence에 묻히면 안 되는 신호라 서버가 alerts로 따로 뽑아 준다. */}
             {(data?.alerts.length ?? 0) > 0 && (
-              <ul className="space-y-1 rounded-xl border border-red-300 bg-red-50 px-3 py-2 dark:border-red-900 dark:bg-red-950/40" role="alert">
+              <ul className="space-y-1 rounded-xl border border-red-300 bg-red-50 px-3 py-2" role="alert">
                 {data?.alerts.map((alert) => (
-                  <li key={alert} className="flex items-start gap-1.5 text-xs font-semibold leading-5 text-red-800 dark:text-red-100">
+                  <li key={alert} className="flex items-start gap-1.5 text-xs font-semibold leading-5 text-red-800">
                     <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
                     {alert}
                   </li>
@@ -107,14 +107,14 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
                 )}
               </div>
             ) : isError || regenerate.isError ? (
-              <div className="flex items-start gap-3 text-red-800 dark:text-red-100">
-                <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-300" />
+              <div className="flex items-start gap-3 text-red-800">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold leading-6">아직 표시할 위험 브리핑이 없습니다.</p>
-                  <p className="mt-1 text-xs font-medium leading-5 text-red-700 dark:text-red-200">
+                  <p className="mt-1 text-xs font-medium leading-5 text-red-700">
                     운영 위험 신호를 불러오지 못했어요. 축제 접근 권한과 백엔드 상태를 확인해 주세요.
                   </p>
-                  {activeError instanceof Error && <p className="mt-2 text-[0.625rem] text-red-600 dark:text-red-200">{activeError.message}</p>}
+                  {activeError instanceof Error && <p className="mt-2 text-[0.625rem] text-red-600">{activeError.message}</p>}
                 </div>
               </div>
             ) : (

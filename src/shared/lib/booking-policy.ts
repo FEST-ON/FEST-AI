@@ -11,6 +11,16 @@ export function isNoShowDue(calledAt: string | null, now = Date.now()) {
   return now - called >= BOOKING_NO_SHOW_GRACE_MINUTES * 60_000;
 }
 
+/**
+ * 방문객이 직접 취소할 수 있는 시각이 지났는지. 서버(domain.validate_booking_cancel_window)와
+ * 같은 규칙이라, 화면에서 버튼이 열려 있는데 서버가 400을 내는 일이 없다.
+ */
+export function isCancelDeadlinePassed(startsAt: string, now = Date.now()) {
+  const starts = new Date(startsAt).getTime();
+  if (Number.isNaN(starts)) return false;
+  return starts - BOOKING_CANCEL_DEADLINE_MINUTES * 60_000 <= now;
+}
+
 export type BookingAction = "CALLED" | "NO_SHOW" | "COMPLETED";
 
 /**

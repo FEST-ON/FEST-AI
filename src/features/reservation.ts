@@ -1,4 +1,4 @@
-import { FESTIVAL_CODE, festivalApi, festivalApiAll, json, publicApi, visitorApi } from "@/shared/lib/api";
+import { FESTIVAL_CODE, festivalApi, festivalApiAll, idempotencyKey, json, publicApi, visitorApi } from "@/shared/lib/api";
 import type { BookingAction } from "@/shared/lib/booking-policy";
 
 export interface VisitorBooking {
@@ -49,7 +49,7 @@ export const MAX_PARTY_SIZE = 6;
 export function createBooking({ sessionId, partySize = 1 }: { sessionId: string; partySize?: number }) {
   return visitorApi<VisitorBooking>(`/visitor/program-sessions/${sessionId}/bookings`, {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": idempotencyKey() },
     body: JSON.stringify({ partySize }),
   });
 }

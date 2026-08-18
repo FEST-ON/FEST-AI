@@ -10,7 +10,7 @@ import { SkeletonList } from "@/shared/ui/skeleton";
 import { TONE } from "@/shared/ui/status-pill";
 
 const CATEGORY_STYLE: Record<string, string> = {
-  공연: TONE.accent, 체험: TONE.success, 전시: TONE.plain, 푸드: TONE.warning, 행사: TONE.pink,
+  공연: TONE.accent, 체험: TONE.success, 전시: TONE.plain, 푸드: TONE.warning, 행사: TONE.neutral,
 };
 
 export default function SchedulePage() {

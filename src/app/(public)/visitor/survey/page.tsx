@@ -25,7 +25,7 @@ export default function SurveyPage() {
   if (submit.isSuccess) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-        <span className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950">
+        <span className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
           <CheckCircle2 className="size-7" />
         </span>
         <h2 className="text-base font-bold text-foreground">{t.survey.thanksTitle}</h2>

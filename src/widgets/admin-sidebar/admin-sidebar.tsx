@@ -37,6 +37,10 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/privacy": ShieldCheck,
 };
 
+// ESG 기능 메뉴 — 아이콘만 ESG 색으로 둬서 일반 운영 메뉴와 한눈에 갈린다.
+// 사이드바는 항상 검정이라 잉크용 --esg-tint 대신 원색(#1DCA5E, 9.7:1)을 쓴다.
+const ESG_NAV = new Set(["/admin/esg", "/admin/rewards"]);
+
 export function AdminLogoutButton({ showLabel = false, className }: { showLabel?: boolean; className?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -93,7 +97,7 @@ export function AdminNavLinks({ role }: { role: string | undefined }) {
             : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
         )}
       >
-        <Icon className="size-4.5" />
+        <Icon className={cn("size-4.5", ESG_NAV.has(href) && "text-esg")} />
         {label}
       </Link>
     );

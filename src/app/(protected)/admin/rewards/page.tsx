@@ -64,7 +64,7 @@ export default function RewardsPage() {
       </p>
 
       <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Leaf className="size-4 text-primary" /> 리워드 캠페인</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Leaf className="size-4 text-esg-tint" /> 리워드 캠페인</h2>
         <Form
           className="mt-3 grid gap-3 sm:grid-cols-4"
           onSubmit={() =>

@@ -38,7 +38,7 @@ export default function CouponsPage() {
       <h1 className="text-lg font-extrabold text-foreground">{t.coupon.title}</h1>
       <p className="text-xs text-muted-foreground">{t.coupon.subtitle}</p>
 
-      <section className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-primary/6 p-4 dark:bg-primary/15">
+      <section className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-primary/6 p-4">
         <div className="flex items-center gap-2.5">
           <span className="grid size-9 place-items-center rounded-full bg-primary/15 text-primary"><Coins className="size-4" /></span>
           <div>
@@ -95,8 +95,8 @@ export default function CouponsPage() {
                 )}
 
                 {usable && !coupon.issueToken && (
-                  <div className="mt-3 space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/40">
-                    <p className="flex items-start gap-1.5 text-[0.6875rem] leading-4 text-amber-900 dark:text-amber-100">
+                  <div className="mt-3 space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                    <p className="flex items-start gap-1.5 text-[0.6875rem] leading-4 text-amber-900">
                       <AlertTriangle className="mt-px size-3.5 shrink-0" />
                       {t.coupon.tokenMissing}
                     </p>
@@ -144,9 +144,10 @@ export default function CouponsPage() {
 
         <div className="space-y-2">
           {offers.data?.map((offer) => {
-            // 서버가 발행 쿠폰에 원본 쿠폰 ID를 내려주지 않아, 같은 업체·쿠폰명으로 보유 여부를 본다.
-            const owned = myCoupons.data?.some(
-              (coupon) => coupon.couponName === offer.couponName && coupon.businessName === offer.businessName) ?? false;
+            // 발행 이력의 원본 쿠폰 id로 센다. 이름으로 짐작하던 예전 방식은 1인 한도가
+            // 2장 이상인 쿠폰의 두 번째 발급까지 잠갔다.
+            const issued = myCoupons.data?.filter((coupon) => coupon.couponId === offer.id).length ?? 0;
+            const owned = issued >= offer.perVisitorLimit;
             const soldOut = offer.remaining <= 0;
             return (
               <div key={offer.id} className="rounded-xl border border-border bg-card p-3">

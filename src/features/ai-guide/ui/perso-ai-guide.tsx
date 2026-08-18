@@ -193,7 +193,7 @@ export function PersoAiGuide() {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
 
       <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 backdrop-blur-md">
-        <Volume2 className="size-3.5 text-cyan-300" />
+        <Volume2 className="size-3.5 text-primary-tint" />
         {t.aiGuide.voiceReadyBadge}
       </div>
 
@@ -211,11 +211,11 @@ export function PersoAiGuide() {
 
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[min-height,max-height] duration-300 ease-out dark:bg-slate-950/68",
+          "absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-[30px] border-t border-white/45 bg-white/70 text-foreground shadow-[0_-18px_52px_rgba(15,23,42,0.38)] backdrop-blur-xl transition-[min-height,max-height] duration-300 ease-out",
           chatPanelHeight,
         )}
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-linear-to-b from-white/90 via-white/40 to-transparent dark:from-slate-950/85 dark:via-slate-950/35" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-12 bg-linear-to-b from-white/90 via-white/40 to-transparent" />
 
         <div
           ref={threadRef}
@@ -236,7 +236,7 @@ export function PersoAiGuide() {
             ) : (
               <div
                 key={message.id}
-                className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/72"
+                className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md"
               >
                 <span className="mb-1 flex items-center gap-1 text-[0.625rem] font-bold text-primary">
                   <Sparkles className="size-3" /> {t.aiGuide.assistantLabel}
@@ -259,14 +259,14 @@ export function PersoAiGuide() {
                 )}
 
                 {message.needsFallbackChannel && (
-                  <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
+                  <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900">
                     <p className="flex items-center gap-1 text-[0.625rem] font-bold">
                       <Headset className="size-3" /> {t.aiGuide.fallbackChannelTitle}
                     </p>
                     <p className="mt-1 text-[0.625rem] leading-4">{t.aiGuide.fallbackChannelDescription}</p>
                     <a
                       href={SUPPORT_PHONE_HREF}
-                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[0.625rem] font-bold text-white dark:bg-amber-100 dark:text-amber-950"
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[0.625rem] font-bold text-white"
                     >
                       <Phone className="size-3" /> {t.aiGuide.fallbackCallAction(SUPPORT_PHONE)}
                     </a>
@@ -358,8 +358,8 @@ export function PersoAiGuide() {
                   className={cn(
                     "flex size-14 shrink-0 items-center justify-center rounded-full border-2 border-white/75 shadow-sm backdrop-blur-md transition active:scale-95 disabled:opacity-40",
                     textInputOpen
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                      : "bg-white/82 text-slate-700 hover:bg-white dark:bg-slate-900/78 dark:text-white",
+                      ? "bg-slate-900 text-white"
+                      : "bg-white/82 text-slate-700 hover:bg-white",
                   )}
                 >
                   <Keyboard className="size-6" />
@@ -375,7 +375,7 @@ export function PersoAiGuide() {
               <Form
                 id="perso-text-question"
                 onSubmit={handleSubmit}
-                className="mt-2 flex w-full items-center gap-1.5 rounded-2xl border border-white/65 bg-white/88 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-slate-900/82"
+                className="mt-2 flex w-full items-center gap-1.5 rounded-2xl border border-white/65 bg-white/88 p-1.5 shadow-sm backdrop-blur-md"
               >
                 <input
                   autoFocus
@@ -402,8 +402,8 @@ export function PersoAiGuide() {
             aria-live="polite"
             className={cn(
               "min-h-4 px-1 pt-1 text-[0.5625rem] font-medium text-muted-foreground",
-              speechError && "text-red-600 dark:text-red-300",
-              isListening && "text-red-600 dark:text-red-300",
+              speechError && "text-red-600",
+              isListening && "text-red-600",
             )}
           >
             {speechError ??
@@ -427,7 +427,7 @@ export function PersoAiGuide() {
                   disabled={isTyping}
                   onClick={() => handleAsk(label)}
                   className={cn(
-                    "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[0.6875rem] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50 dark:border-white/10 dark:bg-slate-900/68",
+                    "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[0.6875rem] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50",
                     largeText && "text-sm",
                   )}
                 >

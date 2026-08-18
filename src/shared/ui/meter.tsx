@@ -8,13 +8,14 @@ export function Meter({
 }: {
   percent: number;
   /** 임계값을 넘었거나 긴급 신호일 때 danger. */
-  tone?: "primary" | "danger";
+  /** ESG 지표 진행률은 브랜드↔ESG 그라데이션으로 채운다. */
+  tone?: "primary" | "danger" | "esg";
   className?: string;
 }) {
   return (
     <div className={cn("h-2 w-full overflow-hidden rounded-full bg-muted", className)}>
       <div
-        className={cn("h-full rounded-full", tone === "danger" ? "bg-red-500" : "bg-primary")}
+        className={cn("h-full rounded-full", tone === "danger" ? "bg-red-500" : tone === "esg" ? "bg-brand-gradient" : "bg-primary")}
         style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }}
       />
     </div>
