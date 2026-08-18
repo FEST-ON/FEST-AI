@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 9164cf0330c761d0
+// ko.ts sha256: 993c4904a8665ffc
 import type { ko } from "./ko";
 
 export const ja: typeof ko = {

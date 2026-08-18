@@ -224,7 +224,7 @@ export const ko = {
     consentTitle: "화면 글씨를 크게 맞춰 드릴까요?",
     consentDescription: "카메라로 잠깐 확인해 알맞은 글씨 크기를 제안해 드려요. 사용하지 않아도 모든 기능을 그대로 이용할 수 있어요.",
     consentAccept: "카메라로 확인",
-    consentDecline: "괜찮아요, 그냥 이용할게요",
+    consentDecline: "괜찮아요, 그냥 이용할게요.",
     manualLargeText: "바로 큰 글씨로",
     checking: "확인 중…",
     noticeOnDevice: "확인은 이 키오스크 안에서만 이뤄지고 사진은 밖으로 나가지 않아요.",
