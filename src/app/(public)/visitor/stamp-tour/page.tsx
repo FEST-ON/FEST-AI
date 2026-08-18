@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Stamp, MapPin, Coins, QrCode, Ticket, PartyPopper } from "lucide-react";
+import { ArrowRight, Stamp, MapPin, Coins, QrCode, Ticket, PartyPopper, ChevronLeft } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Form, SubmitButton } from "@/shared/ui/form";
 import { useWrite } from "@/shared/lib/use-write";
@@ -16,6 +17,7 @@ import { collectStamp, fetchStampSpots, fetchMyCoupons, fetchPoints, isCouponUsa
 import { useTranslation } from "@/shared/lib/i18n";
 import { useNow } from "@/shared/lib/use-now";
 import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
 
 export default function StampTourPage() {
   const { t, locale, bcp47 } = useTranslation();
@@ -37,9 +39,27 @@ export default function StampTourPage() {
   const collected = stampSpots.filter((spot) => spot.collected).length;
   const complete = total > 0 && collected >= total;
 
+  const router = useRouter();
+  const pathname = usePathname();
+  // 하단 탭에 없는 화면(스탬프투어·설문·상권 등)은 돌아갈 길이 브라우저 뒤로가기뿐이었다.
+  const showBack = !NAV_ITEMS.some((item) => item.href === pathname);
+
   return (
-    <div className="px-4 pt-4 pb-6">
+    <>
+    <div className="flex mt-2 items-center">
+      {showBack && (
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label={t.common.back}
+          className="-ml-1 flex size-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+      )}
       <h1 className="text-lg font-extrabold text-foreground">{t.stampTour.title}</h1>
+    </div>
+    <div className="px-4 pt-0 pb-6">
       <p className="text-xs text-muted-foreground">{t.stampTour.subtitle}</p>
 
       <div className="mt-4 flex flex-col items-center rounded-2xl border border-border bg-card py-6">
@@ -206,5 +226,6 @@ export default function StampTourPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }

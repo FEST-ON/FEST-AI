@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Accessibility, Bus, Car, TrainFront } from "lucide-react";
-import { fetchFacilities, fetchTransport, type FacilityInfo } from "@/entities/festival";
+import { WheelchairIcon } from "@/shared/ui/wheelchair-icon";
+import { Bus, Car, TrainFront } from "lucide-react";
+import {
+  fetchFacilities,
+  fetchTransport,
+  type FacilityInfo,
+} from "@/entities/festival";
 import { operatingStatus } from "@/features/map/lib/operating-status";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
@@ -22,19 +27,33 @@ const TRANSPORT_ICON = {
   주차: Car,
 } as const;
 
-const STATUS_TONE = { 원활: "success", 보통: "warning", 혼잡: "danger", 지연: "danger" } as const;
+const STATUS_TONE = {
+  원활: "success",
+  보통: "warning",
+  혼잡: "danger",
+  지연: "danger",
+} as const;
 
 export default function VisitorMapPage() {
   const { t, locale } = useTranslation();
-  const [facilityType, setFacilityType] = useState<FacilityInfo["type"] | null>(null);
-  const { data: facilities, isLoading: fLoading, isError: fError, refetch: refetchFacilities } = useQuery({
+  const [facilityType, setFacilityType] = useState<FacilityInfo["type"] | null>(
+    null,
+  );
+  const {
+    data: facilities,
+    isLoading: fLoading,
+    isError: fError,
+    refetch: refetchFacilities,
+  } = useQuery({
     queryKey: ["facilities", locale] as const,
     queryFn: () => fetchFacilities(locale),
   });
   // 서버 ?type= 대신 클라이언트에서 거른다 — 목록 전체가 이미 캐시에 있고,
   // 백엔드가 매긴 안전시설 우선 정렬 순서를 재요청 없이 그대로 유지한다.
   const facilityTypes = [...new Set(facilities?.map((f) => f.type) ?? [])];
-  const visibleFacilities = facilities?.filter((f) => !facilityType || f.type === facilityType);
+  const visibleFacilities = facilities?.filter(
+    (f) => !facilityType || f.type === facilityType,
+  );
   const { data: transport, isLoading: tLoading } = useQuery({
     queryKey: ["transport", locale] as const,
     queryFn: () => fetchTransport(locale),
@@ -68,7 +87,9 @@ export default function VisitorMapPage() {
                   onClick={() => setFacilityType(value)}
                   className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${facilityType === value ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground"}`}
                 >
-                  {value === null ? t.map.filterAll : t.festivalData.facilityType[value] ?? value}
+                  {value === null
+                    ? t.map.filterAll
+                    : (t.festivalData.facilityType[value] ?? value)}
                 </button>
               ))}
             </div>
@@ -76,7 +97,11 @@ export default function VisitorMapPage() {
           {fLoading ? (
             <Skeleton className="h-40 w-full rounded-xl" />
           ) : fError || !visibleFacilities ? (
-            <ErrorState message={t.common.loadFailed} retryLabel={t.common.retry} onRetry={() => refetchFacilities()} />
+            <ErrorState
+              message={t.common.loadFailed}
+              retryLabel={t.common.retry}
+              onRetry={() => refetchFacilities()}
+            />
           ) : visibleFacilities.length === 0 ? (
             <EmptyState message={t.common.empty} />
           ) : (
@@ -91,19 +116,32 @@ export default function VisitorMapPage() {
                     <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                       <span className="truncate">{f.name}</span>
                       {f.accessibility?.wheelchair && (
-                        <Accessibility className="size-3.5 shrink-0 text-primary" aria-label={t.map.wheelchairLabel} />
+                        <WheelchairIcon
+                          className="size-3.5 shrink-0 text-primary"
+                          aria-label={t.map.wheelchairLabel}
+                        />
                       )}
                     </p>
-                    <p className="text-xs text-muted-foreground">{f.location}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {f.location}
+                    </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <Badge variant="outline" className="text-[0.625rem]">
                       {t.festivalData.facilityType[f.type] ?? f.type}
                     </Badge>
                     <span className="text-[0.6875rem] text-muted-foreground">
-                      {open === null ? hours ?? t.map.facilityHoursUnknown : open ? t.map.facilityOpen : t.map.facilityClosed}
+                      {open === null
+                        ? (hours ?? t.map.facilityHoursUnknown)
+                        : open
+                          ? t.map.facilityOpen
+                          : t.map.facilityClosed}
                     </span>
-                    {open !== null && hours && <span className="text-[0.625rem] text-muted-foreground">{hours}</span>}
+                    {open !== null && hours && (
+                      <span className="text-[0.625rem] text-muted-foreground">
+                        {hours}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -129,11 +167,19 @@ export default function VisitorMapPage() {
                     <Icon className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground">{option.label}</p>
-                    <p className="text-xs text-muted-foreground">{option.detail}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {option.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {option.detail}
+                    </p>
                   </div>
-                  <StatusPill tone={STATUS_TONE[option.status]} className="shrink-0">
-                    {t.festivalData.transportStatus[option.status] ?? option.status}
+                  <StatusPill
+                    tone={STATUS_TONE[option.status]}
+                    className="shrink-0"
+                  >
+                    {t.festivalData.transportStatus[option.status] ??
+                      option.status}
                   </StatusPill>
                 </div>
               );
