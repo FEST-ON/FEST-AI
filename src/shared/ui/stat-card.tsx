@@ -7,7 +7,7 @@ interface StatCardProps {
   value: string;
   helper?: string;
   icon?: LucideIcon;
-  tone?: "default" | "primary" | "warning" | "success";
+  tone?: "default" | "primary" | "warning" | "success" | "esg";
   className?: string;
   /** 주면 카드 전체가 해당 화면으로 가는 링크가 된다 — 숫자를 보고 바로 처리하러 갈 수 있게. */
   href?: string;
@@ -18,6 +18,7 @@ const toneStyles: Record<NonNullable<StatCardProps["tone"]>, string> = {
   primary: "bg-primary text-primary-foreground",
   warning: "bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
   success: "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200",
+  esg: "bg-esg/8 text-foreground dark:bg-esg/15",
 };
 
 export function StatCard({ label, value, helper, icon: Icon, tone = "default", className, href }: StatCardProps) {

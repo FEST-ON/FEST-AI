@@ -36,6 +36,9 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-primary-tint: var(--primary-tint);
+  --color-esg: var(--esg);
+  --color-esg-foreground: var(--esg-foreground);
+  --color-esg-tint: var(--esg-tint);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -58,6 +61,14 @@
 
   /* 브랜드 단일 액센트 — 모든 인터랙티브 요소는 이 색 하나만 쓴다 */
   --brand: #0147ff;
+  /* ESG 전용 액센트 — 환경·리워드 등 ESG 기능에만 쓴다. 일반 성공 상태는 계속 emerald. */
+  --esg: #1dca5e;
+  --esg-foreground: #ffffff;
+  /* #1DCA5E는 흰 배경 위 글자로 2.2:1이라 잉크로 못 쓴다 — 글자/아이콘은 tint 쪽을 쓴다.
+     채움면(bg-esg)에는 원색 #1DCA5E 그대로. */
+  --esg-tint: #0e8a3e;
+  /* 브랜드↔ESG 그라데이션 — AI·ESG 두 축을 함께 가리키는 장식 면에만 */
+  --gradient-brand: linear-gradient(135deg, var(--brand) 0%, var(--esg) 100%);
 
   --background: #ffffff;
   --foreground: #1d1d1f;
@@ -107,6 +118,8 @@
   --primary: #0a84ff;
   --primary-foreground: #ffffff;
   --primary-tint: #7aa5ff;
+  /* #1DCA5E는 검정 위 잉크로 쓰면 4.5:1을 못 넘긴다 — 어두운 면의 글자/아이콘만 밝힌다. */
+  --esg-tint: #4ce085;
   --secondary: #272729;
   --secondary-foreground: #ffffff;
   --muted: #2a2a2c;
@@ -139,6 +152,18 @@
    세분해야 하면 그때 --primary-fill 토큰으로 쪼갠다. */
 .dark .bg-primary {
   background-color: var(--brand);
+}
+
+/* 브랜드↔ESG 그라데이션 면. 초록 끝에서는 흰 글자가 2.2:1로 떨어지므로 글자를 얹지 않는
+   장식·진행바 전용이다. 글자가 필요한 면은 bg-primary를 쓴다. */
+.bg-brand-gradient {
+  background-image: var(--gradient-brand);
+}
+
+/* 고대비 모드에서 그라데이션은 대비를 예측할 수 없다 — 단색 브랜드로 접는다. */
+html[data-high-contrast="true"] .bg-brand-gradient {
+  background-image: none;
+  background-color: var(--primary);
 }
 
 @layer base {
@@ -179,6 +204,8 @@ html[data-high-contrast="true"] {
   --primary: #0000c8;
   --primary-foreground: #ffffff;
   --primary-tint: #0000c8;
+  --esg: #00631f;
+  --esg-tint: #00631f;
   --secondary: #ffffff;
   --secondary-foreground: #000000;
   --muted: #ffffff;
@@ -207,6 +234,8 @@ html[data-high-contrast="true"] .dark {
   --primary: #ffe600;
   --primary-foreground: #000000;
   --primary-tint: #ffe600;
+  --esg: #00e05a;
+  --esg-tint: #00e05a;
   --secondary: #000000;
   --secondary-foreground: #ffffff;
   --muted: #000000;

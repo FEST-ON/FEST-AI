@@ -43,7 +43,7 @@ import { cn, datetimeLocal, seoulDate, seoulDateTime, toIso } from "@/shared/lib
 import { artifactOf, downloadArtifact, formatBytes } from "@/shared/lib/download-artifact";
 
 const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
-  환경: { icon: Leaf, tone: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300" },
+  환경: { icon: Leaf, tone: "text-esg-tint bg-esg/12 dark:bg-esg/20" },
   사회: { icon: Users, tone: "text-primary bg-primary/10 dark:bg-primary/25 dark:text-primary-tint" },
   거버넌스: { icon: Scale, tone: "text-foreground bg-muted dark:bg-muted dark:text-foreground" },
 };
@@ -322,13 +322,13 @@ export default function EsgPage() {
                       <div key={metric.id} className="rounded-2xl border border-border bg-card p-4">
                         <div className="flex items-start justify-between">
                           <p className="text-xs font-semibold text-foreground">{metric.name}</p>
-                          {metric.approved ? <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" /> : <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />}
+                          {metric.approved ? <CheckCircle2 className="size-3.5 shrink-0 text-esg-tint" /> : <CircleDashed className="size-3.5 shrink-0 text-muted-foreground" />}
                         </div>
                         <p className="mt-2 text-xl font-extrabold text-foreground">
                           {metric.value.toLocaleString()}
                           <span className="ml-0.5 text-xs font-medium text-muted-foreground">{metric.unit}</span>
                         </p>
-                        <Meter percent={pct} className="mt-2 h-1.5" />
+                        <Meter percent={pct} tone="esg" className="mt-2 h-1.5" />
                         <p className="mt-1 text-[0.625rem] text-muted-foreground">목표 {metric.target.toLocaleString()}{metric.unit} 대비 {pct}%</p>
                         <p className="mt-2 truncate text-[0.625rem] text-muted-foreground">출처: {metric.source}</p>
                         <p className="text-[0.625rem] text-muted-foreground">{metric.approved ? `${metric.approvedAt} 승인` : "승인 대기중"}</p>

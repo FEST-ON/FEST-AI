@@ -29,6 +29,11 @@ const issueAnalysisUrl = await transpile("../src/features/complaint-insight/api/
   "@/shared/lib/api": apiUrl,
 });
 const { operatingStatus } = await importTypeScript("../src/features/map/lib/operating-status.ts");
+const { datetimeLocal, toIso } = await importTypeScript("../src/shared/lib/utils.ts", {
+  clsx: moduleUrl("export const clsx = (...a) => a.join(' ');"),
+  "tailwind-merge": moduleUrl("export const twMerge = (v) => v;"),
+});
+const { isCancelDeadlinePassed } = await importTypeScript("../src/shared/lib/booking-policy.ts");
 const { buildImprovementTasks, buildRecurringIssues, buildTopicBreakdown } = await import(issueAnalysisUrl);
 // 엔티티는 규칙(model)과 조회(data)가 한 파일이라 조회 쪽 의존성도 함께 연결해 준다.
 // 표시 서식은 규칙 테스트와 무관해서 스텁으로 끊는다.
@@ -522,5 +527,39 @@ test("사이드바 항목은 모두 아이콘이 등록돼 있다", async () => 
   const { ADMIN_NAV_ITEMS } = await importTypeScript("../src/shared/lib/permissions.ts");
   for (const item of ADMIN_NAV_ITEMS) {
     assert.ok(registered.has(item.href), `${item.href} 아이콘이 NAV_ICONS에 없습니다.`);
+  }
+});
+
+test("일시 입력은 브라우저 타임존과 무관하게 축제 기준(Asia/Seoul) 시각으로 오간다", () => {
+  // 2026-09-12T01:00Z = KST 10:00. UTC 노트북에서 열어도 입력칸에는 10:00이 떠야 한다.
+  assert.equal(datetimeLocal("2026-09-12T01:00:00Z"), "2026-09-12T10:00");
+  // 입력한 벽시계 시각은 KST로 읽어 서버에 보낸다(왕복해도 그대로다).
+  assert.equal(toIso("2026-09-12T10:00"), "2026-09-12T01:00:00.000Z");
+  assert.equal(datetimeLocal(toIso("2026-09-12T10:00")), "2026-09-12T10:00");
+  // 타임존이 붙은 값은 건드리지 않는다.
+  assert.equal(toIso("2026-09-12T01:00:00Z"), "2026-09-12T01:00:00.000Z");
+});
+
+test("예약 셀프 취소는 시작 30분 전에 닫힌다(서버 규칙과 같은 표)", () => {
+  const startsAt = "2026-09-12T10:00:00Z";
+  const at = (iso) => new Date(iso).getTime();
+  assert.equal(isCancelDeadlinePassed(startsAt, at("2026-09-12T09:29:00Z")), false);
+  assert.equal(isCancelDeadlinePassed(startsAt, at("2026-09-12T09:30:00Z")), true);
+  assert.equal(isCancelDeadlinePassed(startsAt, at("2026-09-12T10:30:00Z")), true);
+  // 시각을 읽지 못하면 버튼을 막지 않는다 — 서버가 최종 판정한다.
+  assert.equal(isCancelDeadlinePassed("nope", at("2026-09-12T09:30:00Z")), false);
+});
+
+test("멱등키는 crypto.randomUUID가 없는 http 접속에서도 만들어진다", async () => {
+  const original = crypto.randomUUID;
+  try {
+    // 보안 컨텍스트가 아니면 randomUUID 자체가 없다(현장 폰이 http://<LAN IP>로 열 때).
+    Reflect.deleteProperty(crypto, "randomUUID");
+    const { idempotencyKey } = await import(apiUrl);
+    const key = idempotencyKey();
+    assert.equal(typeof key, "string");
+    assert.ok(key.length > 8 && key !== idempotencyKey());
+  } finally {
+    Object.defineProperty(crypto, "randomUUID", { configurable: true, writable: true, value: original });
   }
 });

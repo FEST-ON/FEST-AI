@@ -144,9 +144,10 @@ export default function CouponsPage() {
 
         <div className="space-y-2">
           {offers.data?.map((offer) => {
-            // 서버가 발행 쿠폰에 원본 쿠폰 ID를 내려주지 않아, 같은 업체·쿠폰명으로 보유 여부를 본다.
-            const owned = myCoupons.data?.some(
-              (coupon) => coupon.couponName === offer.couponName && coupon.businessName === offer.businessName) ?? false;
+            // 발행 이력의 원본 쿠폰 id로 센다. 이름으로 짐작하던 예전 방식은 1인 한도가
+            // 2장 이상인 쿠폰의 두 번째 발급까지 잠갔다.
+            const issued = myCoupons.data?.filter((coupon) => coupon.couponId === offer.id).length ?? 0;
+            const owned = issued >= offer.perVisitorLimit;
             const soldOut = offer.remaining <= 0;
             return (
               <div key={offer.id} className="rounded-xl border border-border bg-card p-3">

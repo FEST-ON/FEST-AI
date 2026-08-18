@@ -1,4 +1,4 @@
-import { adminApi, festivalApi, festivalApiAll, json } from "@/shared/lib/api";
+import { adminApi, festivalApi, festivalApiAll, idempotencyKey, json } from "@/shared/lib/api";
 import type { JobResult } from "@/shared/lib/download-artifact";
 
 export const MEASUREMENT_STATUS_LABEL: Record<string, string> = {
@@ -43,7 +43,7 @@ export async function createMeasurement(input: NewMeasurement) {
   return festivalApi(`/esg/measurements`, {
     method: "POST",
     // 같은 지표·같은 근거를 두 번 올리면 서버가 중복으로 막는다.
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": idempotencyKey() },
     body: JSON.stringify({ ...input, dedupeKey: `${input.metricVersionId}:${input.measuredAt}:${input.value}` }),
   });
 }

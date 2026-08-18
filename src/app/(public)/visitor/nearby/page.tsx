@@ -9,7 +9,7 @@ import {
   fetchFestivalBusinesses,
   type RecommendedBusiness,
 } from "@/features/business-recommendation";
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { fetchPrivacyNotice } from "@/features/privacy/api/privacy";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { QueryState } from "@/shared/ui/query-state";
@@ -49,16 +49,26 @@ function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; s
 export default function VisitorNearbyPage() {
   const { t, locale } = useTranslation();
   const [category, setCategory] = useState<string | undefined>();
-  const accessibilityNeeded = useAccessibilityStore((state) => state.largeText);
+  // 휠체어 접근 필요 여부는 이 화면의 필터다. 예전에는 "큰 글씨" 설정을 대신 읽어서,
+  // 큰 글씨를 켠 방문객의 목록이 조용히 줄고 정작 휠체어 이용자에게는 걸리지 않았다.
+  const [wheelchairOnly, setWheelchairOnly] = useState(false);
+
+  // OPS-11: 위치 동의를 철회한 세션에는 좌표를 아예 요청하지 않는다.
+  // 저장만 철회하고 계속 위치를 보내면 철회한 것이 아니다.
+  const privacy = useQuery({ queryKey: ["privacy-notice"], queryFn: fetchPrivacyNotice, staleTime: 60_000, retry: false });
+  const locationAllowed = privacy.data?.consents?.location !== false;
 
   // 위치도 외부 상태라 쿼리로 다룬다 — 거부해도 null로 확정돼 위치 없는 추천이 그대로 나온다.
-  const location = useQuery({ queryKey: ["visitor-position"], queryFn: currentPosition, staleTime: 60_000, retry: false });
-  const position = location.data ?? null;
-  const locating = location.isLoading;
+  const location = useQuery({
+    queryKey: ["visitor-position"], queryFn: currentPosition, staleTime: 60_000, retry: false,
+    enabled: locationAllowed,
+  });
+  const position = locationAllowed ? location.data ?? null : null;
+  const locating = locationAllowed && location.isLoading;
 
   const recommendations = useQuery({
-    queryKey: ["business-recommendations", position, category, accessibilityNeeded] as const,
-    queryFn: () => fetchBusinessRecommendations({ ...position, category, accessibilityRequired: accessibilityNeeded }),
+    queryKey: ["business-recommendations", position, category, wheelchairOnly] as const,
+    queryFn: () => fetchBusinessRecommendations({ ...position, category, accessibilityRequired: wheelchairOnly }),
     enabled: !locating,
   });
   const businesses = useQuery({
@@ -78,10 +88,21 @@ export default function VisitorNearbyPage() {
         <p className="min-w-0 flex-1 text-[0.6875rem] text-muted-foreground">
           {locating ? t.nearby.locating : position ? t.nearby.locationOn : t.nearby.locationOff}
         </p>
-        {!position && !locating && (
+        {!position && !locating && locationAllowed && (
           <Button size="sm" variant="outline" onClick={() => location.refetch()}>{t.nearby.retryLocation}</Button>
         )}
       </div>
+
+      <button
+        type="button"
+        aria-pressed={wheelchairOnly}
+        onClick={() => setWheelchairOnly((value) => !value)}
+        className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+          wheelchairOnly ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground"
+        }`}
+      >
+        <Accessibility className="size-3.5" /> {t.map.wheelchairLabel}
+      </button>
 
       {categories.length > 0 && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
