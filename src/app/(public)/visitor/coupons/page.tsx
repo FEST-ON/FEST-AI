@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Coins, History, Recycle, Stamp, Ticket } from "lucide-react";
 import { fetchPoints } from "@/entities/coupon";
+import { EsgPayDialog } from "@/features/esg/ui/esg-pay-dialog";
 import {
   REUSABLE_CONTAINER_UPDATED_EVENT,
   getReusableVisitorCode,
@@ -77,12 +78,15 @@ export default function EsgPage() {
             <Coins className="size-5" />
           </span>
         </div>
-        <Link
-          href="/visitor/coupons/points"
-          className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-esg-text"
-        >
-          <History className="size-3.5" /> 포인트 적립내역
-        </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Link
+            href="/visitor/coupons/points"
+            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-esg-text"
+          >
+            <History className="size-3.5" /> 포인트 적립내역
+          </Link>
+          <EsgPayDialog />
+        </div>
       </section>
 
       <section>
