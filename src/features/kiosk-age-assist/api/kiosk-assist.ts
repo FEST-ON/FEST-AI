@@ -34,7 +34,13 @@ export function recordKioskAssist(
  * 받아 둔 키오스크가 그동안 계속 카메라를 권한다. 중지는 안전 장치라 캐시를 끊고 받는다.
  */
 export async function fetchKioskCameraEnabled(): Promise<boolean> {
-  const festival = await publicApi<{ kioskCameraEnabled?: boolean }>(
-    `/public/festivals/${FESTIVAL_CODE}`, { cache: "no-store" });
-  return festival.kioskCameraEnabled === true;
+  try {
+    const festival = await publicApi<{ kioskCameraEnabled?: boolean }>(
+      `/public/festivals/${FESTIVAL_CODE}`, { cache: "no-store" });
+    // 구버전 백엔드는 이 선택적 필드를 아직 보내지 않는다. 명시적으로 false일 때만
+    // 운영자 중지 스위치로 보고, 필드 누락·일시적 조회 실패는 온디바이스 기능을 막지 않는다.
+    return festival.kioskCameraEnabled !== false;
+  } catch {
+    return true;
+  }
 }

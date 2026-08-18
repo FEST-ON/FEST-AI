@@ -14,7 +14,7 @@ export const AGE_MODEL_VERSION = "face-api/tiny_face_detector+age_gender@1.7.15"
 
 const MODEL_URI = "/models";
 /** 검출 신뢰도가 이보다 낮은 프레임은 나이를 보지 않는다. */
-const MIN_DETECTION_SCORE = 0.6;
+const MIN_DETECTION_SCORE = 0.45;
 /**
  * 제안 기준 나이. 실제 고령층을 60대 초반으로 낮게 추정하는 경향이 있어 기준을 60이 아니라
  * 62로 둔다 — 아래로 틀리면 도움이 필요한 사람이 제안을 못 받고, 위로 틀리면 30대에게
@@ -68,6 +68,58 @@ function hiddenVideo(): HTMLVideoElement {
   return video;
 }
 
+async function waitForVideoReady(video: HTMLVideoElement): Promise<void> {
+  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("카메라 영상 준비 시간이 초과되었습니다."));
+    }, 5_000);
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      video.removeEventListener("loadeddata", onReady);
+      video.removeEventListener("error", onError);
+    };
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error("카메라 영상을 준비하지 못했습니다."));
+    };
+    video.addEventListener("loadeddata", onReady, { once: true });
+    video.addEventListener("error", onError, { once: true });
+  });
+
+  // 첫 loadeddata 직후에는 프레임 크기만 있고 실제 영상 프레임이 비어 있을 수 있다.
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+  });
+}
+
+async function openCamera(): Promise<MediaStream> {
+  const preferred = {
+    video: {
+      facingMode: { ideal: "user" },
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+    },
+    audio: false,
+  } satisfies MediaStreamConstraints;
+
+  try {
+    return await navigator.mediaDevices.getUserMedia(preferred);
+  } catch (error) {
+    // 키오스크 카메라가 facingMode·해상도 제약을 지원하지 않아도 기본 카메라로 한 번 더 시도한다.
+    if (error instanceof DOMException && ["OverconstrainedError", "NotFoundError"].includes(error.name)) {
+      return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+    throw error;
+  }
+}
+
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)];
@@ -89,12 +141,13 @@ export async function estimateAgeBand(): Promise<AgeAssistResult> {
   let video: HTMLVideoElement | undefined;
   try {
     const faceapi = await loadFaceApi();
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640, height: 480 } });
+    stream = await openCamera();
     video = hiddenVideo();
     video.srcObject = stream;
     await video.play();
+    await waitForVideoReady(video);
 
-    const options = new faceapi.TinyFaceDetectorOptions({ scoreThreshold: MIN_DETECTION_SCORE });
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: MIN_DETECTION_SCORE });
     const ages: number[] = [];
     for (let frame = 0; frame < MAX_FRAMES && ages.length < SAMPLES; frame += 1) {
       const detection = await faceapi.detectSingleFace(video, options).withAgeAndGender();

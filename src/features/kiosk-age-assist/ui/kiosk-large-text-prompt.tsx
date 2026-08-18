@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ALargeSmall, Camera, Languages, LoaderCircle } from "lucide-react";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
@@ -46,18 +45,17 @@ function useKioskFlow(): number {
 type Phase = "idle" | "checking" | "suggest" | "done";
 
 /**
- * 키오스크 AI 안내에서만 카메라 연령대 확인을 자동 시작한다.
+ * 키오스크 모드에 들어오면 카메라 연령대 확인을 자동 시작한다.
  * 얼굴 영상은 estimateAgeBand 내부에서 기기 안에서만 처리하고, 결과가 중장년층일 때만
  * 큰 글씨와 언어를 선택할 수 있는 안내 팝업을 보여 준다.
  */
 export function KioskLargeTextPrompt() {
   const { t } = useTranslation();
-  const pathname = usePathname();
   const flow = useKioskFlow();
   const visitorMode = useAccessibilityStore((state) => state.visitorMode);
   const largeText = useAccessibilityStore((state) => state.largeText);
   const toggleLargeText = useAccessibilityStore((state) => state.toggleLargeText);
-  const assistRoute = visitorMode === "kiosk" && pathname === "/visitor/ai-guide";
+  const assistRoute = visitorMode === "kiosk";
   const [phaseState, setPhaseState] = useState<{ flow: number; phase: Phase }>({ flow: -1, phase: "idle" });
   const phase = phaseState.flow === flow ? phaseState.phase : "idle";
   const setPhase = useCallback((next: Phase) => setPhaseState({ flow, phase: next }), [flow]);
