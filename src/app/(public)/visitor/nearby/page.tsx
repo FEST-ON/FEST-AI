@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Accessibility, MapPin, Megaphone, Navigation, Store } from "lucide-react";
+import { MapPin, Megaphone, Navigation, Store } from "lucide-react";
 import {
   currentPosition,
   fetchBusinessRecommendations,
@@ -14,6 +14,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
+import { WheelchairIcon } from "@/shared/ui/wheelchair-icon";
 import { useTranslation } from "@/shared/lib/i18n";
 
 function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; sponsored?: boolean; label: string }) {
@@ -67,13 +68,13 @@ export default function VisitorNearbyPage() {
   const locating = locationAllowed && location.isLoading;
 
   const recommendations = useQuery({
-    queryKey: ["business-recommendations", position, category, wheelchairOnly] as const,
-    queryFn: () => fetchBusinessRecommendations({ ...position, category, accessibilityRequired: wheelchairOnly }),
+    queryKey: ["business-recommendations", position, category, wheelchairOnly, locale] as const,
+    queryFn: () => fetchBusinessRecommendations({ ...position, category, accessibilityRequired: wheelchairOnly }, locale),
     enabled: !locating,
   });
   const businesses = useQuery({
     queryKey: ["festival-businesses", locale] as const,
-    queryFn: () => fetchFestivalBusinesses(),
+    queryFn: () => fetchFestivalBusinesses(undefined, locale),
   });
 
   const categories = [...new Set((businesses.data ?? []).map((item) => item.category))];
@@ -101,7 +102,7 @@ export default function VisitorNearbyPage() {
           wheelchairOnly ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground"
         }`}
       >
-        <Accessibility className="size-3.5" /> {t.map.wheelchairLabel}
+        <WheelchairIcon className="size-3.5" /> {t.map.wheelchairLabel}
       </button>
 
       {categories.length > 0 && (
@@ -183,7 +184,7 @@ export default function VisitorNearbyPage() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm font-semibold text-foreground">{business.name}</p>
                     <div className="flex shrink-0 items-center gap-1">
-                      {business.accessibility?.wheelchair && <Accessibility className="size-3.5 text-primary" />}
+                      {business.accessibility?.wheelchair && <WheelchairIcon className="size-3.5 text-primary" />}
                       <Badge variant="outline" className="text-[0.625rem]">{business.category}</Badge>
                     </div>
                   </div>

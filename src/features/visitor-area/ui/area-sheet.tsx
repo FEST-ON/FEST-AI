@@ -17,9 +17,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
  * 전체 대상 공지로 폴백하고, 안전 관련 긴급 공지는 판정 여부와 무관하게 도착한다.
  */
 export function AreaSheet() {
-  const { t, bcp47 } = useTranslation();
-  const current = useQuery({ queryKey: ["visitor-area"], queryFn: fetchVisitorArea });
-  const areas = useQuery({ queryKey: ["public-areas"], queryFn: fetchPublicAreas });
+  const { t, bcp47, locale } = useTranslation();
+  const current = useQuery({ queryKey: ["visitor-area", locale], queryFn: () => fetchVisitorArea(locale) });
+  const areas = useQuery({ queryKey: ["public-areas", locale], queryFn: () => fetchPublicAreas(locale) });
   // 구역이 바뀌면 받을 공지 대상도 바뀐다.
   const choose = useWrite((areaId: string | null) => setVisitorArea(areaId), {
     invalidates: ["visitor-area", "public-announcements"],

@@ -15,10 +15,10 @@ const INTERESTS = ["performance", "experience", "exhibition", "food", "event"] a
 const DURATIONS = [60, 120, 180, 240];
 
 export default function VisitorCoursePage() {
-  const { t, bcp47 } = useTranslation();
+  const { t, bcp47, locale } = useTranslation();
   const [interests, setInterests] = useState<string[]>([]);
   const [durationMin, setDurationMin] = useState(120);
-  const plan = useMutation({ mutationFn: createCoursePlan });
+  const plan = useMutation({ mutationFn: (input: Parameters<typeof createCoursePlan>[0]) => createCoursePlan(input, locale) });
 
   const time = (value: string) => new Date(value).toLocaleTimeString(bcp47, { hour: "2-digit", minute: "2-digit" });
 

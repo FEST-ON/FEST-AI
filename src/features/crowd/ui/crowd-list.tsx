@@ -9,10 +9,10 @@ import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { useTranslation } from "@/shared/lib/i18n";
 
 export function CrowdList({ limit }: { limit?: number }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["public-crowd"],
-    queryFn: fetchPublicCrowd,
+    queryKey: ["public-crowd", locale],
+    queryFn: () => fetchPublicCrowd(locale),
     // 혼잡도는 현장 상황이라 오래 캐시하면 의미가 없다.
     refetchInterval: 30_000,
     staleTime: 15_000,

@@ -2,6 +2,7 @@ import type { ChatMessage } from "@/entities/visitor";
 import { ApiError, FESTIVAL_CODE, json, visitorApi, visitorSessionGeneration } from "@/shared/lib/api";
 import { BCP47_BY_LOCALE } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
+import { translateEntries } from "@/shared/lib/i18n/translate-client";
 
 // 대화 ID는 새로고침해도 살아남아야 한다 — 메모리에만 두면 화면을 다시 열 때마다 새
 // 대화가 열려서, 서버에 남아 있는 이전 대화 내용을 다시 볼 방법이 없었다.
@@ -61,7 +62,7 @@ interface HistoryRow {
  * 이전 대화 복원. 서버에 남아 있는 기록을 화면이 한 번도 읽지 않아서, 새로고침하면
  * 대화가 통째로 사라진 것처럼 보였다.
  */
-export async function loadHistory(locale: Locale): Promise<Array<{ role: "user" | "assistant"; content: string; messageId: string; freshnessAt?: string; needsFallbackChannel: boolean }>> {
+export async function loadHistory(locale: Locale): Promise<Array<{ role: "user" | "assistant"; content: string; rawContent?: string; messageId: string; freshnessAt?: string; needsFallbackChannel: boolean }>> {
   const stored = restore();
   if (!stored || stored.locale !== locale) return [];
   try {
@@ -69,16 +70,20 @@ export async function loadHistory(locale: Locale): Promise<Array<{ role: "user" 
     conversationId = stored.id;
     conversationLocale = locale;
     conversationSession = visitorSessionGeneration();
-    return rows.flatMap((row) => [
-      { role: "user" as const, content: row.question, messageId: `${row.id}-q`, needsFallbackChannel: false },
-      {
-        role: "assistant" as const,
-        content: row.answer,
-        messageId: row.id,
-        freshnessAt: row.freshnessAt ?? undefined,
-        needsFallbackChannel: Boolean(row.fallback) || row.sources.length === 0,
-      },
-    ]);
+    return await Promise.all(rows.flatMap((row) => {
+      const needsFallbackChannel = Boolean(row.fallback) || row.sources.length === 0;
+      return [
+        Promise.resolve({ role: "user" as const, content: row.question, messageId: `${row.id}-q`, needsFallbackChannel: false }),
+        (async () => ({
+          role: "assistant" as const,
+          content: needsFallbackChannel ? await translateFallbackAnswer(row.answer, locale) : row.answer,
+          rawContent: needsFallbackChannel ? row.answer : undefined,
+          messageId: row.id,
+          freshnessAt: row.freshnessAt ?? undefined,
+          needsFallbackChannel,
+        }))(),
+      ];
+    }));
   } catch {
     // 세션이 만료됐거나 대화가 사라졌으면 빈 화면으로 시작한다.
     resetConversation();
@@ -98,6 +103,24 @@ function sendMessage(id: string, question: string) {
   }>(`/visitor/ai/conversations/${id}/messages`, json("POST", { message: question, context: { channel: "PERSO_AI", inputMode: "VOICE_OR_TEXT" } }));
 }
 
+async function translateSourceTitles(titles: string[], locale: Locale): Promise<string[]> {
+  if (locale === "ko" || titles.length === 0) return titles;
+  const entries = Object.fromEntries(titles.map((title, index) => [String(index), title]));
+  const translated = await translateEntries(entries, locale);
+  return titles.map((title, index) => translated[String(index)] ?? title);
+}
+
+/**
+ * 근거 부족(INSUFFICIENT_GROUNDING) 등으로 안내가 막히면 서버는 요청 언어와 무관하게
+ * 고정된 한국어 문구("승인된 축제 정보에서 충분한 근거를 찾지 못했습니다." 등)를 그대로 내려준다.
+ * 근거를 찾아 실제로 생성된 답변은 서버가 이미 요청 언어로 답하므로 여기서는 건드리지 않는다.
+ */
+async function translateFallbackAnswer(answer: string, locale: Locale): Promise<string> {
+  if (locale === "ko") return answer;
+  const translated = await translateEntries({ answer }, locale);
+  return translated.answer ?? answer;
+}
+
 export async function generateReply(question: string, locale: Locale) {
   let response;
   try {
@@ -109,14 +132,17 @@ export async function generateReply(question: string, locale: Locale) {
     response = await sendMessage(await openConversation(locale), question);
   }
 
+  // 근거(출처)가 하나도 없거나 서버가 fallback을 표시하면 AI 답변만으로는 부족하다 —
+  // 이때는 안내데스크·전화 같은 사람이 응대하는 채널을 함께 안내한다.
+  const needsFallbackChannel = Boolean(response.fallback) || response.sources.length === 0;
+
   return {
-    content: response.answer,
-    sources: response.sources.map((source) => source.title),
+    content: needsFallbackChannel ? await translateFallbackAnswer(response.answer, locale) : response.answer,
+    rawContent: needsFallbackChannel ? response.answer : undefined,
+    sources: await translateSourceTitles(response.sources.map((source) => source.title), locale),
     messageId: response.messageId,
     freshnessAt: response.freshnessAt ?? undefined,
-    // 근거(출처)가 하나도 없거나 서버가 fallback을 표시하면 AI 답변만으로는 부족하다 —
-    // 이때는 안내데스크·전화 같은 사람이 응대하는 채널을 함께 안내한다.
-    needsFallbackChannel: Boolean(response.fallback) || response.sources.length === 0,
+    needsFallbackChannel,
   };
 }
 
@@ -146,6 +172,7 @@ export function buildMessage(
     backendMessageId?: string;
     freshnessAt?: string;
     needsFallbackChannel?: boolean;
+    rawContent?: string;
   } = {},
 ): ChatMessage {
   return {
