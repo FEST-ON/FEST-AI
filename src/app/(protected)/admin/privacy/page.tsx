@@ -295,8 +295,13 @@ export default function AdminPrivacyPage() {
           편향·오탐이 확인되면 여기서 중지해요. 중지해도 방문객은 수동 큰 글씨·음성 안내를 그대로 쓸 수 있어요.
         </p>
         <QueryState query={kioskCamera} skeleton={<SkeletonList count={3} className="h-10 rounded-lg" wrapperClassName="space-y-2" />}>
-          {(data) => (
-            <div className="space-y-3">
+          {(data) => {
+            const estimateResults = {
+              counts: data.estimateResults?.counts ?? {},
+              recent: data.estimateResults?.recent ?? [],
+            };
+            return (
+              <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border p-3">
                 <div className="min-w-0">
                   <StatusPill tone={data.enabled ? "success" : "muted"}>
@@ -350,11 +355,54 @@ export default function AdminPrivacyPage() {
                 <StatCard label="안내 화면 도달" value={`${data.rates.taskCompletedCount}건`} helper="이용 흐름당 1건" />
                 <StatCard label="모델" value={data.models[0]?.modelVersion ?? "-"} helper={data.models.length > 1 ? `외 ${data.models.length - 1}개` : "단일 버전"} />
               </div>
+              <div className="rounded-xl border border-border p-3">
+                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-xs font-bold text-foreground">얼굴인식 결과 로그</h3>
+                  <span className="text-[0.6875rem] text-muted-foreground">최근 100건 · 익명 범주만 저장</span>
+                </div>
+                <div className="mb-3 grid grid-cols-3 gap-2">
+                  <StatCard label="중장년층" value={`${estimateResults.counts.SENIOR ?? 0}건`} helper="큰 글씨 제안 대상" />
+                  <StatCard label="그 외" value={`${estimateResults.counts.OTHER ?? 0}건`} helper="제안 없음" />
+                  <StatCard label="판단 불가" value={`${estimateResults.counts.UNAVAILABLE ?? 0}건`} helper="카메라·모델 오류" />
+                </div>
+                {!data.estimateResultLoggingAvailable ? (
+                  <p className="text-[0.6875rem] leading-5 text-muted-foreground">
+                    현재 연결된 백엔드는 얼굴인식 결과 로그를 아직 지원하지 않아요. 기존 키오스크·카메라 기능은 사용할 수 있고,
+                    백엔드에 결과 로그 migration을 적용하면 이곳에 기록돼요.
+                  </p>
+                ) : estimateResults.recent.length === 0 ? (
+                  <p className="text-[0.6875rem] text-muted-foreground">아직 얼굴인식 결과가 없습니다.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>결과</TableHead>
+                        <TableHead>모델</TableHead>
+                        <TableHead>기록 시각</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {estimateResults.recent.slice(0, 10).map((row, index) => (
+                        <TableRow key={`${row.createdAt}-${index}`}>
+                          <TableCell>
+                            <StatusPill tone={row.result === "SENIOR" ? "success" : row.result === "OTHER" ? "neutral" : "warning"}>
+                              {row.result === "SENIOR" ? "중장년층" : row.result === "OTHER" ? "그 외" : "판단 불가"}
+                            </StatusPill>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{row.modelVersion}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{time(row.createdAt)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
               <p className="text-[0.6875rem] text-muted-foreground">
-                지표는 방문객 세션과 연결하지 않은 건수 집계예요 — 누가 어떤 추정을 받았는지는 조회할 수 없어요.
+                지표는 방문객 세션과 연결하지 않은 건수 집계예요 — 누가 어떤 추정을 받았는지는 조회할 수 없어요. 영상·얼굴 특징값·추정 연령은 저장하지 않아요.
               </p>
-            </div>
-          )}
+              </div>
+            );
+          }}
         </QueryState>
       </section>
 

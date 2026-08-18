@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, MapPin, Megaphone, Navigation, Store } from "lucide-react";
@@ -18,6 +19,21 @@ import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { WheelchairIcon } from "@/shared/ui/wheelchair-icon";
 import { useTranslation } from "@/shared/lib/i18n";
 import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
+
+const REGIONAL_ADS = [
+  {
+    src: "/ads/jeju-museum-of-art.png",
+    alt: "제주도립미술관 전시와 프로그램 안내 광고",
+    width: 1478,
+    height: 405,
+  },
+  {
+    src: "/ads/jeju-donation-festival.png",
+    alt: "제주도 고향사랑기부제 참여 안내 광고",
+    width: 2048,
+    height: 696,
+  },
+] as const;
 
 function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; sponsored?: boolean; label: string }) {
   return (
@@ -46,6 +62,53 @@ function BusinessCard({ item, sponsored, label }: { item: RecommendedBusiness; s
         ))}
       </ul>
     </article>
+  );
+}
+
+function SponsoredAdsCarousel() {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveIndex((index) => (index + 1) % REGIONAL_ADS.length);
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <div aria-label="지역상권 광고 슬라이드" aria-live="polite">
+      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+        <div
+          className="flex transition-transform duration-700 ease-out"
+          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+        >
+          {REGIONAL_ADS.map((ad) => (
+            <div key={ad.src} className="aspect-[3/1] w-full shrink-0 bg-white">
+              <Image
+                src={ad.src}
+                alt={ad.alt}
+                width={ad.width}
+                height={ad.height}
+                sizes="(max-width: 448px) 100vw, 420px"
+                className="block size-full object-contain"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="mt-2 flex justify-center gap-1.5" aria-label="광고 위치">
+        {REGIONAL_ADS.map((ad, index) => (
+          <button
+            key={ad.src}
+            type="button"
+            onClick={() => setActiveIndex(index)}
+            aria-label={`${index + 1}번째 광고 보기`}
+            aria-current={activeIndex === index}
+            className={`size-1.5 rounded-full transition-colors ${activeIndex === index ? "bg-primary" : "bg-muted-foreground/30"}`}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -172,19 +235,13 @@ export default function VisitorNearbyPage() {
         )}
       </section>
 
-      {recommendations.data && recommendations.data.sponsoredItems.length > 0 && (
-        <section className="mt-6">
+      <section className="mt-6">
           <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-foreground">
             <Megaphone className="size-4" /> {t.nearby.sponsoredTitle}
           </h2>
           <p className="mb-2 text-[0.6875rem] text-muted-foreground">{t.nearby.sponsoredNotice}</p>
-          <div className="space-y-2">
-            {recommendations.data.sponsoredItems.map((item) => (
-              <BusinessCard key={item.businessId} item={item} sponsored label={t.nearby.sponsoredBadge} />
-            ))}
-          </div>
-        </section>
-      )}
+          <SponsoredAdsCarousel />
+      </section>
 
       <section className="mt-6">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground">

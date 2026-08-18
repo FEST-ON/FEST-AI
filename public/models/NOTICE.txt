@@ -1,4 +1,5 @@
-이 디렉터리의 모델 가중치(tiny_face_detector_model.bin, age_gender_model.bin)와
+이 디렉터리의 모델 가중치(tiny_face_detector_model.bin, age_gender_model.bin,
+face_landmark_68_tiny_model.bin)와
 매니페스트는 face-api.js에서 그대로 가져온 것이다. 브라우저로 함께 배포되므로
 MIT 라이선스가 요구하는 저작권 고지와 라이선스 전문을 여기 둔다.
 

@@ -8,6 +8,7 @@ import { KioskSettingsBar } from "@/features/accessibility/ui/kiosk-settings-bar
 import { KioskLargeTextPrompt } from "@/features/kiosk-age-assist/ui/kiosk-large-text-prompt";
 import { setVisitorArea } from "@/features/visitor-area/api/area";
 import { EmergencyAnnouncementBanner } from "@/features/notification/ui/emergency-announcement-banner";
+import { VisitorNotificationToast } from "@/features/notification/ui/visitor-notification-toast";
 import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 import { VisitorNav } from "@/widgets/visitor-nav/visitor-nav";
@@ -53,6 +54,7 @@ export function VisitorShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-background">
       <EmergencyAnnouncementBanner />
       {!isImmersiveAiGuide && <VisitorTopbar />}
+      <VisitorNotificationToast />
       <main
         id="main"
         className={cn(

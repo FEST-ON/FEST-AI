@@ -118,6 +118,11 @@ export interface KioskCameraReport {
   };
   counts: Record<string, number>;
   models: { modelVersion: string; count: number; lastSeenAt: string }[];
+  estimateResults?: {
+    counts: Partial<Record<"SENIOR" | "OTHER" | "UNAVAILABLE", number>>;
+    recent: { result: "SENIOR" | "OTHER" | "UNAVAILABLE"; modelVersion: string; createdAt: string }[];
+  };
+  estimateResultLoggingAvailable?: boolean;
   rates: {
     consentAcceptRate: number | null;
     estimateFailureRate: number | null;
@@ -128,7 +133,15 @@ export interface KioskCameraReport {
 }
 
 export function fetchKioskCameraReport() {
-  return festivalApi<KioskCameraReport>("/kiosk-camera");
+  return festivalApi<KioskCameraReport>("/kiosk-camera").then((report) => ({
+    ...report,
+    estimateResultLoggingAvailable: Boolean(report.estimateResults),
+    // 백엔드 마이그레이션 전 응답도 관리자 화면이 깨지지 않도록 빈 결과로 보정한다.
+    estimateResults: {
+      counts: report.estimateResults?.counts ?? {},
+      recent: report.estimateResults?.recent ?? [],
+    },
+  }));
 }
 
 export function updateKioskCamera({ enabled, stopReason }: { enabled: boolean; stopReason?: string }) {
