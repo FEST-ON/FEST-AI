@@ -45,7 +45,7 @@ export default function StampTourPage() {
       <div className="mt-4 flex flex-col items-center rounded-2xl border border-border bg-card py-6">
         <ProgressRing tone="esg" value={total ? (collected / total) * 100 : 0} label={`${collected}/${total}`} sublabel={t.stampTour.collectionSubLabel} />
         {complete && (
-          <Badge className="mt-3 gap-1 bg-esg/12 text-esg-tint hover:bg-esg/12">
+          <Badge className="mt-3 gap-1 bg-esg/12 text-esg-tint hover:bg-esg/12 dark:bg-esg/20">
             <PartyPopper className="size-3.5" /> {t.stampTour.completeBadge}
           </Badge>
         )}

@@ -43,9 +43,9 @@ import { cn, datetimeLocal, seoulDate, seoulDateTime, toIso } from "@/shared/lib
 import { artifactOf, downloadArtifact, formatBytes } from "@/shared/lib/download-artifact";
 
 const PILLAR_META: Record<EsgPillar, { icon: typeof Leaf; tone: string }> = {
-  환경: { icon: Leaf, tone: "text-esg-tint bg-esg/12" },
-  사회: { icon: Users, tone: "text-primary bg-primary/10" },
-  거버넌스: { icon: Scale, tone: "text-foreground bg-muted" },
+  환경: { icon: Leaf, tone: "text-esg-tint bg-esg/12 dark:bg-esg/20" },
+  사회: { icon: Users, tone: "text-primary bg-primary/10 dark:bg-primary/25 dark:text-primary-tint" },
+  거버넌스: { icon: Scale, tone: "text-foreground bg-muted dark:bg-muted dark:text-foreground" },
 };
 
 const PILLARS: EsgPillar[] = ["환경", "사회", "거버넌스"];

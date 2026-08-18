@@ -30,6 +30,7 @@ import { useFestivalLanguages } from "@/features/accessibility/model/use-festiva
 import { useSpeechOutput } from "@/features/accessibility/model/use-speech-output";
 import { detectLocale, dictionaries, LANGUAGE_BY_LOCALE, useTranslation } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
+import { translateEntries } from "@/shared/lib/i18n/translate-client";
 import { buildMessage, generateReply, loadHistory, reportAiMessage, resetConversation } from "../lib/generate-reply";
 import { useChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
 import { useSpeechRecognition } from "../model/use-speech-recognition";
@@ -43,7 +44,7 @@ const QUESTION_ICON = {
 
 export function PersoAiGuide() {
   const { t, locale, bcp47 } = useTranslation();
-  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome, restoreMessages } = useChatStore();
+  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome, restoreMessages, updateMessageContents } = useChatStore();
   const { largeText, voiceGuide, visitorMode, languageSource, setLanguage } = useAccessibilityStore();
   const { languages } = useFestivalLanguages();
   const [draft, setDraft] = useState("");
@@ -81,6 +82,7 @@ export function PersoAiGuide() {
           backendMessageId: entry.role === "assistant" ? entry.messageId : undefined,
           freshnessAt: entry.freshnessAt,
           needsFallbackChannel: entry.needsFallbackChannel,
+          rawContent: entry.rawContent,
         })),
       ]);
     });
@@ -88,6 +90,24 @@ export function PersoAiGuide() {
     // 최초 진입과 언어 전환 때만 복원한다. messages를 의존성에 넣으면 매 메시지마다 다시 돈다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale, welcomeMessage]);
+
+  // 근거 부족 등으로 뜬 고정 안내 문구(rawContent 보유)는 대화 도중 언어를 바꿔도 화면에
+  // 그대로 남아 있었다 — 원문(한국어)을 들고 있다가 언어가 바뀔 때마다 다시 번역해 갈아 끼운다.
+  useEffect(() => {
+    const fallbackMessages = messages.filter((message) => message.needsFallbackChannel && message.rawContent);
+    if (fallbackMessages.length === 0) return;
+    let cancelled = false;
+    translateEntries(
+      Object.fromEntries(fallbackMessages.map((message) => [message.id, message.rawContent!])),
+      locale,
+    ).then((translated) => {
+      if (!cancelled) updateMessageContents(translated);
+    });
+    return () => { cancelled = true; };
+    // rawContent 보유 메시지 집합이 바뀔 때(새 fallback 추가)도 다시 맞추되, 무한 루프를
+    // 피하려고 messages 전체가 아니라 locale에만 반응한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
 
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
 
@@ -114,6 +134,7 @@ export function PersoAiGuide() {
         backendMessageId: reply.messageId,
         freshnessAt: reply.freshnessAt,
         needsFallbackChannel: reply.needsFallbackChannel,
+        rawContent: reply.rawContent,
       }));
     } catch {
       // 답변 자체를 받지 못한 경우도 근거가 없는 상황이라 대체 채널을 함께 안내한다.

@@ -7,6 +7,7 @@ import {
   fetchMapLocations,
   type MapLocation,
 } from "@/features/map/api/map-locations";
+import { useTranslation } from "@/shared/lib/i18n";
 
 type KakaoLatLng = object;
 type KakaoMap = object;
@@ -77,6 +78,7 @@ function escapeHtml(value: string) {
 }
 
 export function FestivalMap() {
+  const { locale } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [locations, setLocations] = useState<MapLocation[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(null);
@@ -85,7 +87,7 @@ export function FestivalMap() {
   useEffect(() => {
     let cancelled = false;
     async function initializeMap() {
-      const rows = await fetchMapLocations();
+      const rows = await fetchMapLocations({ locale });
       if (cancelled) return;
       setLocations(rows);
       setSelectedLocation(rows[0] ?? null);
@@ -126,7 +128,7 @@ export function FestivalMap() {
     }
     initializeMap();
     return () => { cancelled = true; };
-  }, []);
+  }, [locale]);
 
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">

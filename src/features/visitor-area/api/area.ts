@@ -1,4 +1,6 @@
 import { FESTIVAL_CODE, publicApi, visitorApi } from "@/shared/lib/api";
+import type { Locale } from "@/shared/lib/i18n";
+import { translateEntries, translateFields } from "@/shared/lib/i18n/translate-client";
 
 /**
  * VIS-12 방문객 구역 식별.
@@ -21,12 +23,15 @@ export interface PublicArea {
   areaType: string;
 }
 
-export function fetchVisitorArea() {
-  return visitorApi<VisitorArea>("/visitor-sessions/current/area");
+export async function fetchVisitorArea(locale: Locale = "ko"): Promise<VisitorArea> {
+  const area = await visitorApi<VisitorArea>("/visitor-sessions/current/area");
+  if (locale === "ko" || !area.areaName) return area;
+  const translated = await translateEntries({ areaName: area.areaName }, locale);
+  return { ...area, areaName: translated.areaName ?? area.areaName };
 }
 
-export function fetchPublicAreas() {
-  return publicApi<PublicArea[]>(`/public/festivals/${FESTIVAL_CODE}/areas`);
+export function fetchPublicAreas(locale: Locale = "ko"): Promise<PublicArea[]> {
+  return publicApi<PublicArea[]>(`/public/festivals/${FESTIVAL_CODE}/areas`).then((areas) => translateFields(areas, ["name"], locale));
 }
 
 export function setVisitorArea(areaId: string | null, source: "QR" | "MANUAL" = "MANUAL") {

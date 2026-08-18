@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -108,6 +109,54 @@
   --sidebar-ring: var(--brand);
 }
 
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #1d1d1f;
+  --card-foreground: #ffffff;
+  --popover: #272729;
+  --popover-foreground: #ffffff;
+  /* #0147FF는 검정 위에서 2.7:1로 묻힌다. 어두운 면에서는 애플 systemBlue(dark)로
+     올려 text-primary/border-primary가 그대로 4.6:1 이상 나오게 한다. */
+  --primary: #0a84ff;
+  --primary-foreground: #ffffff;
+  --primary-tint: #7aa5ff;
+  /* #1DCA5E는 검정 위 잉크로 쓰면 4.5:1을 못 넘긴다 — 어두운 면의 글자/아이콘만 밝힌다. */
+  --esg-tint: #4ce085;
+  --secondary: #272729;
+  --secondary-foreground: #ffffff;
+  --muted: #2a2a2c;
+  --muted-foreground: #a1a1a6;
+  --accent: #252527;
+  --accent-foreground: #7aa5ff;
+  --destructive: #ff453a;
+  /* 12%는 카드 경계가 사실상 보이지 않는다 — 카드/배경 분리에 필요한 만큼만 올린다. */
+  --border: rgb(255 255 255 / 22%);
+  --input: rgb(255 255 255 / 30%);
+  --ring: #7aa5ff;
+  --chart-1: #7aa5ff;
+  --chart-2: #0147ff;
+  --chart-3: #a8c2ff;
+  --chart-4: #ffffff;
+  --chart-5: #86868b;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1d1d1f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 22%);
+  --sidebar-ring: #7aa5ff;
+}
+
+/* 다크에서 --primary는 잉크용으로 밝혀놨다(#0a84ff). 하지만 그 색을 통째로 채우면
+   위에 얹힌 흰 글자가 3.6:1로 떨어진다 — 채움면만 브랜드 원색으로 되돌려 6.3:1을 지킨다.
+   ponytail: bg-primary/10 같은 틴트는 클래스명이 달라 걸리지 않는다. 채움면 색을 더
+   세분해야 하면 그때 --primary-fill 토큰으로 쪼갠다. */
+.dark .bg-primary {
+  background-color: var(--brand);
+}
+
 /* 브랜드↔ESG 그라데이션 면. 초록 끝에서는 흰 글자가 2.2:1로 떨어지므로 글자를 얹지 않는
    장식·진행바 전용이다. 글자가 필요한 면은 bg-primary를 쓴다. */
 .bg-brand-gradient {
@@ -181,6 +230,31 @@ html[data-high-contrast="true"] {
   --sidebar-accent: #ffffff;
   --sidebar-accent-foreground: #000000;
   --sidebar-border: #ffffff;
+}
+
+html[data-high-contrast="true"].dark,
+html[data-high-contrast="true"] .dark {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+  --primary: #ffe600;
+  --primary-foreground: #000000;
+  --primary-tint: #ffe600;
+  --esg: #00e05a;
+  --esg-tint: #00e05a;
+  --secondary: #000000;
+  --secondary-foreground: #ffffff;
+  --muted: #000000;
+  --muted-foreground: #ffffff;
+  --accent: #000000;
+  --accent-foreground: #ffe600;
+  --destructive: #ff6b6b;
+  --border: #ffffff;
+  --input: #ffffff;
+  --ring: #ffe600;
 }
 
 /* 반투명·블러·흐린 글자는 대비를 떨어뜨리므로 고대비 모드에서는 끈다. */
