@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 91cc20270fff9260
+// ko.ts sha256: 9164cf0330c761d0
 import type { ko } from "./ko";
 
 export const ja: typeof ko = {
@@ -223,6 +223,22 @@ export const ja: typeof ko = {
     footerNote: "設定はこの端末に自動保存され、次回訪問時も保持されます。",
     highContrastLabel: "ハイコントラストモード",
     highContrastHelper: "文字と背景のコントラストを最大にします",
+  },
+  kioskAssist: {
+    consentTitle: "画面の文字を大きくしますか？",
+    consentDescription: "カメラで少し確認して、ちょうどよい文字サイズをご提案します。使わなくてもすべての機能をご利用いただけます。",
+    consentAccept: "カメラで確認",
+    consentDecline: "大丈夫です、このまま使います",
+    manualLargeText: "すぐ大きな文字に",
+    checking: "確認中…",
+    noticeOnDevice: "確認はこのキオスク内だけで行われ、画像が外部に出ることはありません。",
+    noticeDiscard: "映像と顔の情報は保存せず、確認後すぐに消去します。",
+    noticeNoIdentity: "誰かを特定せず、料金や利用資格にも使いません。",
+    noticeOptional: "カメラを使わなくても、下のボタンで大きな文字にできます。",
+    suggestTitle: "大きな文字にしますか？",
+    suggestDescription: "文字とボタンを大きく表示します。今の画面のままでも大丈夫です。",
+    suggestAccept: "大きな文字で見る",
+    suggestDecline: "今のままでいいです",
   },
   complaint: {
     ariaLabel: "苦情の送信",

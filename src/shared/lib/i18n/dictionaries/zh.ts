@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 91cc20270fff9260
+// ko.ts sha256: 9164cf0330c761d0
 import type { ko } from "./ko";
 
 export const zh: typeof ko = {
@@ -223,6 +223,22 @@ export const zh: typeof ko = {
     footerNote: "设置会自动保存在本设备，下次访问时依然有效。",
     highContrastLabel: "高对比度模式",
     highContrastHelper: "将文字与背景的对比度调到最高",
+  },
+  kioskAssist: {
+    consentTitle: "需要把屏幕文字调大吗？",
+    consentDescription: "摄像头会短暂检测并推荐合适的字号。不使用也可以正常使用全部功能。",
+    consentAccept: "用摄像头检测",
+    consentDecline: "不用了，直接使用",
+    manualLargeText: "直接使用大字",
+    checking: "检测中…",
+    noticeOnDevice: "检测只在本机进行，图像不会传出设备。",
+    noticeDiscard: "不保存影像和面部信息，检测后立即删除。",
+    noticeNoIdentity: "不识别身份，也不用于价格或使用资格。",
+    noticeOptional: "不使用摄像头也可以通过下方按钮开启大字模式。",
+    suggestTitle: "要切换为大字吗？",
+    suggestDescription: "文字和按钮会变大。保持当前画面也可以。",
+    suggestAccept: "使用大字",
+    suggestDecline: "保持现在这样",
   },
   complaint: {
     ariaLabel: "提交投诉",

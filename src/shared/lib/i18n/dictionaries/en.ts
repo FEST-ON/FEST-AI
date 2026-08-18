@@ -1,5 +1,5 @@
 // 이 파일은 생성물입니다. 고치지 말고 ko.ts를 고친 뒤 `npm run i18n`을 실행하세요.
-// ko.ts sha256: 91cc20270fff9260
+// ko.ts sha256: 9164cf0330c761d0
 import type { ko } from "./ko";
 
 export const en: typeof ko = {
@@ -223,6 +223,22 @@ export const en: typeof ko = {
     footerNote: "Settings are saved on this device and kept for your next visit.",
     highContrastLabel: "High contrast",
     highContrastHelper: "Maximises contrast between text and background",
+  },
+  kioskAssist: {
+    consentTitle: "Would you like larger text on screen?",
+    consentDescription: "The camera takes a quick look and suggests a text size. You can use every feature without it.",
+    consentAccept: "Check with camera",
+    consentDecline: "No thanks, continue as is",
+    manualLargeText: "Use large text now",
+    checking: "Checking…",
+    noticeOnDevice: "The check runs only on this kiosk and no image leaves the device.",
+    noticeDiscard: "Video and face data are never stored and are discarded right after the check.",
+    noticeNoIdentity: "It does not identify you and is never used for pricing or eligibility.",
+    noticeOptional: "You can turn on large text with the button below without using the camera.",
+    suggestTitle: "Switch to large text?",
+    suggestDescription: "Text and buttons become larger. Keeping the current screen is fine too.",
+    suggestAccept: "Use large text",
+    suggestDecline: "Keep it as is",
   },
   complaint: {
     ariaLabel: "Submit a complaint",
