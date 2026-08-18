@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BadgePercent,
+  Recycle,
   CalendarDays,
   MapPin,
   RefreshCw,
@@ -67,7 +67,7 @@ const QUICK_MENU: {
   {
     href: "/visitor/coupons",
     labelKey: "coupons",
-    icon: BadgePercent,
+    icon: Recycle,
     kiosk: false,
     menuKey: "coupons",
   },
