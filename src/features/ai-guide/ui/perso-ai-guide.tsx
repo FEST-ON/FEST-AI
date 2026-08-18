@@ -28,6 +28,7 @@ import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sh
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useFestivalLanguages } from "@/features/accessibility/model/use-festival-languages";
 import { useSpeechOutput } from "@/features/accessibility/model/use-speech-output";
+import { useOnDeviceFaceMouth } from "../model/use-on-device-face-mouth";
 import { detectLocale, dictionaries, LANGUAGE_BY_LOCALE, useTranslation } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
 import { translateEntries } from "@/shared/lib/i18n/translate-client";
@@ -53,6 +54,8 @@ export function PersoAiGuide() {
   const threadRef = useRef<HTMLDivElement>(null);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
   const [switchedFrom, setSwitchedFrom] = useState<Locale | null>(null);
+  const avatarStageRef = useRef<HTMLDivElement>(null);
+  const avatarImageRef = useRef<HTMLImageElement>(null);
 
   const welcomeMessage = useMemo(
     () => ({
@@ -119,6 +122,7 @@ export function PersoAiGuide() {
 
   const { status: voiceStatus, mouthOpen } = useSpeechOutput(latestAssistantMessage?.content, { enabled: voiceGuide, bcp47 });
   const isSpeaking = voiceStatus === "playing" || voiceStatus === "fallback";
+  const mouthAnchor = useOnDeviceFaceMouth(avatarImageRef, avatarStageRef);
 
   // 자동 전환된 언어로 바로 답해야 해서 사용할 언어를 인자로 받는다(전환 직후 locale은 아직 이전 값).
   const handleAsk = useCallback(async (question: string, askLocale: Locale = locale) => {
@@ -220,24 +224,33 @@ export function PersoAiGuide() {
 
   return (
     <section className="relative isolate flex h-full min-h-0 flex-col overflow-hidden bg-slate-950 text-white">
-      <Image
-        src="/images/perso-ai-guide.png"
-        alt={t.aiGuide.imageAlt}
-        fill
-        priority
-        sizes="(max-width: 448px) 100vw, 448px"
-        className="-z-10 object-cover object-[center_10%]"
-      />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-        <div
-          className={cn(
-            "absolute left-1/2 top-[35.5%] w-[clamp(2.8rem,12vw,4.4rem)] -translate-x-1/2 rounded-[50%] bg-[#8b2332]/80 shadow-[0_1px_4px_rgba(40,0,0,0.35)] transition-[height,opacity] duration-75",
-            isSpeaking ? "opacity-75" : "opacity-0",
-          )}
-          style={{ height: `${0.12 + mouthOpen * 0.62}rem` }}
-        />
+      <div ref={avatarStageRef} className="absolute inset-0 z-0 overflow-hidden">
+        <div className={cn("ai-avatar-stage absolute inset-0", isSpeaking && "ai-avatar-speaking")}>
+          <Image
+            ref={avatarImageRef}
+            src="/images/perso-ai-guide.png"
+            alt={t.aiGuide.imageAlt}
+            fill
+            priority
+            sizes="(max-width: 448px) 100vw, 448px"
+            className="object-cover object-[center_10%]"
+          />
+          <div
+            aria-hidden
+            className={cn(
+              "absolute -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-[#8b2332]/80 shadow-[0_1px_4px_rgba(40,0,0,0.35)] transition-[height,opacity] duration-75",
+              isSpeaking ? "opacity-75" : "opacity-0",
+            )}
+            style={{
+              left: `${mouthAnchor.left}%`,
+              top: `${mouthAnchor.top}%`,
+              width: `${mouthAnchor.width}%`,
+              height: `${0.12 + mouthOpen * 0.62}rem`,
+            }}
+          />
+        </div>
       </div>
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
 
       <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 backdrop-blur-md">
         <Volume2 className="size-3.5 text-primary-tint" />
