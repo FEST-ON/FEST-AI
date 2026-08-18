@@ -99,7 +99,7 @@ export default function StampTourPage() {
               <Coins className="size-4" />
               <div>
                 <p className="text-[10px] font-semibold text-white/75">
-                  내 ESG 포인트
+                  {t.stampTour.pointsLabel}
                 </p>
                 <p className="text-lg font-extrabold">
                   {(points.data?.balance ?? 0).toLocaleString()}P
@@ -110,7 +110,7 @@ export default function StampTourPage() {
               href="/visitor/coupons/points"
               className="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-esg-text"
             >
-              적립내역
+              {t.stampTour.pointsHistoryLink}
             </Link>
           </div>
         </section>
@@ -122,7 +122,7 @@ export default function StampTourPage() {
               {t.stampTour.spotsTitle}
             </h2>
             <span className="text-[11px] font-semibold text-esg-text">
-              {collected}/{total} 완료
+              {t.stampTour.collectedCount(collected, total)}
             </span>
           </div>
 
@@ -212,7 +212,7 @@ export default function StampTourPage() {
               <div className="rounded-xl border border-esg/30 bg-esg/5 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold text-foreground">
-                    현장 QR로 스탬프 적립
+                    {t.stampTour.scanPanelTitle}
                   </p>
                   <Button
                     type="button"
@@ -220,7 +220,7 @@ export default function StampTourPage() {
                     variant="ghost"
                     onClick={() => setScanningSpot(null)}
                   >
-                    닫기
+                    {t.common.close}
                   </Button>
                 </div>
                 <div className="mt-3">

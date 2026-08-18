@@ -12,35 +12,36 @@ import {
   readReusableContainerRentals,
   reusableContainerPoints,
 } from "@/features/reusable-containers";
-
-const ESG_ACTIONS = [
-  {
-    href: "/visitor/coupons/wallet",
-    label: "쿠폰",
-    description: "내 쿠폰과 혜택",
-    icon: Ticket,
-  },
-  {
-    href: "/visitor/stamp-tour",
-    label: "스탬프",
-    description: "현장 스탬프 투어",
-    icon: Stamp,
-  },
-  {
-    href: "/visitor/coupons/reusable",
-    label: "대여/반납",
-    description: "다회용기 순환 관리",
-    icon: Recycle,
-  },
-  {
-    href: "/visitor/coupons/plogging",
-    label: "플로깅",
-    description: "플로깅 포인트 받기",
-    icon: Trash2,
-  },
-] as const;
+import { useTranslation } from "@/shared/lib/i18n";
 
 export default function EsgPage() {
+  const { t } = useTranslation();
+  const ESG_ACTIONS = [
+    {
+      href: "/visitor/coupons/wallet",
+      label: t.esg.home.actions.coupon.label,
+      description: t.esg.home.actions.coupon.description,
+      icon: Ticket,
+    },
+    {
+      href: "/visitor/stamp-tour",
+      label: t.esg.home.actions.stamp.label,
+      description: t.esg.home.actions.stamp.description,
+      icon: Stamp,
+    },
+    {
+      href: "/visitor/coupons/reusable",
+      label: t.esg.home.actions.reusable.label,
+      description: t.esg.home.actions.reusable.description,
+      icon: Recycle,
+    },
+    {
+      href: "/visitor/coupons/plogging",
+      label: t.esg.home.actions.plogging.label,
+      description: t.esg.home.actions.plogging.description,
+      icon: Trash2,
+    },
+  ] as const;
   const [visitorCode, setVisitorCode] = useState("");
   const [localReusableRentals, setLocalReusableRentals] = useState<
     ReturnType<typeof readReusableContainerRentals>
@@ -72,9 +73,9 @@ export default function EsgPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-4 pb-6">
       <div>
-        <h1 className="text-lg font-extrabold text-foreground">ESG 순환</h1>
+        <h1 className="text-lg font-extrabold text-foreground">{t.esg.home.title}</h1>
         <p className="text-xs text-muted-foreground">
-          다회용기와 스탬프로 축제의 좋은 순환에 참여해요.
+          {t.esg.home.subtitle}
         </p>
       </div>
 
@@ -82,7 +83,7 @@ export default function EsgPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold text-white/80">
-              내 ESG 포인트 확인
+              {t.esg.home.pointsCardLabel}
             </p>
             <p className="mt-1 text-3xl font-extrabold tracking-tight">
               {(
@@ -92,8 +93,8 @@ export default function EsgPage() {
             </p>
             <p className="mt-2 text-[11px] leading-4 text-white/80">
               {localReusablePoints > 0
-                ? `다회용기 반납으로 +${localReusablePoints}P 적립`
-                : "다회용기 반납과 스탬프로 포인트를 모아보세요."}
+                ? t.esg.home.reusableEarnedNotice(localReusablePoints)
+                : t.esg.home.pointsEmptyNotice}
             </p>
           </div>
           <span className="grid size-11 shrink-0 place-items-center rounded-full bg-white/15">
@@ -105,14 +106,14 @@ export default function EsgPage() {
             href="/visitor/coupons/points"
             className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-esg-text"
           >
-            <History className="size-3.5" /> 포인트 적립내역
+            <History className="size-3.5" /> {t.esg.home.historyLink}
           </Link>
           <EsgPayDialog />
         </div>
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-foreground">ESG 기능</h2>
+        <h2 className="mb-2 text-sm font-bold text-foreground">{t.esg.home.featuresTitle}</h2>
         <div className="grid grid-cols-2 gap-2.5">
           {ESG_ACTIONS.map(({ href, label, description, icon: Icon }) => (
             <Link
