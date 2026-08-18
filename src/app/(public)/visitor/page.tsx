@@ -122,6 +122,14 @@ export default function VisitorHomePage() {
     day: "numeric",
     weekday: "long",
   });
+  // schedule 항목의 day는 Asia/Seoul 기준 "월/일 (요일)" 포맷이라 같은 옵션으로 맞춰야 오늘 일정이 걸러진다.
+  const todayKey = new Date().toLocaleDateString(bcp47, {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+    timeZone: "Asia/Seoul",
+  });
+  const todaySchedule = schedule?.filter((item) => item.day === todayKey);
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-4">
@@ -254,10 +262,10 @@ export default function VisitorHomePage() {
                   onRetry={() => scheduleQuery.refetch()}
                 />
               )
-            ) : schedule.length === 0 ? (
+            ) : (todaySchedule ?? []).length === 0 ? (
               <EmptyState message={t.common.empty} />
             ) : null}
-            {(schedule ?? []).slice(0, 3).map((item) => (
+            {(todaySchedule ?? []).slice(0, 3).map((item) => (
               <div
                 key={item.id}
                 className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
