@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type VoiceStatus = "idle" | "synthesizing" | "playing" | "fallback";
 
@@ -13,6 +13,7 @@ interface VoiceResponse {
 }
 
 const VOICE_ENDPOINT = "/api/backend/voice/synthesize";
+const VOICE_MODE = process.env.NEXT_PUBLIC_VOICE_MODE ?? "browser";
 
 function stopAudio(audioRef: { current: HTMLAudioElement | null }, urlRef: { current: string | null }) {
   audioRef.current?.pause();
@@ -47,6 +48,33 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [mouthOpen, setMouthOpen] = useState(0);
 
+  const speakWithBrowser = useCallback((value: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    stopAudio(audioRef, audioUrlRef);
+    stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+    setStatus("fallback");
+    const utterance = new SpeechSynthesisUtterance(value);
+    utterance.lang = bcp47;
+    const startedAt = performance.now();
+    const pulse = () => {
+      setMouthOpen(0.18 + Math.abs(Math.sin((performance.now() - startedAt) / 115)) * 0.62);
+      mouthFrameRef.current = requestAnimationFrame(pulse);
+    };
+    mouthFrameRef.current = requestAnimationFrame(pulse);
+    utterance.onend = () => {
+      stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+      setStatus("idle");
+    };
+    utterance.onerror = () => {
+      stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+      setStatus("idle");
+    };
+    window.speechSynthesis.cancel();
+    // 키오스크·모바일 브라우저에서 멈춘 큐를 깨우고, 버튼 클릭 직후에도 재생되게 한다.
+    window.speechSynthesis.resume();
+    window.speechSynthesis.speak(utterance);
+  }, [bcp47]);
+
   useEffect(() => {
     if (!enabled) {
       window.speechSynthesis?.cancel();
@@ -60,33 +88,17 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
 
     const spokenText = text;
     spokenRef.current = spokenText;
+
+    // 기본값은 완전한 온디바이스 데모다. CosyVoice 백엔드는 운영 환경에서
+    // NEXT_PUBLIC_VOICE_MODE=remote를 명시한 경우에만 사용한다.
+    if (VOICE_MODE !== "remote") {
+      speakWithBrowser(spokenText);
+      return () => stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+    }
+
     const controller = new AbortController();
     let cancelled = false;
-
-    function browserFallback(value: string) {
-      if (typeof window === "undefined" || !window.speechSynthesis) return;
-      stopAudio(audioRef, audioUrlRef);
-      stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
-      setStatus("fallback");
-      const utterance = new SpeechSynthesisUtterance(value);
-      utterance.lang = bcp47;
-      const startedAt = performance.now();
-      const pulse = () => {
-        setMouthOpen(0.18 + Math.abs(Math.sin((performance.now() - startedAt) / 115)) * 0.62);
-        mouthFrameRef.current = requestAnimationFrame(pulse);
-      };
-      mouthFrameRef.current = requestAnimationFrame(pulse);
-      utterance.onend = () => {
-        stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
-        setStatus("idle");
-      };
-      utterance.onerror = () => {
-        stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
-        setStatus("idle");
-      };
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
-    }
+    let timedOut = false;
 
     function startAudioAnimation(audio: HTMLAudioElement) {
       if (!window.AudioContext) return;
@@ -115,7 +127,7 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
       } catch {
         // 일부 키오스크 브라우저는 AudioContext를 막을 수 있다. 재생은 계속하고
         // 음성 출력 상태만으로 입 모양을 움직이는 fallback을 사용한다.
-        browserFallback(spokenText);
+        speakWithBrowser(spokenText);
       }
     }
 
@@ -147,25 +159,30 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
         audio.onerror = () => {
           stopAudio(audioRef, audioUrlRef);
           stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
-          browserFallback(spokenText);
+          speakWithBrowser(spokenText);
         };
         startAudioAnimation(audio);
         setStatus("playing");
         await audio.play();
       } catch (error) {
-        if (cancelled || (error instanceof DOMException && error.name === "AbortError")) return;
-        browserFallback(spokenText);
+        if (cancelled || (error instanceof DOMException && error.name === "AbortError" && !timedOut)) return;
+        speakWithBrowser(spokenText);
       }
     }
 
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 1800);
     void synthesize();
     return () => {
       cancelled = true;
       controller.abort();
+      window.clearTimeout(timeout);
       stopAudio(audioRef, audioUrlRef);
       stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
     };
-  }, [text, enabled, bcp47]);
+  }, [text, enabled, bcp47, speakWithBrowser]);
 
   // 화면을 떠나면 읽던 문장을 끊는다 — 뒤로 가기 후에도 계속 말하면 사용자가 멈출 방법이 없다.
   useEffect(() => () => {
@@ -174,5 +191,9 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
     stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
   }, []);
 
-  return { status, mouthOpen };
+  const replay = useCallback(() => {
+    if (enabled && text) speakWithBrowser(text);
+  }, [enabled, speakWithBrowser, text]);
+
+  return { status, mouthOpen, replay };
 }
