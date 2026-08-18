@@ -79,7 +79,7 @@ export default function StampTourPage() {
       <div className="px-4 pt-0 pb-6">
         <p className="text-xs text-muted-foreground">{t.stampTour.subtitle}</p>
 
-        <section className="rounded-2xl border border-esg/30 bg-esg/5 p-4">
+        <section className="mt-4 rounded-2xl border border-esg/30 bg-esg/5 p-4">
           <div className="flex flex-col items-center rounded-xl border border-esg/20 bg-card py-5">
             <ProgressRing
               value={total ? (collected / total) * 100 : 0}

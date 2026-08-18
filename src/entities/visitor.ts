@@ -1,6 +1,7 @@
 import { FESTIVAL_CODE, json, publicApi, visitorApi } from "@/shared/lib/api";
 import type { Locale } from "@/shared/lib/i18n";
 import { translateEntries } from "@/shared/lib/i18n/translate-client";
+import { linkedStoreName } from "@/shared/lib/survey-store-link";
 
 export interface ChatMessage {
   id: string;
@@ -29,6 +30,8 @@ export interface SurveyOption {
 export interface SurveyQuestion {
   id: string;
   surveyId: string;
+  /** "[매장명] ..." 접두어에서 뽑은 매장명. 없으면 매장과 무관한 공용 설문. */
+  linkedStoreName: string | null;
   question: string;
   type: "rating" | "single_choice" | "multiple_choice" | "text";
   options?: SurveyOption[];
@@ -63,16 +66,23 @@ export function hasSurveyAnswer(value: SurveyAnswer | undefined) {
 export async function fetchSurveyQuestions(locale: Locale = "ko"): Promise<SurveyQuestion[]> {
   const surveys = await publicApi<Array<{
     id: string;
+    title?: string;
     questions: Array<{ id: string; prompt: string; type: string; options?: string[]; required: boolean }>;
   }>>(`/public/festivals/${FESTIVAL_CODE}/surveys`);
-  const questions = surveys.flatMap((survey) => survey.questions.map((question) => ({
-    id: question.id,
-    surveyId: survey.id,
-    question: question.prompt,
-    type: surveyQuestionType(question.type),
-    options: question.options?.map((value) => ({ value, label: value })),
-    required: question.required,
-  } satisfies SurveyQuestion)));
+  // 매장 연결은 제목 접두어로만 표현되므로, 번역으로 바뀌기 전 원문 제목에서 읽어야
+  // 스탬프 스팟의 원문 이름과 그대로 대조할 수 있다.
+  const questions = surveys.flatMap((survey) => {
+    const storeName = linkedStoreName(survey.title ?? "");
+    return survey.questions.map((question) => ({
+      id: question.id,
+      surveyId: survey.id,
+      linkedStoreName: storeName,
+      question: question.prompt,
+      type: surveyQuestionType(question.type),
+      options: question.options?.map((value) => ({ value, label: value })),
+      required: question.required,
+    } satisfies SurveyQuestion));
+  });
 
   if (locale === "ko" || questions.length === 0) return questions;
   const entries: Record<string, string> = {};

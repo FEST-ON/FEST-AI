@@ -14,7 +14,7 @@ import {
   Stamp,
   ClipboardList,
   ArrowRight,
-  ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { CrowdList } from "@/features/crowd/ui/crowd-list";
@@ -71,6 +71,7 @@ const QUICK_MENU: {
     kiosk: false,
     menuKey: "coupons",
   },
+
   {
     href: "/visitor/nearby",
     labelKey: "nearby",
@@ -84,6 +85,13 @@ const QUICK_MENU: {
     icon: ClipboardList,
     kiosk: false,
     menuKey: "survey",
+  },
+  {
+    href: "/visitor/coupons/plogging",
+    labelKey: "plogging",
+    icon: Trash2,
+    kiosk: false,
+    menuKey: "coupons",
   },
 ];
 
@@ -188,7 +196,9 @@ export default function VisitorHomePage() {
       >
         {quickMenu.map(({ href, labelKey, icon: Icon }) => {
           // 스탬프 투어는 ESG 적립 기능 — 나머지 일반 기능과 색으로 갈라 둔다.
-          const esg = href === "/visitor/stamp-tour";
+          const esg =
+            href === "/visitor/stamp-tour" ||
+            href === "/visitor/coupons/plogging";
           return (
             <Link
               key={href}
@@ -278,19 +288,6 @@ export default function VisitorHomePage() {
             ))}
           </div>
         </section>
-      )}
-
-      {/* OPS-11: 수집 항목·보유기간 고지와 열람·삭제 요구 창구는 방문객이 스스로 찾을 수 있어야 한다. */}
-      {visitorMode === "qr" && (
-        <Link
-          href="/visitor/privacy"
-          className="mb-2 flex items-center justify-between rounded-xl border border-border bg-card p-3 text-xs font-semibold text-muted-foreground"
-        >
-          <span className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="size-4 text-primary" /> {t.privacy.title}
-          </span>
-          <ArrowRight className="size-3.5" />
-        </Link>
       )}
     </div>
   );
