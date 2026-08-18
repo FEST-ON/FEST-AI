@@ -38,6 +38,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local CosyVoice source, model weights, and runtime cache
+/.cosyvoice-runtime/
+
+# backend source lives in the FEST-ON/Backend repository
+/backend/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
