@@ -365,7 +365,12 @@ export default function AdminPrivacyPage() {
                   <StatCard label="그 외" value={`${estimateResults.counts.OTHER ?? 0}건`} helper="제안 없음" />
                   <StatCard label="판단 불가" value={`${estimateResults.counts.UNAVAILABLE ?? 0}건`} helper="카메라·모델 오류" />
                 </div>
-                {estimateResults.recent.length === 0 ? (
+                {!data.estimateResultLoggingAvailable ? (
+                  <p className="text-[0.6875rem] leading-5 text-muted-foreground">
+                    현재 연결된 백엔드는 얼굴인식 결과 로그를 아직 지원하지 않아요. 기존 키오스크·카메라 기능은 사용할 수 있고,
+                    백엔드에 결과 로그 migration을 적용하면 이곳에 기록돼요.
+                  </p>
+                ) : estimateResults.recent.length === 0 ? (
                   <p className="text-[0.6875rem] text-muted-foreground">아직 얼굴인식 결과가 없습니다.</p>
                 ) : (
                   <Table>
