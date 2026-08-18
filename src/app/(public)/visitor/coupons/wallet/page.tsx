@@ -30,10 +30,10 @@ export default function CouponWalletPage() {
   return (
     <div className="px-4 pt-4 pb-6">
       <Link href="/visitor/coupons" className="mb-4 inline-flex items-center gap-1 text-xs font-semibold text-esg-text">
-        <ArrowLeft className="size-3.5" /> ESG 순환
+        <ArrowLeft className="size-3.5" /> {t.esg.backTitle}
       </Link>
-      <h1 className="text-lg font-extrabold text-foreground">내 쿠폰함</h1>
-      <p className="text-xs text-muted-foreground">발급받은 쿠폰과 현장 혜택을 확인하세요.</p>
+      <h1 className="text-lg font-extrabold text-foreground">{t.coupon.title}</h1>
+      <p className="text-xs text-muted-foreground">{t.coupon.subtitle}</p>
 
       <section className="mt-5">
         <h2 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-foreground"><Ticket className="size-4" /> {t.coupon.myCouponsTitle}</h2>
