@@ -21,10 +21,8 @@ export function Logo({
           isDark ? "text-white" : "text-foreground",
         )}
       >
-        F
-        <span className="bg-brand-gradient-ink bg-clip-text text-transparent font-black">
-          :EST
-        </span>
+        F<span className="text-primary">:</span>
+        <span className="bg-brand-gradient bg-clip-text font-black text-transparent">EST</span>
         <span className="ml-1">AI</span>
       </span>
       {withTagline && (

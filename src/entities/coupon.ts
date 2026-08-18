@@ -11,6 +11,8 @@ export interface StampSpot {
   collected: boolean;
   /** SELF는 화면에서 바로 찍고, 그 외(QR·현장 확인)는 현장 인증 값이 있어야 한다. */
   verificationType: string;
+  actionType: string;
+  points: number;
 }
 
 export type CouponBenefitType = "FIXED" | "PERCENT" | "GIFT";
@@ -128,8 +130,16 @@ export async function fetchStampSpots(locale: Locale = "ko"): Promise<StampSpot[
     location: action.location,
     collected: action.completed,
     verificationType: action.verificationType,
+    actionType: action.actionType,
+    points: Number(action.points ?? 0),
   }));
   return translateFields(spots, ["name", "location"], locale);
+}
+
+/** ESG 화면에서는 다회용기 회수와 연결된 스탬프만 별도로 사용할 수 있다. */
+export async function fetchReusableContainerStamps(locale: Locale = "ko") {
+  const spots = await fetchStampSpots(locale);
+  return spots.filter((spot) => spot.actionType === "REUSABLE_CUP");
 }
 
 /**
