@@ -1,5 +1,28 @@
 @import "tailwindcss";
+
+@keyframes ai-avatar-speaking {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  28% { transform: translate3d(-0.18%, 0.2%, 0) rotate(-0.18deg) scale(1.002); }
+  58% { transform: translate3d(0.2%, -0.12%, 0) rotate(0.15deg) scale(1.004); }
+  82% { transform: translate3d(0.05%, 0.16%, 0) rotate(-0.08deg) scale(1.001); }
+}
+
+.ai-avatar-speaking {
+  transform-origin: 50% 35%;
+  animation: ai-avatar-speaking 1.8s ease-in-out infinite;
+}
 @import "tw-animate-css";
+
+@keyframes visitor-notification-toast {
+  0% { opacity: 0; transform: translateY(-14px); }
+  12% { opacity: 1; transform: translateY(0); }
+  78% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-34px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-visitor-notification-toast { animation: none; }
+}
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));

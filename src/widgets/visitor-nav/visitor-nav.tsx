@@ -23,7 +23,7 @@ export const NAV_ITEMS: {
     href: "/visitor/coupons",
     labelKey: "coupons",
     icon: Recycle,
-    kiosk: true,
+    kiosk: false,
     menuKey: "coupons",
   },
   {

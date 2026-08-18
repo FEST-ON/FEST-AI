@@ -4,10 +4,10 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { KioskSettingsBar } from "@/features/accessibility/ui/kiosk-settings-bar";
 import { KioskLargeTextPrompt } from "@/features/kiosk-age-assist/ui/kiosk-large-text-prompt";
 import { setVisitorArea } from "@/features/visitor-area/api/area";
 import { EmergencyAnnouncementBanner } from "@/features/notification/ui/emergency-announcement-banner";
+import { VisitorNotificationToast } from "@/features/notification/ui/visitor-notification-toast";
 import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 import { VisitorNav } from "@/widgets/visitor-nav/visitor-nav";
@@ -53,6 +53,7 @@ export function VisitorShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-background">
       <EmergencyAnnouncementBanner />
       {!isImmersiveAiGuide && <VisitorTopbar />}
+      <VisitorNotificationToast />
       <main
         id="main"
         className={cn(
@@ -62,12 +63,9 @@ export function VisitorShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
-      {/* 키오스크는 이용자가 바뀔 때마다 언어·글씨 크기부터 다시 맞춘다 — 모든 화면에서 바로 보이게 둔다. */}
+      {/* 키오스크 얼굴인식 결과가 필요한 경우에만 큰 글씨 제안 팝업을 띄운다. */}
       {visitorMode === "kiosk" && (
-        <>
-          <KioskLargeTextPrompt />
-          <KioskSettingsBar />
-        </>
+        <KioskLargeTextPrompt />
       )}
       <VisitorNav />
     </div>
