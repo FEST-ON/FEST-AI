@@ -13,7 +13,13 @@ import { cn } from "@/shared/lib/utils";
 import { VisitorNav } from "@/widgets/visitor-nav/visitor-nav";
 import { VisitorTopbar } from "@/widgets/visitor-nav/visitor-topbar";
 
-const KIOSK_ROUTES = ["/visitor", "/visitor/ai-guide", "/visitor/map"];
+const KIOSK_ROUTES = [
+  "/visitor",
+  "/visitor/ai-guide",
+  "/visitor/map",
+  "/visitor/schedule",
+  "/visitor/nearby",
+];
 
 export function VisitorShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
