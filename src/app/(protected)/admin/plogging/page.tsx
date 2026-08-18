@@ -193,8 +193,7 @@ export default function AdminPloggingPage() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-foreground">최근 인증 활동</h2>
-            <p className="mt-1 text-[11px] text-muted-foreground">인증 완료 건은 방문객 화면에 즉시 반영됩니다.</p>
-          </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">(데모: localStorage) 인증 완료 내역은 이 기기/브라우저에서만 즉시 반영됩니다.</p>
           <Badge variant="outline" className="gap-1 text-[10px]"><QrCode className="size-3" /> TRASH_PICKUP</Badge>
         </div>
         {submissions.length === 0 ? (
@@ -228,9 +227,9 @@ export default function AdminPloggingPage() {
         <div className="mt-3 grid gap-3 text-xs text-muted-foreground sm:grid-cols-3">
           <div className="flex gap-2"><ScanLine className="mt-0.5 size-4 shrink-0 text-primary" /><span><b className="text-foreground">1. 스캔</b><br />방문객 QR을 스캔하거나 코드를 입력합니다.</span></div>
           <div className="flex gap-2"><Trash2 className="mt-0.5 size-4 shrink-0 text-primary" /><span><b className="text-foreground">2. 확인</b><br />수거한 쓰레기 봉투 수를 입력합니다.</span></div>
-          <div className="flex gap-2"><Coins className="mt-0.5 size-4 shrink-0 text-primary" /><span><b className="text-foreground">3. 적립</b><br />인증 완료 즉시 봉투당 +{PLOGGING_POINTS_PER_BAG}P를 방문객 화면에 표시합니다.</span></div>
+          <div className="flex gap-2"><Coins className="mt-0.5 size-4 shrink-0 text-primary" /><span><b className="text-foreground">3. 적립</b><br />(데모: 이 기기 기준) 인증 완료 즉시 봉투당 +{PLOGGING_POINTS_PER_BAG}P를 기록합니다.</span></div>
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground">현재는 프론트엔드 전용 데모 저장소(localStorage)입니다. 실제 서버 저장·중복 방지는 백엔드 API 연결 시 교체할 수 있습니다.</p>
+        <p className="mt-3 text-[11px] text-muted-foreground">현재는 프론트엔드 전용 데모 저장소(localStorage)라 인증 내역이 기기/브라우저 간 동기화되지 않습니다. 실제 서버 저장·중복 방지는 백엔드 API 연결 시 교체할 수 있습니다.</p>
       </section>
     </div>
   );
