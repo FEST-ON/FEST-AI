@@ -1,6 +1,12 @@
 "use client";
 
-import { MonitorSmartphone, QrCode } from "lucide-react";
+import {
+  ArrowRight,
+  MonitorSmartphone,
+  QrCode,
+  ShieldCheck,
+} from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Label } from "@/shared/ui/label";
@@ -186,6 +192,20 @@ export function AccessibilitySheet({
               onCheckedChange={toggleVoiceGuide}
             />
           </div>
+
+          {/* OPS-11: 수집 항목·보유기간 고지와 열람·삭제 요구 창구는 방문객이 스스로 찾을 수 있어야 한다. */}
+          {visitorMode === "qr" && (
+            <Link
+              href="/visitor/privacy"
+              className="mb-2 flex items-center justify-between rounded-xl border border-border bg-card p-3 text-xs font-semibold text-muted-foreground"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <ShieldCheck className="size-4 text-primary" />
+                {t.privacy.title}
+              </span>
+              <ArrowRight className="size-3.5" />
+            </Link>
+          )}
         </div>
         <SheetFooter>
           <p className="text-center text-[0.6875rem] text-muted-foreground">

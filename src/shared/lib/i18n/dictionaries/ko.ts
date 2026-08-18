@@ -30,6 +30,7 @@ export const ko = {
       reservation: "예약·대기",
       stampTour: "스탬프투어",
       coupons: "쿠폰·포인트",
+      plogging: "플로깅",
       nearby: "지역상권",
       survey: "만족도조사",
     },
@@ -173,6 +174,10 @@ export const ko = {
     textPlaceholder: "의견을 입력해 주세요",
     submitting: "제출 중...",
     submit: "제출하기",
+    storeLockedTitle: "스탬프를 모으면 열리는 설문",
+    storeLockedHint: (storeName: string) => `${storeName} 스탬프를 적립하면 참여할 수 있어요.`,
+    storeLockedCta: "스탬프 투어 가기",
+    allLockedEmpty: "지금은 참여할 수 있는 설문이 없어요. 매장 스탬프를 먼저 모아보세요.",
   },
   area: {
     ariaLabel: "현재 구역 설정",
