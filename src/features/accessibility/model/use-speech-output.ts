@@ -12,8 +12,11 @@ interface VoiceResponse {
   };
 }
 
-const VOICE_ENDPOINT = "/api/backend/voice/synthesize";
+const VOICE_ENDPOINT = "/api/voice/synthesize";
 const VOICE_MODE = process.env.NEXT_PUBLIC_VOICE_MODE ?? "browser";
+// 방문객 화면은 모델이 차갑게 시작되거나 CPU 추론이 길어져도 4초 이상 멈추지 않는다.
+// CosyVoice가 준비된 뒤 빠르게 응답하면 서버 음성을 사용하고, 아니면 브라우저 음성으로 즉시 대체한다.
+const VOICE_TIMEOUT_MS = 4_000;
 
 function stopAudio(audioRef: { current: HTMLAudioElement | null }, urlRef: { current: string | null }) {
   audioRef.current?.pause();
@@ -45,6 +48,7 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
   const audioUrlRef = useRef<string | null>(null);
   const mouthFrameRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const [replayVersion, setReplayVersion] = useState(0);
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [mouthOpen, setMouthOpen] = useState(0);
 
@@ -81,10 +85,10 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
       stopAudio(audioRef, audioUrlRef);
       stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
       spokenRef.current = undefined;
-      setStatus("idle");
-      return;
+      const resetStatus = window.setTimeout(() => setStatus("idle"), 0);
+      return () => window.clearTimeout(resetStatus);
     }
-    if (!text || spokenRef.current === text) return;
+    if (!text || (spokenRef.current === text && replayVersion === 0)) return;
 
     const spokenText = text;
     spokenRef.current = spokenText;
@@ -92,8 +96,11 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
     // 기본값은 완전한 온디바이스 데모다. CosyVoice 백엔드는 운영 환경에서
     // NEXT_PUBLIC_VOICE_MODE=remote를 명시한 경우에만 사용한다.
     if (VOICE_MODE !== "remote") {
-      speakWithBrowser(spokenText);
-      return () => stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+      const startFallback = window.setTimeout(() => speakWithBrowser(spokenText), 0);
+      return () => {
+        window.clearTimeout(startFallback);
+        stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+      };
     }
 
     const controller = new AbortController();
@@ -173,7 +180,7 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
     const timeout = window.setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, 1800);
+    }, VOICE_TIMEOUT_MS);
     void synthesize();
     return () => {
       cancelled = true;
@@ -182,7 +189,7 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
       stopAudio(audioRef, audioUrlRef);
       stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
     };
-  }, [text, enabled, bcp47, speakWithBrowser]);
+  }, [text, enabled, bcp47, replayVersion, speakWithBrowser]);
 
   // 화면을 떠나면 읽던 문장을 끊는다 — 뒤로 가기 후에도 계속 말하면 사용자가 멈출 방법이 없다.
   useEffect(() => () => {
@@ -192,7 +199,12 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
   }, []);
 
   const replay = useCallback(() => {
-    if (enabled && text) speakWithBrowser(text);
+    if (!enabled || !text) return;
+    if (VOICE_MODE === "remote") {
+      setReplayVersion((value) => value + 1);
+      return;
+    }
+    speakWithBrowser(text);
   }, [enabled, speakWithBrowser, text]);
 
   return { status, mouthOpen, replay };

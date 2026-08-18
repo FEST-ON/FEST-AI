@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@heygen/liveavatar-web-sdk": "^0.0.18",
     "@tanstack/react-query": "^5.101.4",
     "@types/qrcode": "^1.5.5",
     "@vercel/functions": "^3.9.3",

@@ -9,6 +9,7 @@ import {
   Flag,
   Headset,
   Keyboard,
+  KeyRound,
   Languages,
   MapPin,
   Mic,
@@ -17,7 +18,9 @@ import {
   SendHorizontal,
   Square,
   Sparkles,
+  Settings2,
   Users,
+  Video,
   Volume2,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
@@ -29,6 +32,7 @@ import { useAccessibilityStore } from "@/features/accessibility/model/store";
 import { useFestivalLanguages } from "@/features/accessibility/model/use-festival-languages";
 import { useSpeechOutput } from "@/features/accessibility/model/use-speech-output";
 import { useOnDeviceFaceMouth } from "../model/use-on-device-face-mouth";
+import { useLiveAvatar } from "../model/use-live-avatar";
 import { detectLocale, dictionaries, LANGUAGE_BY_LOCALE, useTranslation } from "@/shared/lib/i18n";
 import type { Locale } from "@/shared/lib/i18n";
 import { translateEntries } from "@/shared/lib/i18n/translate-client";
@@ -54,8 +58,24 @@ export function PersoAiGuide() {
   const threadRef = useRef<HTMLDivElement>(null);
   const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
   const [switchedFrom, setSwitchedFrom] = useState<Locale | null>(null);
+  const [showLiveAvatarSetup, setShowLiveAvatarSetup] = useState(false);
+  const [liveAvatarApiKey, setLiveAvatarApiKey] = useState("");
+  const [liveAvatarId, setLiveAvatarId] = useState("");
+  const [liveAvatarSandbox, setLiveAvatarSandbox] = useState(true);
   const avatarStageRef = useRef<HTMLDivElement>(null);
   const avatarImageRef = useRef<HTMLImageElement>(null);
+  const autoStartLiveAvatarRef = useRef(false);
+  const spokenAvatarMessageRef = useRef<string | undefined>(undefined);
+  const {
+    videoRef: setLiveAvatarVideo,
+    status: liveAvatarStatus,
+    streamReady: liveAvatarStreamReady,
+    isSpeaking: liveAvatarIsSpeaking,
+    isConfigured: liveAvatarIsConfigured,
+    error: liveAvatarError,
+    start: startLiveAvatarSession,
+    speak: speakLiveAvatar,
+  } = useLiveAvatar();
 
   const welcomeMessage = useMemo(
     () => ({
@@ -113,6 +133,8 @@ export function PersoAiGuide() {
   }, [locale]);
 
   const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+  const latestAssistantMessageId = latestAssistantMessage?.id;
+  const latestAssistantMessageContent = latestAssistantMessage?.content;
 
   // 새 말풍선이 붙으면 가장 최근 대화가 보이도록 맨 아래로 따라간다.
   useEffect(() => {
@@ -120,9 +142,38 @@ export function PersoAiGuide() {
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, [messages, isTyping]);
 
-  const { status: voiceStatus, mouthOpen } = useSpeechOutput(latestAssistantMessage?.content, { enabled: voiceGuide, bcp47 });
-  const isSpeaking = voiceStatus === "playing" || voiceStatus === "fallback";
+  // LiveAvatar가 연결되면 기존 브라우저/CosyVoice 음성은 끄고 아바타 음성만 사용한다.
+  // 연결에 실패했을 때는 기존 음성 안내로 즉시 돌아가므로 안내 기능이 사라지지 않는다.
+  const { status: voiceStatus, mouthOpen, replay: replayVoice } = useSpeechOutput(
+    latestAssistantMessage?.content,
+    { enabled: voiceGuide && !liveAvatarStreamReady, bcp47 },
+  );
+  const isSpeaking = liveAvatarIsSpeaking || voiceStatus === "playing" || voiceStatus === "fallback";
   const mouthAnchor = useOnDeviceFaceMouth(avatarImageRef, avatarStageRef);
+
+  // 서버 환경변수에 API 키와 아바타 ID가 있으면 AI 안내 화면 진입과 함께 세션을 연다.
+  // 연결 설정 패널은 사용자가 왼쪽 위 설정 버튼을 눌렀을 때만 연다.
+  useEffect(() => {
+    if (liveAvatarIsConfigured !== true || autoStartLiveAvatarRef.current) return;
+    autoStartLiveAvatarRef.current = true;
+    void startLiveAvatarSession();
+  }, [liveAvatarIsConfigured, startLiveAvatarSession]);
+
+  // Alan AI가 새 답변을 만들면 같은 한국어 문장을 LiveAvatar에 그대로 전달한다.
+  // 질문 전에 켜지지 않았더라도 영상 스트림이 준비되는 순간 최신 답변을 한 번 재생한다.
+  useEffect(() => {
+    if (!liveAvatarStreamReady || !latestAssistantMessageId || !latestAssistantMessageContent || latestAssistantMessageId === WELCOME_MESSAGE_ID) return;
+    if (spokenAvatarMessageRef.current === latestAssistantMessageId) return;
+    if (speakLiveAvatar(latestAssistantMessageContent)) spokenAvatarMessageRef.current = latestAssistantMessageId;
+  }, [latestAssistantMessageContent, latestAssistantMessageId, liveAvatarStreamReady, speakLiveAvatar]);
+
+  function startLiveAvatar() {
+    void startLiveAvatarSession({
+      apiKey: liveAvatarApiKey.trim() || undefined,
+      avatarId: liveAvatarId.trim() || undefined,
+      sandbox: liveAvatarSandbox,
+    });
+  }
 
   // 자동 전환된 언어로 바로 답해야 해서 사용할 언어를 인자로 받는다(전환 직후 locale은 아직 이전 값).
   const handleAsk = useCallback(async (question: string, askLocale: Locale = locale) => {
@@ -233,13 +284,23 @@ export function PersoAiGuide() {
             fill
             priority
             sizes="(max-width: 448px) 100vw, 448px"
-            className="object-cover object-[center_10%]"
+            className={cn("object-cover object-[center_10%] transition-opacity duration-500", liveAvatarStreamReady && "opacity-0")}
+          />
+          <video
+            ref={setLiveAvatarVideo}
+            autoPlay
+            playsInline
+            aria-label="LiveAvatar 한국어 AI 안내 아바타"
+            className={cn(
+              "absolute inset-0 size-full object-cover object-[center_10%] transition-opacity duration-500",
+              liveAvatarStreamReady ? "opacity-100" : "pointer-events-none opacity-0",
+            )}
           />
           <div
             aria-hidden
             className={cn(
               "absolute -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-[#8b2332]/80 shadow-[0_1px_4px_rgba(40,0,0,0.35)] transition-[height,opacity] duration-75",
-              isSpeaking ? "opacity-75" : "opacity-0",
+              isSpeaking && !liveAvatarStreamReady ? "opacity-75" : "opacity-0",
             )}
             style={{
               left: `${mouthAnchor.left}%`,
@@ -252,9 +313,92 @@ export function PersoAiGuide() {
       </div>
       <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
 
+      <div className="absolute left-4 top-4 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 shadow-sm backdrop-blur-md">
+        <Video className={cn("size-3.5", liveAvatarStreamReady ? "text-emerald-300" : "text-white/75")} />
+        {liveAvatarStreamReady ? "LiveAvatar 연결됨" : "Alan AI 아바타"}
+        <button
+          type="button"
+          onClick={() => setShowLiveAvatarSetup((visible) => !visible)}
+          aria-label="한국어 API 연결 설정"
+          className="ml-1 rounded-full bg-white/15 p-1 transition hover:bg-white/25"
+        >
+          <Settings2 className="size-3" />
+        </button>
+        {liveAvatarIsConfigured && !liveAvatarStreamReady && liveAvatarStatus === "idle" && (
+          <button
+            type="button"
+            onClick={() => void startLiveAvatarSession()}
+            className="rounded-full bg-emerald-400/90 px-2 py-0.5 text-[0.625rem] font-bold text-emerald-950 transition hover:bg-emerald-300"
+          >
+            시작
+          </button>
+        )}
+      </div>
+
+      {showLiveAvatarSetup && !liveAvatarStreamReady && (
+        <div className="absolute left-4 right-4 top-16 z-40 rounded-2xl border border-white/20 bg-slate-950/85 p-3 text-white shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <KeyRound className="size-3.5 text-emerald-300" />
+            한국어 LiveAvatar 연결
+          </div>
+          <p className="mt-1 text-[0.625rem] leading-4 text-white/70">
+            API 키와 LiveAvatar 대시보드의 한국인형 아바타 ID를 입력하면 이 화면에서 바로 사용합니다. 입력값은 저장하지 않습니다.
+          </p>
+          <div className="mt-2 grid gap-2">
+            <input
+              type="password"
+              value={liveAvatarApiKey}
+              onChange={(event) => setLiveAvatarApiKey(event.target.value)}
+              placeholder="LiveAvatar API 키"
+              autoComplete="off"
+              className="h-9 rounded-lg border border-white/15 bg-white/10 px-2.5 text-xs text-white outline-none placeholder:text-white/45 focus:border-emerald-300"
+            />
+            <input
+              type="text"
+              value={liveAvatarId}
+              onChange={(event) => setLiveAvatarId(event.target.value)}
+              placeholder="한국인형 아바타 ID (UUID)"
+              autoComplete="off"
+              className="h-9 rounded-lg border border-white/15 bg-white/10 px-2.5 text-xs text-white outline-none placeholder:text-white/45 focus:border-emerald-300"
+            />
+            <label className="flex items-center gap-2 text-[0.625rem] text-white/75">
+              <input
+                type="checkbox"
+                checked={liveAvatarSandbox}
+                onChange={(event) => setLiveAvatarSandbox(event.target.checked)}
+                className="accent-emerald-400"
+              />
+              Sandbox로 테스트(크레딧 사용 안 함)
+            </label>
+            <button
+              type="button"
+              onClick={startLiveAvatar}
+              disabled={liveAvatarStatus === "starting" || liveAvatarStatus === "connecting"}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-400 px-3 text-xs font-bold text-emerald-950 transition hover:bg-emerald-300 disabled:opacity-50"
+            >
+              {liveAvatarStatus === "starting" || liveAvatarStatus === "connecting" ? "아바타 연결 중…" : "한국어 아바타 시작"}
+            </button>
+          </div>
+          {liveAvatarError && <p className="mt-2 text-[0.625rem] leading-4 text-red-200">{liveAvatarError}</p>}
+        </div>
+      )}
+
       <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 backdrop-blur-md">
         <Volume2 className="size-3.5 text-primary-tint" />
-        {t.aiGuide.voiceReadyBadge}
+        {liveAvatarStreamReady ? "한국어 아바타 음성" : t.aiGuide.voiceReadyBadge}
+        {(voiceGuide || liveAvatarStreamReady) && (
+          <button
+            type="button"
+            onClick={() => {
+              if (liveAvatarStreamReady && latestAssistantMessage) speakLiveAvatar(latestAssistantMessage.content);
+              else replayVoice();
+            }}
+            aria-label={t.accessibility.voiceGuideLabel}
+            className="rounded-full bg-white/15 px-2 py-0.5 text-[0.625rem] text-white transition hover:bg-white/25"
+          >
+            재생
+          </button>
+        )}
       </div>
 
       <div className="absolute right-4 top-4 z-30 flex items-center gap-2">
