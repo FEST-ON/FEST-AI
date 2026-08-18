@@ -117,7 +117,8 @@ export function PersoAiGuide() {
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, [messages, isTyping]);
 
-  useSpeechOutput(latestAssistantMessage?.content, { enabled: voiceGuide, bcp47 });
+  const { status: voiceStatus, mouthOpen } = useSpeechOutput(latestAssistantMessage?.content, { enabled: voiceGuide, bcp47 });
+  const isSpeaking = voiceStatus === "playing" || voiceStatus === "fallback";
 
   // 자동 전환된 언어로 바로 답해야 해서 사용할 언어를 인자로 받는다(전환 직후 locale은 아직 이전 값).
   const handleAsk = useCallback(async (question: string, askLocale: Locale = locale) => {
@@ -228,6 +229,15 @@ export function PersoAiGuide() {
         className="-z-10 object-cover object-[center_10%]"
       />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+        <div
+          className={cn(
+            "absolute left-1/2 top-[35.5%] w-[clamp(2.8rem,12vw,4.4rem)] -translate-x-1/2 rounded-[50%] bg-[#8b2332]/80 shadow-[0_1px_4px_rgba(40,0,0,0.35)] transition-[height,opacity] duration-75",
+            isSpeaking ? "opacity-75" : "opacity-0",
+          )}
+          style={{ height: `${0.12 + mouthOpen * 0.62}rem` }}
+        />
+      </div>
 
       <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 backdrop-blur-md">
         <Volume2 className="size-3.5 text-primary-tint" />

@@ -21,6 +21,18 @@ function stopAudio(audioRef: { current: HTMLAudioElement | null }, urlRef: { cur
   urlRef.current = null;
 }
 
+function stopMouthAnimation(
+  frameRef: { current: number | null },
+  contextRef: { current: AudioContext | null },
+  setMouthOpen: (value: number) => void,
+) {
+  if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+  frameRef.current = null;
+  if (contextRef.current) void contextRef.current.close();
+  contextRef.current = null;
+  setMouthOpen(0);
+}
+
 /**
  * 음성 안내가 켜져 있으면 새 안내 문장을 소리 내 읽는다.
  * CosyVoice 3 FastAPI가 연결되어 있으면 서버 음성을 우선 사용하고,
@@ -30,12 +42,16 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
   const spokenRef = useRef<string | undefined>(undefined);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  const mouthFrameRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const [status, setStatus] = useState<VoiceStatus>("idle");
+  const [mouthOpen, setMouthOpen] = useState(0);
 
   useEffect(() => {
     if (!enabled) {
       window.speechSynthesis?.cancel();
       stopAudio(audioRef, audioUrlRef);
+      stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
       spokenRef.current = undefined;
       setStatus("idle");
       return;
@@ -50,13 +66,57 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
     function browserFallback(value: string) {
       if (typeof window === "undefined" || !window.speechSynthesis) return;
       stopAudio(audioRef, audioUrlRef);
+      stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
       setStatus("fallback");
       const utterance = new SpeechSynthesisUtterance(value);
       utterance.lang = bcp47;
-      utterance.onend = () => setStatus("idle");
-      utterance.onerror = () => setStatus("idle");
+      const startedAt = performance.now();
+      const pulse = () => {
+        setMouthOpen(0.18 + Math.abs(Math.sin((performance.now() - startedAt) / 115)) * 0.62);
+        mouthFrameRef.current = requestAnimationFrame(pulse);
+      };
+      mouthFrameRef.current = requestAnimationFrame(pulse);
+      utterance.onend = () => {
+        stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+        setStatus("idle");
+      };
+      utterance.onerror = () => {
+        stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
+        setStatus("idle");
+      };
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
+    }
+
+    function startAudioAnimation(audio: HTMLAudioElement) {
+      if (!window.AudioContext) return;
+      try {
+        const context = new AudioContext();
+        const analyser = context.createAnalyser();
+        const source = context.createMediaElementSource(audio);
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        analyser.connect(context.destination);
+        audioContextRef.current = context;
+        const samples = new Uint8Array(analyser.fftSize);
+        const sample = () => {
+          analyser.getByteTimeDomainData(samples);
+          let energy = 0;
+          for (const value of samples) {
+            const normalized = (value - 128) / 128;
+            energy += normalized * normalized;
+          }
+          const level = Math.min(1, Math.sqrt(energy / samples.length) * 5);
+          setMouthOpen(level);
+          mouthFrameRef.current = requestAnimationFrame(sample);
+        };
+        mouthFrameRef.current = requestAnimationFrame(sample);
+        void context.resume().catch(() => undefined);
+      } catch {
+        // 일부 키오스크 브라우저는 AudioContext를 막을 수 있다. 재생은 계속하고
+        // 음성 출력 상태만으로 입 모양을 움직이는 fallback을 사용한다.
+        browserFallback(spokenText);
+      }
     }
 
     async function synthesize() {
@@ -81,12 +141,15 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
         audioRef.current = audio;
         audio.onended = () => {
           stopAudio(audioRef, audioUrlRef);
+          stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
           setStatus("idle");
         };
         audio.onerror = () => {
           stopAudio(audioRef, audioUrlRef);
+          stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
           browserFallback(spokenText);
         };
+        startAudioAnimation(audio);
         setStatus("playing");
         await audio.play();
       } catch (error) {
@@ -100,6 +163,7 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
       cancelled = true;
       controller.abort();
       stopAudio(audioRef, audioUrlRef);
+      stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
     };
   }, [text, enabled, bcp47]);
 
@@ -107,7 +171,8 @@ export function useSpeechOutput(text: string | undefined, { enabled, bcp47 }: { 
   useEffect(() => () => {
     window.speechSynthesis?.cancel();
     stopAudio(audioRef, audioUrlRef);
+    stopMouthAnimation(mouthFrameRef, audioContextRef, setMouthOpen);
   }, []);
 
-  return { status };
+  return { status, mouthOpen };
 }
