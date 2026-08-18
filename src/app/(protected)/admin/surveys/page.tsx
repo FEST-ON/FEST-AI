@@ -91,6 +91,7 @@ export default function SurveysPage() {
   const surveys = useQuery({ queryKey: ["admin-surveys"], queryFn: fetchSurveys });
   // 매장 연결 설문은 스탬프 스팟(리워드 액션) 이름과 제목 접두어를 대조해 방문객 화면에서 잠긴다.
   const campaigns = useQuery({ queryKey: ["reward-campaigns"], queryFn: fetchRewardCampaigns });
+  const storeOptions = useMemo(() => {
     const names = new Set<string>();
     (campaigns.data ?? []).forEach((campaign) =>
       campaign.actions.forEach((action) => { if (action.rule.name) names.add(action.rule.name); }));
