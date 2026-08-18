@@ -43,7 +43,7 @@ export function NotificationSheet() {
     locale,
   );
 
-  return <Sheet>
+  return <Sheet onOpenChange={(open) => { if (open) setReadIds(notificationIds); }}>
     <SheetTrigger render={<Button variant="ghost" className={cn("relative", iconTileClass)} aria-label={t.notification.ariaLabel(unreadCount)} />}>
       <Bell className="size-5" />{unreadCount > 0 && <span className="absolute right-3 top-1 size-1.5 rounded-full bg-destructive" />}
       <span className={iconTileLabelClass}>{t.notification.shortLabel}</span>
