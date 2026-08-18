@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,6 +38,10 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/admin/privacy": ShieldCheck,
 };
 
+// ESG 기능 메뉴 — 아이콘만 ESG 색으로 둬서 일반 운영 메뉴와 한눈에 갈린다.
+// 사이드바는 항상 검정이라 잉크용 --esg-tint 대신 원색(#1DCA5E, 9.7:1)을 쓴다.
+const ESG_NAV = new Set(["/admin/esg", "/admin/rewards"]);
+
 export function AdminLogoutButton({ showLabel = false, className }: { showLabel?: boolean; className?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -66,6 +70,7 @@ export function AdminLogoutButton({ showLabel = false, className }: { showLabel?
  */
 export function AdminNavLinks({ role }: { role: string | undefined }) {
   const pathname = usePathname();
+  // 메뉴가 20개를 넘어 그룹을 접어 두다 보니 다른 그룹 항목은 늘 두 번 눌러야 닿는다.
   const [query, setQuery] = useState("");
   const isActive = (href: string) => (href === "/admin" ? pathname === href : pathname.startsWith(href));
 
@@ -73,6 +78,7 @@ export function AdminNavLinks({ role }: { role: string | undefined }) {
   const matched = visibleNavItems(role).filter(
     (item) => !keyword || item.label.includes(keyword) || (item.group ?? "").includes(keyword),
   );
+
   const groups = new Map<string | undefined, AdminNavItem[]>();
   for (const item of matched) {
     groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
@@ -92,7 +98,7 @@ export function AdminNavLinks({ role }: { role: string | undefined }) {
             : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
         )}
       >
-        <Icon className="size-4.5" />
+        <Icon className={cn("size-4.5", ESG_NAV.has(href) && "text-esg")} />
         {label}
       </Link>
     );
@@ -111,13 +117,16 @@ export function AdminNavLinks({ role }: { role: string | undefined }) {
           className="h-10 w-full rounded-xl border border-sidebar-border bg-transparent pl-9 pr-3 text-sm text-sidebar-foreground outline-none placeholder:text-sidebar-foreground/40 focus-visible:border-sidebar-ring"
         />
       </div>
-      {keyword && matched.length === 0 && <p className="px-3 py-2 text-xs text-sidebar-foreground/50">일치하는 메뉴가 없어요.</p>}
+      {keyword && matched.length === 0 && (
+        <p className="px-3 py-2 text-xs text-sidebar-foreground/50">일치하는 메뉴가 없어요.</p>
+      )}
       {[...groups].map(([group, items]) =>
         group === undefined ? (
           items.map(renderLink)
         ) : (
+          // 검색 중에는 결과가 접혀 있으면 안 보이므로 모두 펼친다.
           <details key={group} open={Boolean(keyword) || items.some((item) => isActive(item.href))} className="group">
-            <summary className="mt-1 flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-sidebar-foreground/50 hover:text-sidebar-foreground [&::-webkit-details-marker]:hidden">
+            <summary className="mt-1 flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 text-[0.6875rem] font-semibold uppercase tracking-wide text-sidebar-foreground/50 hover:text-sidebar-foreground [&::-webkit-details-marker]:hidden">
               {group}
               <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
             </summary>
@@ -129,6 +138,10 @@ export function AdminNavLinks({ role }: { role: string | undefined }) {
   );
 }
 
+/**
+ * 모바일 전용 하단 탭. 방문객 화면(widgets/visitor-nav)과 같은 패턴으로, 현장에서
+ * 한 손으로 오가는 화면만 올립니다. 전체 메뉴는 상단바 햄버거 시트에 그대로 있습니다.
+ */
 export function AdminBottomNav() {
   const pathname = usePathname();
   const user = useAdminSessionStore((s) => s.user);
@@ -137,6 +150,7 @@ export function AdminBottomNav() {
   if (items.length === 0) return null;
 
   return (
+    // 아이폰 홈 인디케이터와 겹치지 않도록 안전 영역만큼 아래를 띄운다(viewportFit: cover와 한 쌍).
     <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <div className="flex items-stretch justify-between px-2 py-1.5">
         {items.map(({ href, label }) => {
@@ -182,7 +196,7 @@ export function AdminSidebar() {
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-sidebar-foreground">{user?.name ?? "알 수 없음"}</p>
-          <p className="truncate text-[11px] text-sidebar-foreground/60">
+          <p className="truncate text-[0.6875rem] text-sidebar-foreground/60">
             {user?.role ? (ADMIN_ROLE_LABEL[user.role] ?? user.role) : ""}
           </p>
         </div>

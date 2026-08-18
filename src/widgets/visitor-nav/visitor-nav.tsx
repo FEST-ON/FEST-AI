@@ -19,7 +19,7 @@ export const NAV_ITEMS: {
   menuKey?: VisitorMenuKey;
 }[] = [
   { href: "/visitor", labelKey: "home", icon: Home, kiosk: true },
-  { href: "/visitor/coupons", labelKey: "coupons", icon: Recycle, kiosk: false, menuKey: "coupons" },
+  { href: "/visitor/coupons", labelKey: "coupons", icon: Recycle, kiosk: true, menuKey: "coupons" },
   { href: "/visitor/ai-guide", labelKey: "aiGuide", icon: Sparkles, kiosk: true },
   { href: "/visitor/reservation", labelKey: "reservation", icon: Ticket, kiosk: false, menuKey: "reservation" },
   { href: "/visitor/map", labelKey: "map", icon: MapPin, kiosk: true },
@@ -37,7 +37,8 @@ export function VisitorNav() {
   );
 
   return (
-    <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    // 아이폰 홈 인디케이터와 겹치지 않도록 안전 영역만큼 아래를 띄운다(viewportFit: cover와 한 쌍).
+    <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex max-w-md items-stretch justify-between px-2 py-1.5">
         {navItems.map(({ href, labelKey, icon: Icon }) => {
           const isAi = href === "/visitor/ai-guide";
@@ -54,7 +55,7 @@ export function VisitorNav() {
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium transition-colors",
                 isAi && "gap-0 pt-0",
-                active ? (isEsg ? "text-esg-text" : "text-primary") : "text-muted-foreground hover:text-foreground",
+                active ? (isEsg ? "text-esg-tint" : "text-primary") : "text-muted-foreground hover:text-foreground",
               )}
             >
               <span
@@ -62,7 +63,7 @@ export function VisitorNav() {
                   "grid place-items-center",
                   isAi
                     ? cn(
-                        "-mt-5 size-12 rounded-full border-4 border-card shadow-md",
+                        "-mt-5 size-12 rounded-full shadow-md",
                         active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                       )
                     : "size-5",

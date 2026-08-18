@@ -13,8 +13,8 @@ import { SkeletonList } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 
 export default function SurveyPage() {
-  const { t } = useTranslation();
-  const survey = useQuery({ queryKey: ["survey-questions"], queryFn: fetchSurveyQuestions });
+  const { t, locale } = useTranslation();
+  const survey = useQuery({ queryKey: ["survey-questions", locale], queryFn: () => fetchSurveyQuestions(locale) });
   const [answers, setAnswers] = useState<Record<string, SurveyAnswer>>({});
   // 오류는 제출 버튼 위에 그대로 그리므로 전역 토스트는 끈다.
   const submit = useMutation({
@@ -82,18 +82,18 @@ export default function SurveyPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {q.options?.map((opt) => (
                       <button
-                        key={opt}
+                        key={opt.value}
                         type="button"
-                        onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
-                        aria-pressed={answers[q.id] === opt}
+                        onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt.value }))}
+                        aria-pressed={answers[q.id] === opt.value}
                         className={cn(
                           "rounded-full border px-3 py-1.5 text-xs font-semibold",
-                          answers[q.id] === opt
+                          answers[q.id] === opt.value
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-border bg-background text-foreground",
                         )}
                       >
-                        {opt}
+                        {opt.label}
                       </button>
                     ))}
                   </div>
@@ -101,19 +101,19 @@ export default function SurveyPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     {q.options?.map((opt) => {
                       const answer = answers[q.id];
-                      const selected = Array.isArray(answer) && answer.includes(opt);
+                      const selected = Array.isArray(answer) && answer.includes(opt.value);
                       return (
                         <button
-                          key={opt}
+                          key={opt.value}
                           type="button"
                           onClick={() => setAnswers((current) => {
                             const currentAnswer = current[q.id];
                             const values = Array.isArray(currentAnswer) ? currentAnswer : [];
                             return {
                               ...current,
-                              [q.id]: values.includes(opt)
-                                ? values.filter((value) => value !== opt)
-                                : [...values, opt],
+                              [q.id]: values.includes(opt.value)
+                                ? values.filter((value) => value !== opt.value)
+                                : [...values, opt.value],
                             };
                           })}
                           aria-pressed={selected}
@@ -124,7 +124,7 @@ export default function SurveyPage() {
                               : "border-border bg-background text-foreground",
                           )}
                         >
-                          {opt}
+                          {opt.label}
                         </button>
                       );
                     })}

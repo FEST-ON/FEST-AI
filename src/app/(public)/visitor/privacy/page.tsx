@@ -45,12 +45,18 @@ export default function VisitorPrivacyPage() {
 
   // 항목 정의는 서버가 한국어로 내려주므로 다른 언어에서는 요청 시점에 번역한다.
   const { translated } = useAutoTranslate(
-    Object.fromEntries((notice.data?.items ?? []).flatMap((item) => [
-      [`${item.key}.label`, item.label],
-      [`${item.key}.basis`, item.basis],
-      [`${item.key}.retention`, item.retention],
-      ...(item.notice ? [[`${item.key}.notice`, item.notice] as [string, string]] : []),
-    ])),
+    Object.fromEntries([
+      ...(notice.data?.items ?? []).flatMap((item) => [
+        [`${item.key}.label`, item.label],
+        [`${item.key}.basis`, item.basis],
+        [`${item.key}.retention`, item.retention],
+        ...(item.notice ? [[`${item.key}.notice`, item.notice] as [string, string]] : []),
+      ]),
+      ...(notice.data?.retentionPolicy ?? []).flatMap((row) => [
+        [`policy.${row.key}.label`, row.label],
+        [`policy.${row.key}.retention`, row.retention],
+      ]),
+    ]),
     locale,
   );
 
@@ -116,9 +122,11 @@ export default function VisitorPrivacyPage() {
               <ul className="mt-2 divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
                 {data.retentionPolicy.map((row) => (
                   <li key={row.key} className="flex items-start justify-between gap-3 p-3 text-xs">
-                    <span className="font-semibold text-foreground">{row.label}</span>
+                    <span className="font-semibold text-foreground">
+                      {translated[`policy.${row.key}.label`] ?? row.label}
+                    </span>
                     <span className="shrink-0 text-right text-muted-foreground">
-                      {row.retention}
+                      {translated[`policy.${row.key}.retention`] ?? row.retention}
                       {row.mode === "NOT_COLLECTED" && ` · ${t.privacy.notCollected}`}
                     </span>
                   </li>

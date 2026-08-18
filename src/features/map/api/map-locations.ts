@@ -1,4 +1,6 @@
 import { FESTIVAL_CODE, festivalApi, json, publicApi } from "@/shared/lib/api";
+import type { Locale } from "@/shared/lib/i18n";
+import { translateEntries } from "@/shared/lib/i18n/translate-client";
 
 export const MAP_LOCATION_CATEGORIES = [
   { value: "BOOTH", label: "판매 부스" },
@@ -69,7 +71,8 @@ function areaToLocation(area: AdminArea, description?: string): MapLocation | nu
   };
 }
 
-export async function fetchMapLocations(options: { includeHidden?: boolean } = {}): Promise<MapLocation[]> {
+export async function fetchMapLocations(options: { includeHidden?: boolean; locale?: Locale } = {}): Promise<MapLocation[]> {
+  // includeHidden은 관리자 지도 편집 화면 전용이라 번역하지 않는다(관리자 화면엔 i18n이 없다).
   if (options.includeHidden) {
     const areas = await festivalApi<AdminArea[]>(`/areas`);
     return areas.map((area) => areaToLocation(area)).filter((row): row is MapLocation => Boolean(row));
@@ -80,10 +83,24 @@ export async function fetchMapLocations(options: { includeHidden?: boolean } = {
   const programsByArea = new Map<string, string[]>();
   map.facilities.forEach((item) => facilitiesByArea.set(item.areaId, [...(facilitiesByArea.get(item.areaId) ?? []), item.name]));
   map.programs.forEach((item) => programsByArea.set(item.areaId, [...(programsByArea.get(item.areaId) ?? []), item.title]));
-  return map.areas.map((area) => {
+  const locations = map.areas.map((area) => {
     const details = [...(facilitiesByArea.get(area.id) ?? []), ...(programsByArea.get(area.id) ?? [])];
     return areaToLocation(area, details.length ? details.join(" · ") : `${area.name} 구역`);
   }).filter((row): row is MapLocation => Boolean(row));
+
+  const locale = options.locale ?? "ko";
+  if (locale === "ko" || locations.length === 0) return locations;
+  const entries: Record<string, string> = {};
+  locations.forEach((location) => {
+    entries[`${location.id}.name`] = location.name;
+    if (location.description) entries[`${location.id}.description`] = location.description;
+  });
+  const translated = await translateEntries(entries, locale);
+  return locations.map((location) => ({
+    ...location,
+    name: translated[`${location.id}.name`] ?? location.name,
+    description: location.description ? (translated[`${location.id}.description`] ?? location.description) : location.description,
+  }));
 }
 
 function areaBody(input: MapLocationInput & { version?: number }) {

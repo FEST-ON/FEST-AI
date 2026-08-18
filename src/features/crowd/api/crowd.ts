@@ -1,4 +1,6 @@
 import { FESTIVAL_CODE, festivalApi, json, publicApi } from "@/shared/lib/api";
+import type { Locale } from "@/shared/lib/i18n";
+import { translateEntries } from "@/shared/lib/i18n/translate-client";
 import type { Tone } from "@/shared/ui/status-pill";
 
 export type CrowdLevel = "QUIET" | "MODERATE" | "BUSY" | "FULL";
@@ -32,13 +34,17 @@ export interface PublicCrowd {
  * 공개 혼잡도는 배열이 아니라 구역 목록을 updatedAt·stale로 감싼 객체다.
  * 구역 이름도 운영자 API의 areaName이 아니라 name으로 온다 — 화면이 쓰는 모양으로 맞춰서 돌려준다.
  */
-export async function fetchPublicCrowd(): Promise<PublicCrowd[]> {
+export async function fetchPublicCrowd(locale: Locale = "ko"): Promise<PublicCrowd[]> {
   const { zones } = await publicApi<{
     updatedAt: string;
     stale: boolean;
     zones: (Omit<PublicCrowd, "areaName"> & { name: string })[];
   }>(`/public/festivals/${FESTIVAL_CODE}/crowd`);
-  return zones.map(({ name, ...zone }) => ({ ...zone, areaName: name }));
+  const rows = zones.map(({ name, ...zone }) => ({ ...zone, areaName: name }));
+  if (locale === "ko" || rows.length === 0) return rows;
+  const entries = Object.fromEntries(rows.map((row) => [row.areaId, row.areaName]));
+  const translated = await translateEntries(entries, locale);
+  return rows.map((row) => ({ ...row, areaName: translated[row.areaId] ?? row.areaName }));
 }
 
 export interface AdminCrowdSnapshot extends PublicCrowd {

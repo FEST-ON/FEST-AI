@@ -1,4 +1,6 @@
 import { FESTIVAL_CODE, json, publicApi, visitorApi } from "@/shared/lib/api";
+import type { Locale } from "@/shared/lib/i18n";
+import { translateEntries } from "@/shared/lib/i18n/translate-client";
 
 export interface ChatMessage {
   id: string;
@@ -11,6 +13,17 @@ export interface ChatMessage {
   freshnessAt?: string;
   // 검증된 근거가 부족해 사람이 응대하는 채널을 함께 안내해야 하는 답변인지.
   needsFallbackChannel?: boolean;
+  // needsFallbackChannel일 때만 채워지는 서버 원문(한국어) 고정 문구.
+  // 방문객이 대화 중간에 언어를 바꾸면 이 원문을 다시 번역해서 보여준다 — 실제 AI 답변은
+  // 대화 생성 시점의 언어로 이미 고정돼 있어 재번역 대상이 아니다.
+  rawContent?: string;
+}
+
+// 옵션 제출 값은 서버가 정의한 원문(한국어) 문자열이어야 한다 — value는 번역해도 그대로,
+// label만 화면 표시용으로 번역한다.
+export interface SurveyOption {
+  value: string;
+  label: string;
 }
 
 export interface SurveyQuestion {
@@ -18,7 +31,7 @@ export interface SurveyQuestion {
   surveyId: string;
   question: string;
   type: "rating" | "single_choice" | "multiple_choice" | "text";
-  options?: string[];
+  options?: SurveyOption[];
   required: boolean;
 }
 
@@ -47,19 +60,35 @@ export function hasSurveyAnswer(value: SurveyAnswer | undefined) {
  * 존재하지 않는 것과 같았다. 모든 설문의 문항을 순서대로 이어 붙이고, 각 문항이 자기
  * surveyId를 들고 다닌다(제출은 설문 단위로 나눠 보낸다).
  */
-export async function fetchSurveyQuestions() {
+export async function fetchSurveyQuestions(locale: Locale = "ko"): Promise<SurveyQuestion[]> {
   const surveys = await publicApi<Array<{
     id: string;
     questions: Array<{ id: string; prompt: string; type: string; options?: string[]; required: boolean }>;
   }>>(`/public/festivals/${FESTIVAL_CODE}/surveys`);
-  return surveys.flatMap((survey) => survey.questions.map((question) => ({
+  const questions = surveys.flatMap((survey) => survey.questions.map((question) => ({
     id: question.id,
     surveyId: survey.id,
     question: question.prompt,
     type: surveyQuestionType(question.type),
-    options: question.options,
+    options: question.options?.map((value) => ({ value, label: value })),
     required: question.required,
   } satisfies SurveyQuestion)));
+
+  if (locale === "ko" || questions.length === 0) return questions;
+  const entries: Record<string, string> = {};
+  questions.forEach((q) => {
+    entries[`${q.id}.question`] = q.question;
+    q.options?.forEach((opt, index) => { entries[`${q.id}.option.${index}`] = opt.value; });
+  });
+  const translated = await translateEntries(entries, locale);
+  return questions.map((q) => ({
+    ...q,
+    question: translated[`${q.id}.question`] ?? q.question,
+    options: q.options?.map((opt, index) => ({
+      value: opt.value,
+      label: translated[`${q.id}.option.${index}`] ?? opt.label,
+    })),
+  }));
 }
 
 export async function submitSurvey(questions: SurveyQuestion[], answers: Record<string, SurveyAnswer>) {

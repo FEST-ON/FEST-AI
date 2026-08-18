@@ -1,7 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { BellRing, CalendarClock, Megaphone, Send, ShieldAlert, X } from "lucide-react";
+import {
+  BellRing,
+  CalendarClock,
+  Megaphone,
+  Send,
+  ShieldAlert,
+  X,
+} from "lucide-react";
 import { callBooking, fetchAdminBookings } from "@/features/reservation";
 import { fetchAreas } from "@/features/map/api/map-locations";
 import {
@@ -17,7 +24,11 @@ import {
 } from "@/entities/announcement";
 import { useAdminSessionStore } from "@/features/admin-auth/model/store";
 import { canPublishEmergency } from "@/shared/lib/permissions";
-import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
+import {
+  EmptyState,
+  ErrorState,
+  queryErrorMessage,
+} from "@/shared/ui/query-state";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Input } from "@/shared/ui/input";
@@ -29,11 +40,15 @@ import { useWrite } from "@/shared/lib/use-write";
 import { datetimeLocal, toIso } from "@/shared/lib/utils";
 
 const SEVERITY_TONE: Record<AnnouncementSeverity, Tone> = {
-  INFO: "secondary", WARNING: "warning", EMERGENCY: "danger",
+  INFO: "secondary",
+  WARNING: "warning",
+  EMERGENCY: "danger",
 };
 
 function toggleValue(list: string[], value: string) {
-  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+  return list.includes(value)
+    ? list.filter((v) => v !== value)
+    : [...list, value];
 }
 
 // datetime-local 입력이 브라우저 로컬 시간이므로 표시도 같은 기준으로 맞춘다.
@@ -48,26 +63,51 @@ export function NotificationAdminPanel() {
   const role = useAdminSessionStore((state) => state.user?.role);
   const emergencyAllowed = canPublishEmergency(role);
 
-  const { data: bookings = [], isLoading: bookingsLoading, error: bookingsError, refetch: refetchBookings } = useQuery({
+  const {
+    data: bookings = [],
+    isLoading: bookingsLoading,
+    error: bookingsError,
+    refetch: refetchBookings,
+  } = useQuery({
     queryKey: ["admin-bookings"],
     queryFn: () => fetchAdminBookings(),
     refetchInterval: 15_000,
   });
-  const waitingBookings = bookings.filter((booking) => booking.status === "WAITING");
-  const calledBookings = bookings.filter((booking) => booking.status === "CALLED");
+  const waitingBookings = bookings.filter(
+    (booking) => booking.status === "WAITING",
+  );
+  const calledBookings = bookings.filter(
+    (booking) => booking.status === "CALLED",
+  );
 
-  const callMutation = useWrite(callBooking, { success: "방문객을 호출했어요.", invalidates: ["admin-bookings"] });
+  const callMutation = useWrite(callBooking, {
+    success: "방문객을 호출했어요.",
+    invalidates: ["admin-bookings"],
+  });
 
-  const { data: announcements = [], isLoading: announcementsLoading, error: announcementsError, refetch: refetchAnnouncements } = useQuery({
+  const {
+    data: announcements = [],
+    isLoading: announcementsLoading,
+    error: announcementsError,
+    refetch: refetchAnnouncements,
+  } = useQuery({
     queryKey: ["announcements"],
     queryFn: fetchAnnouncements,
   });
-  const { data: areaOptions = [] } = useQuery({ queryKey: ["admin-areas"], queryFn: fetchAreas });
+  const { data: areaOptions = [] } = useQuery({
+    queryKey: ["admin-areas"],
+    queryFn: fetchAreas,
+  });
 
   const publishMutation = useWrite(publishAnnouncement, {
-    success: "공지를 발행했어요.", invalidates: ["announcements"], onSuccess: () => reset(),
+    success: "공지를 발행했어요.",
+    invalidates: ["announcements"],
+    onSuccess: () => reset(),
   });
-  const closeMutation = useWrite(closeAnnouncement, { success: "공지 노출을 종료했어요.", invalidates: ["announcements"] });
+  const closeMutation = useWrite(closeAnnouncement, {
+    success: "공지 노출을 종료했어요.",
+    invalidates: ["announcements"],
+  });
 
   const { form, set, field, reset } = useForm(() => ({
     title: "",
@@ -79,15 +119,33 @@ export function NotificationAdminPanel() {
     startsAt: datetimeLocal(),
     endsAt: "",
   }));
-  const { title, body, severity, audience, targetAreaIds, publishMode, startsAt, endsAt } = form;
+  const {
+    title,
+    body,
+    severity,
+    audience,
+    targetAreaIds,
+    publishMode,
+    startsAt,
+    endsAt,
+  } = form;
 
   // 즉시 게시는 "발행 버튼을 누른 시각"이 노출 시작이므로 입력값을 검증에서 제외한다.
-  const validationError = publishMode === "scheduled"
-    ? validatePublishInput({ title, audience, startsAt, endsAt })
-    : validatePublishInput({ title, audience, startsAt: datetimeLocal(), endsAt: "" }) ??
-      (endsAt && new Date(endsAt) <= new Date() ? "자동 해제 시각은 현재 시각 이후여야 해요." : null);
+  const validationError =
+    publishMode === "scheduled"
+      ? validatePublishInput({ title, audience, startsAt, endsAt })
+      : (validatePublishInput({
+          title,
+          audience,
+          startsAt: datetimeLocal(),
+          endsAt: "",
+        }) ??
+        (endsAt && new Date(endsAt) <= new Date()
+          ? "자동 해제 시각은 현재 시각 이후여야 해요."
+          : null));
   const severityBlocked = severity === "EMERGENCY" && !emergencyAllowed;
-  const canPublish = !validationError && !severityBlocked && !publishMutation.isPending;
+  const canPublish =
+    !validationError && !severityBlocked && !publishMutation.isPending;
 
   function publishNotice() {
     if (!canPublish) return;
@@ -108,20 +166,29 @@ export function NotificationAdminPanel() {
         <div>
           <div className="flex items-center gap-2">
             <BellRing className="size-5 text-primary" />
-            <h2 className="text-base font-bold text-foreground">방문객 알림 관리</h2>
+            <h2 className="text-base font-bold text-foreground">
+              방문객 알림 관리
+            </h2>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            발행한 공지는 지정한 대상·구역·시간에만 노출되고, 긴급 공지는 상단에 고정돼요.
+            발행한 공지는 지정한 대상·구역·시간에만 노출되고, 긴급 공지는 상단에
+            고정돼요.
           </p>
         </div>
         <span className="text-xs font-medium text-muted-foreground">
-          현재 {announcements.filter((item) => canClose(item.status)).length + calledBookings.length}건
+          현재{" "}
+          {announcements.filter((item) => canClose(item.status)).length +
+            calledBookings.length}
+          건
         </span>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         {/* 방문객 전체로 나가는 되돌릴 수 없는 발행이라, Enter 제출 대신 확인 단계를 반드시 거치게 한다. */}
-        <form onSubmit={(event) => event.preventDefault()} className="space-y-3 rounded-2xl border border-border bg-background p-4">
+        <form
+          onSubmit={(event) => event.preventDefault()}
+          className="space-y-3 rounded-2xl border border-border bg-background p-4"
+        >
           <div className="flex items-center gap-2">
             <Megaphone className="size-4 text-primary" />
             <h3 className="text-sm font-bold">공지사항 발행</h3>
@@ -154,7 +221,8 @@ export function NotificationAdminPanel() {
             <Label>긴급도</Label>
             <div className="flex flex-wrap gap-2">
               {SEVERITY_OPTIONS.map((option) => {
-                const blocked = option.value === "EMERGENCY" && !emergencyAllowed;
+                const blocked =
+                  option.value === "EMERGENCY" && !emergencyAllowed;
                 return (
                   <Button
                     key={option.value}
@@ -162,7 +230,11 @@ export function NotificationAdminPanel() {
                     size="sm"
                     variant={severity === option.value ? "default" : "outline"}
                     disabled={blocked}
-                    title={blocked ? "긴급 공지는 최고 관리자만 발행할 수 있어요." : undefined}
+                    title={
+                      blocked
+                        ? "긴급 공지는 최고 관리자만 발행할 수 있어요."
+                        : undefined
+                    }
                     onClick={() => set("severity")(option.value)}
                   >
                     {option.label}
@@ -173,7 +245,8 @@ export function NotificationAdminPanel() {
             {!emergencyAllowed && (
               <p className="flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                 <ShieldAlert className="size-3" />
-                긴급 공지는 최고 관리자 권한이 필요해요. 긴급 상황이면 최고 관리자에게 발행을 요청하세요.
+                긴급 공지는 최고 관리자 권한이 필요해요. 긴급 상황이면 최고
+                관리자에게 발행을 요청하세요.
               </p>
             )}
           </div>
@@ -186,8 +259,12 @@ export function NotificationAdminPanel() {
                   key={option.value}
                   type="button"
                   size="sm"
-                  variant={audience.includes(option.value) ? "default" : "outline"}
-                  onClick={() => set("audience")(toggleValue(audience, option.value))}
+                  variant={
+                    audience.includes(option.value) ? "default" : "outline"
+                  }
+                  onClick={() =>
+                    set("audience")(toggleValue(audience, option.value))
+                  }
                 >
                   {option.label}
                 </Button>
@@ -204,8 +281,12 @@ export function NotificationAdminPanel() {
                     key={area.id}
                     type="button"
                     size="sm"
-                    variant={targetAreaIds.includes(area.id) ? "default" : "outline"}
-                    onClick={() => set("targetAreaIds")(toggleValue(targetAreaIds, area.id))}
+                    variant={
+                      targetAreaIds.includes(area.id) ? "default" : "outline"
+                    }
+                    onClick={() =>
+                      set("targetAreaIds")(toggleValue(targetAreaIds, area.id))
+                    }
                   >
                     {area.name}
                   </Button>
@@ -264,35 +345,67 @@ export function NotificationAdminPanel() {
           <p className="text-[0.6875rem] text-muted-foreground">
             {publishMode === "now"
               ? "발행 버튼을 누른 시각부터 방문객 화면에 노출돼요."
-              : "지정한 시각이 되면 방문객 화면에 노출돼요. 그 전까지는 '노출 예정' 상태로 남아요."}
-            {" "}자동 해제 시각을 비워두면 직접 종료할 때까지 노출돼요.
+              : "지정한 시각이 되면 방문객 화면에 노출돼요. 그 전까지는 '노출 예정' 상태로 남아요."}{" "}
+            자동 해제 시각을 비워두면 직접 종료할 때까지 노출돼요.
           </p>
 
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
             {validationError && (
-              <p className="mr-auto text-xs text-muted-foreground">{validationError}</p>
+              <p className="mr-auto text-xs text-muted-foreground">
+                {validationError}
+              </p>
             )}
             <ConfirmButton
               size="sm"
               disabled={!canPublish}
-              title={severity === "EMERGENCY" ? "긴급 공지를 발행할까요?" : "공지를 발행할까요?"}
+              title={
+                severity === "EMERGENCY"
+                  ? "긴급 공지를 발행할까요?"
+                  : "공지를 발행할까요?"
+              }
               description={
                 <span className="block space-y-1">
-                  <span className="block font-medium text-foreground">{title.trim()}</span>
+                  <span className="block font-medium text-foreground">
+                    {title.trim()}
+                  </span>
                   <span className="block">
-                    {SEVERITY_OPTIONS.find((option) => option.value === severity)?.label}
+                    {
+                      SEVERITY_OPTIONS.find(
+                        (option) => option.value === severity,
+                      )?.label
+                    }
                     {" · "}
-                    {audience.map((value) => AUDIENCE_OPTIONS.find((option) => option.value === value)?.label ?? value).join(", ")}
+                    {audience
+                      .map(
+                        (value) =>
+                          AUDIENCE_OPTIONS.find(
+                            (option) => option.value === value,
+                          )?.label ?? value,
+                      )
+                      .join(", ")}
                     {" · "}
                     {targetAreaIds.length === 0
                       ? "전체 구역"
-                      : targetAreaIds.map((id) => areaOptions.find((area) => area.id === id)?.name ?? id).join(", ")}
+                      : targetAreaIds
+                          .map(
+                            (id) =>
+                              areaOptions.find((area) => area.id === id)
+                                ?.name ?? id,
+                          )
+                          .join(", ")}
                   </span>
                   <span className="block">
-                    {formatMoment(startsAt)}부터 {endsAt ? `${formatMoment(endsAt)}까지` : "직접 종료할 때까지"} 노출돼요.
+                    {formatMoment(startsAt)}부터{" "}
+                    {endsAt
+                      ? `${formatMoment(endsAt)}까지`
+                      : "직접 종료할 때까지"}{" "}
+                    노출돼요.
                   </span>
                   {severity === "EMERGENCY" && (
-                    <span className="block text-destructive">대상 방문객 화면 상단에 즉시 고정되고, 되돌리려면 직접 종료해야 해요.</span>
+                    <span className="block text-destructive">
+                      대상 방문객 화면 상단에 즉시 고정되고, 되돌리려면 직접
+                      종료해야 해요.
+                    </span>
                   )}
                 </span>
               }
@@ -314,16 +427,29 @@ export function NotificationAdminPanel() {
             대기 중인 예약을 호출하면 해당 방문객 화면의 알림에 바로 표시돼요.
           </p>
           <div className="space-y-2">
-            {bookingsLoading && <p className="text-xs text-muted-foreground">불러오는 중…</p>}
-            {bookingsError && <ErrorState message={queryErrorMessage(bookingsError)} onRetry={() => refetchBookings()} />}
-            {!bookingsLoading && !bookingsError && waitingBookings.length === 0 && (
-              <EmptyState message="호출할 대기 예약이 없어요." />
+            {bookingsLoading && (
+              <p className="text-xs text-muted-foreground">불러오는 중…</p>
             )}
+            {bookingsError && (
+              <ErrorState
+                message={queryErrorMessage(bookingsError)}
+                onRetry={() => refetchBookings()}
+              />
+            )}
+            {!bookingsLoading &&
+              !bookingsError &&
+              waitingBookings.length === 0 && (
+                <EmptyState message="호출할 대기 예약이 없어요." />
+              )}
             {waitingBookings.map((booking) => (
-              <div key={booking.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+              <div
+                key={booking.id}
+                className="flex items-center gap-3 rounded-xl border border-border p-3"
+              >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">
-                    {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}{booking.programTitle}
+                    {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}
+                    {booking.programTitle}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {formatMoment(booking.startsAt)} · {booking.partySize}명
@@ -341,32 +467,59 @@ export function NotificationAdminPanel() {
               </div>
             ))}
           </div>
-          {callMutation.error && <p className="text-xs text-destructive">{callMutation.error.message}</p>}
+          {callMutation.error && (
+            <p className="text-xs text-destructive">
+              {callMutation.error.message}
+            </p>
+          )}
         </div>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <div>
-          <h3 className="mb-2 text-xs font-bold text-muted-foreground">최근 공지</h3>
+          <h3 className="mb-2 text-xs font-bold text-muted-foreground">
+            최근 공지
+          </h3>
           <div className="space-y-2">
-            {announcementsLoading && <p className="text-xs text-muted-foreground">불러오는 중…</p>}
+            {announcementsLoading && (
+              <p className="text-xs text-muted-foreground">불러오는 중…</p>
+            )}
             {announcementsError && (
-              <ErrorState message={queryErrorMessage(announcementsError)} onRetry={() => refetchAnnouncements()} />
+              <ErrorState
+                message={queryErrorMessage(announcementsError)}
+                onRetry={() => refetchAnnouncements()}
+              />
             )}
-            {!announcementsLoading && !announcementsError && announcements.length === 0 && (
-              <EmptyState message="발행된 공지가 없어요." />
-            )}
+            {!announcementsLoading &&
+              !announcementsError &&
+              announcements.length === 0 && (
+                <EmptyState message="발행된 공지가 없어요." />
+              )}
             {announcements.slice(0, 4).map((announcement) => (
-              <div key={announcement.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
-                <StatusPill tone={SEVERITY_TONE[announcement.severity]} className="shrink-0">
-                  {SEVERITY_OPTIONS.find((o) => o.value === announcement.severity)?.label}
+              <div
+                key={announcement.id}
+                className="flex items-center gap-3 rounded-xl border border-border p-3"
+              >
+                <StatusPill
+                  tone={SEVERITY_TONE[announcement.severity]}
+                  className="shrink-0"
+                >
+                  {
+                    SEVERITY_OPTIONS.find(
+                      (o) => o.value === announcement.severity,
+                    )?.label
+                  }
                 </StatusPill>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{announcement.title}</p>
+                  <p className="truncate text-sm font-semibold">
+                    {announcement.title}
+                  </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {STATUS_LABEL[announcement.status]}
-                    {announcement.startsAt && ` · ${formatMoment(announcement.startsAt)}`}
-                    {announcement.endsAt && ` ~ ${formatMoment(announcement.endsAt)}`}
+                    {announcement.startsAt &&
+                      ` · ${formatMoment(announcement.startsAt)}`}
+                    {announcement.endsAt &&
+                      ` ~ ${formatMoment(announcement.endsAt)}`}
                   </p>
                 </div>
                 {canClose(announcement.status) && (
@@ -386,16 +539,26 @@ export function NotificationAdminPanel() {
           </div>
         </div>
         <div>
-          <h3 className="mb-2 text-xs font-bold text-muted-foreground">최근 예약 호출</h3>
+          <h3 className="mb-2 text-xs font-bold text-muted-foreground">
+            최근 예약 호출
+          </h3>
           <div className="space-y-2">
-            {calledBookings.length === 0 && <EmptyState message="호출한 예약이 없어요." />}
+            {calledBookings.length === 0 && (
+              <EmptyState message="호출한 예약이 없어요." />
+            )}
             {calledBookings.slice(0, 4).map((booking) => (
-              <div key={booking.id} className="rounded-xl border border-border p-3">
+              <div
+                key={booking.id}
+                className="rounded-xl border border-border p-3"
+              >
                 <p className="truncate text-sm font-semibold">
-                  {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}{booking.programTitle}
+                  {booking.queueNumber ? `${booking.queueNumber}번 · ` : ""}
+                  {booking.programTitle}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {booking.calledAt ? `${formatMoment(booking.calledAt)} 호출` : "호출됨"}
+                  {booking.calledAt
+                    ? `${formatMoment(booking.calledAt)} 호출`
+                    : "호출됨"}
                 </p>
               </div>
             ))}

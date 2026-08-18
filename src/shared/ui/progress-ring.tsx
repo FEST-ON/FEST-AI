@@ -7,6 +7,7 @@ interface ProgressRingProps {
   className?: string;
   label?: string;
   sublabel?: string;
+  /** ESG 기능(스탬프 투어 등)의 진행률은 ESG 색으로 채운다. */
   tone?: "primary" | "esg";
 }
 
@@ -42,7 +43,10 @@ export function ProgressRing({
           fill="none"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
-          className={`${tone === "esg" ? "stroke-esg" : "stroke-primary"} transition-[stroke-dashoffset] duration-700 ease-out`}
+          className={cn(
+            "transition-[stroke-dashoffset] duration-700 ease-out",
+            tone === "esg" ? "stroke-esg" : "stroke-primary",
+          )}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
         />

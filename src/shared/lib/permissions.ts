@@ -105,11 +105,17 @@ export function visibleNavItems(role: string | undefined) {
   return ADMIN_NAV_ITEMS.filter((item) => role !== undefined && (item.roles as string[]).includes(role));
 }
 
+/**
+ * 축제 기간에 현장에서 폰으로 여는 화면. 사이드바는 lg 이상에서만 보이고 모바일에서는
+ * 접힌 그룹 안에 있어 두 번 눌러야 닿아서, 이 다섯 개만 하단 탭으로 따로 뺍니다.
+ * 순서 = 탭 순서. 권한이 없는 항목은 빠지므로 역할에 따라 개수가 줄어듭니다.
+ */
 const MOBILE_NAV_HREFS = ["/admin", "/admin/field", "/admin/bookings", "/admin/coupons", "/admin/tickets"];
 
 export function mobileNavItems(role: string | undefined) {
   const items = MOBILE_NAV_HREFS.map((href) => ADMIN_NAV_ITEMS.find((item) => item.href === href)).filter(
     (item): item is AdminNavItem => item !== undefined && role !== undefined && (item.roles as string[]).includes(role),
   );
+  // 검수자처럼 현장 화면이 거의 없는 역할에 탭 하나짜리 바를 띄우면 자리만 먹는다.
   return items.length < 2 ? [] : items;
 }

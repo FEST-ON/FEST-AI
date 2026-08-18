@@ -1,6 +1,6 @@
 "use client";
 
-import { FESTIVAL_CODE, publicApi, visitorApi } from "@/shared/lib/api";
+import { FESTIVAL_CODE, idempotencyKey, publicApi, visitorApi } from "@/shared/lib/api";
 import type { Locale } from "@/shared/lib/i18n";
 import { translateFields } from "@/shared/lib/i18n/translate-client";
 
@@ -28,6 +28,8 @@ export interface CouponOffer {
   validUntil: string;
   /** 남은 발행 수량. 0이면 소진. */
   remaining: number;
+  /** 방문객 1인이 받을 수 있는 장수. 화면이 "이미 발급받음"을 판단하는 기준이다. */
+  perVisitorLimit: number;
 }
 
 export type IssuedCouponStatus = "ISSUED" | "REDEEMED" | "EXPIRED";
@@ -35,6 +37,8 @@ export type IssuedCouponStatus = "ISSUED" | "REDEEMED" | "EXPIRED";
 /** 방문객에게 발행된 쿠폰 1장. 업체가 QR을 읽어 사용 처리한다. */
 export interface IssuedCoupon {
   id: string;
+  /** 원본 쿠폰 id. 발행 목록에서 같은 쿠폰을 몇 장 받았는지 세는 기준이다. */
+  couponId: string;
   couponName: string;
   businessName: string;
   benefitType: CouponBenefitType;
@@ -49,10 +53,15 @@ export interface IssuedCoupon {
   issueToken?: string;
 }
 
+/**
+ * 화면에 QR을 띄워도 되는지. 상태는 서버가 이미 판정해 주고(만료면 EXPIRED), 여기서는
+ * 재조회 전에 만료된 쿠폰만 추가로 걸러낸다. 만료 시각을 읽지 못하면 서버 상태를 따른다 —
+ * 파싱 실패로 살아 있는 쿠폰의 QR을 숨기면 현장에서 쓸 방법이 없어진다.
+ */
 export function isCouponUsable(coupon: IssuedCoupon, now = Date.now()) {
   if (coupon.status !== "ISSUED") return false;
   const expiresAt = new Date(coupon.expiresAt).getTime();
-  return !Number.isFinite(expiresAt) || expiresAt > now;
+  return Number.isNaN(expiresAt) || expiresAt > now;
 }
 
 export interface PointLedgerEntry {
@@ -127,7 +136,7 @@ export async function fetchStampSpots(locale: Locale = "ko"): Promise<StampSpot[
   return translateFields(spots, ["name", "location"], locale);
 }
 
-/** 쿠폰 탭에서 보여줄 다회용기 회수 스탬프만 분리한다. */
+/** ESG 화면에서는 다회용기 회수와 연결된 스탬프만 별도로 사용할 수 있다. */
 export async function fetchReusableContainerStamps(locale: Locale = "ko") {
   const spots = await fetchStampSpots(locale);
   return spots.filter((spot) => spot.actionType === "REUSABLE_CUP");
@@ -140,7 +149,7 @@ export async function fetchReusableContainerStamps(locale: Locale = "ko") {
 export function collectStamp({ actionId, verificationKey }: { actionId: string; verificationKey: string }) {
   return visitorApi(`/visitor/reward-events`, {
     method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": idempotencyKey() },
     body: JSON.stringify({ rewardActionId: actionId, verificationKey, evidence: {} }),
   });
 }
@@ -154,6 +163,7 @@ interface CouponOfferRow {
   validFrom: string;
   validUntil: string;
   remaining: number;
+  perVisitorLimit: number;
   businessName: string;
 }
 
@@ -168,6 +178,7 @@ export async function fetchCouponOffers(locale: Locale = "ko"): Promise<CouponOf
     benefitValue: Number(row.benefitValue),
     validUntil: row.validUntil,
     remaining: row.remaining,
+    perVisitorLimit: row.perVisitorLimit,
   }));
   return translateFields(offers, ["couponName", "businessName", "description"], locale);
 }
@@ -176,6 +187,7 @@ export async function fetchCouponOffers(locale: Locale = "ko"): Promise<CouponOf
 // 발행 응답(POST .../issues)은 couponName으로 담아준다. 나머지 필드는 두 응답이 같다.
 interface IssuedCouponRow {
   id: string;
+  couponId?: string;
   status: IssuedCouponStatus;
   issuedAt: string;
   expiresAt: string;
@@ -187,9 +199,11 @@ interface IssuedCouponRow {
   issueToken?: string;
 }
 
-function normalizeIssued(row: IssuedCouponRow): IssuedCoupon {
+// 발행 응답(POST .../issues)에는 원본 쿠폰 id가 없다 — 호출부가 아는 값을 넘겨 채운다.
+function normalizeIssued(row: IssuedCouponRow, couponId = ""): IssuedCoupon {
   return {
     id: row.id,
+    couponId: row.couponId ?? couponId,
     couponName: row.name ?? row.couponName ?? "",
     businessName: row.businessName ?? "",
     benefitType: row.benefitType ?? "GIFT",
@@ -203,18 +217,18 @@ function normalizeIssued(row: IssuedCouponRow): IssuedCoupon {
 
 export async function fetchMyCoupons(locale: Locale = "ko"): Promise<IssuedCoupon[]> {
   const rows = await visitorApi<IssuedCouponRow[]>("/visitor/coupons");
-  return translateFields(rows.map(normalizeIssued), ["couponName", "businessName"], locale);
+  return translateFields(rows.map((row) => normalizeIssued(row)), ["couponName", "businessName"], locale);
 }
 
 export async function issueCoupon(couponId: string) {
   const row = await visitorApi<IssuedCouponRow>(`/visitor/coupons/${couponId}/issues`, {
     method: "POST",
     // 버튼 연타로 같은 쿠폰이 여러 장 발행되지 않도록 다른 방문객 API와 같은 방식으로 막는다.
-    headers: { "Idempotency-Key": crypto.randomUUID() },
+    headers: { "Idempotency-Key": idempotencyKey() },
   });
   // 사용 토큰은 이 응답에서만 받을 수 있으므로 곧바로 기기에 저장한다.
   if (row.issueToken) rememberIssueToken(row.id, row.issueToken);
-  return normalizeIssued(row);
+  return normalizeIssued(row, couponId);
 }
 
 /**
