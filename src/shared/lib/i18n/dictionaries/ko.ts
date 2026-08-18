@@ -125,6 +125,12 @@ export const ko = {
     bookedWithoutNumber: "예약 완료",
     cancelAria: "예약 취소",
     partySize: (n: number) => `${n}명`,
+    phoneDialogTitle: "예약자 전화번호",
+    phoneDialogDescription: "예약자를 구분할 수 있도록 전화번호를 입력해 주세요.",
+    phoneLabel: "전화번호",
+    phonePlaceholder: "010-1234-5678",
+    phoneInvalid: "올바른 전화번호 형식으로 입력해 주세요.",
+    confirmBookingButton: "예약하기",
     status: {
       CONFIRMED: "예약 확정",
       WAITING: "대기 중",

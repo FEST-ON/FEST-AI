@@ -129,6 +129,12 @@ export const zh: typeof ko = {
     bookedWithoutNumber: "预约完成",
     cancelAria: "取消预约",
     partySize: (n: number) => `${n}人`,
+    phoneDialogTitle: "预约人电话号码",
+    phoneDialogDescription: "请输入电话号码以便区分预约人。",
+    phoneLabel: "电话号码",
+    phonePlaceholder: "010-1234-5678",
+    phoneInvalid: "请输入正确的电话号码格式。",
+    confirmBookingButton: "确认预约",
     status: {
       CONFIRMED: "预约确认",
       WAITING: "等候中",

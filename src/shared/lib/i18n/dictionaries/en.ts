@@ -129,6 +129,12 @@ export const en: typeof ko = {
     bookedWithoutNumber: "Booked",
     cancelAria: "Cancel booking",
     partySize: (n: number) => `${n} people`,
+    phoneDialogTitle: "Contact phone number",
+    phoneDialogDescription: "Please enter a phone number so we can identify this booking.",
+    phoneLabel: "Phone number",
+    phonePlaceholder: "010-1234-5678",
+    phoneInvalid: "Please enter a valid phone number.",
+    confirmBookingButton: "Book now",
     status: {
       CONFIRMED: "Confirmed",
       WAITING: "Waiting",

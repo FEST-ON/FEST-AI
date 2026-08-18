@@ -129,6 +129,12 @@ export const ja: typeof ko = {
     bookedWithoutNumber: "予約完了",
     cancelAria: "予約をキャンセル",
     partySize: (n: number) => `${n}名`,
+    phoneDialogTitle: "予約者の電話番号",
+    phoneDialogDescription: "予約を区別できるよう電話番号を入力してください。",
+    phoneLabel: "電話番号",
+    phonePlaceholder: "010-1234-5678",
+    phoneInvalid: "正しい電話番号を入力してください。",
+    confirmBookingButton: "予約する",
     status: {
       CONFIRMED: "予約確定",
       WAITING: "待機中",
