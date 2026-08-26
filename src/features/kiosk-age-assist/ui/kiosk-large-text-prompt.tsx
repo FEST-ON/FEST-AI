@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ALargeSmall, Camera, Languages, LoaderCircle } from "lucide-react";
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { LanguageBar } from "@/features/accessibility/ui/language-bar";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
+import { LanguageBar } from "@/shared/ui/language-bar";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Button } from "@/shared/ui/button";
 import {

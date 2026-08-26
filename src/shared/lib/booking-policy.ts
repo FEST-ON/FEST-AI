@@ -21,6 +21,17 @@ export function isCancelDeadlinePassed(startsAt: string, now = Date.now()) {
   return starts - BOOKING_CANCEL_DEADLINE_MINUTES * 60_000 <= now;
 }
 
+// 예약 상태 표기. 예약 관리·현장 운영 화면이 각자 표를 들고 있어 같은 NO_SHOW를
+// 한쪽은 "노쇼", 다른 쪽은 "미입장"으로 불렀다. 표기도 규칙과 같은 자리에 둔다.
+export const BOOKING_STATUS_LABEL: Record<string, string> = {
+  CONFIRMED: "예약 확정",
+  WAITING: "대기 중",
+  CALLED: "호출됨",
+  COMPLETED: "입장 완료",
+  CANCELLED: "취소",
+  NO_SHOW: "노쇼",
+};
+
 export type BookingAction = "CALLED" | "NO_SHOW" | "COMPLETED";
 
 /**

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { MessageSquareWarning, CheckCircle2 } from "lucide-react";
 import { json, visitorApi } from "@/shared/lib/api";
 import { useTranslation } from "@/shared/lib/i18n";
 import { useForm } from "@/shared/lib/use-form";
+import { useWrite } from "@/shared/lib/use-write";
 import { cn } from "@/shared/lib/utils";
 import { queryErrorMessage } from "@/shared/ui/query-state";
 import { Button } from "@/shared/ui/button";
@@ -47,10 +47,7 @@ export function ComplaintSheet({
   const canSubmit = form.title.trim().length > 0 && form.description.trim().length > 0;
 
   // 오류는 시트 안에 그대로 그리므로 전역 토스트는 끈다.
-  const submit = useMutation({
-    mutationFn: () => visitorApi("/visitor/complaints", json("POST", form)),
-    meta: { silent: true },
-  });
+  const submit = useWrite(() => visitorApi("/visitor/complaints", json("POST", form)), { silent: true });
 
   return (
     <Sheet

@@ -1,6 +1,7 @@
 "use client";
 
-import { FESTIVAL_CODE, idempotencyKey, publicApi, visitorApi } from "@/shared/lib/api";
+import { FESTIVAL_CODE, idempotent, publicApi, visitorApi } from "@/shared/lib/api";
+import { readJson, writeJson } from "@/shared/lib/local-store";
 import type { Locale } from "@/shared/lib/i18n";
 import { translateFields } from "@/shared/lib/i18n/translate-client";
 
@@ -82,28 +83,15 @@ const STORAGE_KEY = "festai-coupon-tokens";
 
 type TokenMap = Record<string, string>;
 
-function read(): TokenMap {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as TokenMap) : {};
-  } catch {
-    // 저장 값이 깨졌으면 없는 것으로 본다 — 토큰이 없으면 화면이 재발행을 안내한다.
-    return {};
-  }
-}
+// 저장 값이 깨졌으면 없는 것으로 본다 — 토큰이 없으면 화면이 재발행을 안내한다.
+const read = () => readJson<TokenMap>(STORAGE_KEY, {});
 
 export function issueTokenOf(issueId: string) {
   return read()[issueId];
 }
 
 export function rememberIssueToken(issueId: string, token: string) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...read(), [issueId]: token }));
-  } catch {
-    // 저장 공간이 없어도 발행 자체는 끝났으므로 막지 않는다.
-  }
+  writeJson(STORAGE_KEY, { ...read(), [issueId]: token });
 }
 
 interface RewardAction {
@@ -136,22 +124,12 @@ export async function fetchStampSpots(locale: Locale = "ko"): Promise<StampSpot[
   return translateFields(spots, ["name", "location"], locale);
 }
 
-/** ESG 화면에서는 다회용기 회수와 연결된 스탬프만 별도로 사용할 수 있다. */
-export async function fetchReusableContainerStamps(locale: Locale = "ko") {
-  const spots = await fetchStampSpots(locale);
-  return spots.filter((spot) => spot.actionType === "REUSABLE_CUP");
-}
-
 /**
  * 스탬프 적립. verificationKey는 현장 QR에 담긴 값이고, 서버가 rule.verificationKeys와
  * 대조한다 — 값이 틀리면 400이라 현장에 가지 않고는 적립되지 않는다.
  */
 export function collectStamp({ actionId, verificationKey }: { actionId: string; verificationKey: string }) {
-  return visitorApi(`/visitor/reward-events`, {
-    method: "POST",
-    headers: { "Idempotency-Key": idempotencyKey() },
-    body: JSON.stringify({ rewardActionId: actionId, verificationKey, evidence: {} }),
-  });
+  return visitorApi(`/visitor/reward-events`, idempotent("POST", { rewardActionId: actionId, verificationKey, evidence: {} }));
 }
 
 interface CouponOfferRow {
@@ -221,11 +199,8 @@ export async function fetchMyCoupons(locale: Locale = "ko"): Promise<IssuedCoupo
 }
 
 export async function issueCoupon(couponId: string) {
-  const row = await visitorApi<IssuedCouponRow>(`/visitor/coupons/${couponId}/issues`, {
-    method: "POST",
-    // 버튼 연타로 같은 쿠폰이 여러 장 발행되지 않도록 다른 방문객 API와 같은 방식으로 막는다.
-    headers: { "Idempotency-Key": idempotencyKey() },
-  });
+  // 버튼 연타로 같은 쿠폰이 여러 장 발행되지 않도록 다른 방문객 API와 같은 방식으로 막는다.
+  const row = await visitorApi<IssuedCouponRow>(`/visitor/coupons/${couponId}/issues`, idempotent("POST"));
   // 사용 토큰은 이 응답에서만 받을 수 있으므로 곧바로 기기에 저장한다.
   if (row.issueToken) rememberIssueToken(row.id, row.issueToken);
   return normalizeIssued(row, couponId);

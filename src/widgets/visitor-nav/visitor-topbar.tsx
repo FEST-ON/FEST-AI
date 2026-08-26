@@ -1,20 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { ComplaintSheet } from "@/features/complaint";
-import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
+import { AccessibilitySheet } from "@/shared/ui/accessibility-sheet";
 import { NotificationSheet } from "@/features/notification/ui/notification-sheet";
 import { AreaSheet } from "@/features/visitor-area/ui/area-sheet";
-import { useTranslation } from "@/shared/lib/i18n";
 import { Logo } from "@/shared/ui/logo";
 
 export function VisitorTopbar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { t } = useTranslation();
-
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex max-w-md items-center justify-between gap-1 px-3 py-1.5 pr-0">

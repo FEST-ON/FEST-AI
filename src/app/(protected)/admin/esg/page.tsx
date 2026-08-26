@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Leaf, Users, Scale, Sparkles, FileCheck2, CheckCircle2, CircleDashed, Download, Paperclip } from "lucide-react";
-import { fetchEsgMetrics, generateEsgReport } from "@/entities/esg";
-import type { EsgPillar } from "@/entities/esg";
+import { fetchEsgMetrics, generateEsgReport, type EsgPillar } from "@/entities/esg";
 import {
   addEvidence,
   approveReport,

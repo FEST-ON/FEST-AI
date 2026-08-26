@@ -7,7 +7,7 @@ export interface NewRewardCampaign {
   dailyPointLimit: number;
 }
 
-export async function createRewardCampaign(input: NewRewardCampaign) {
+export function createRewardCampaign(input: NewRewardCampaign) {
   return festivalApi<{ id: string; name: string }>(`/reward-campaigns`, json("POST", input));
 }
 
@@ -22,8 +22,24 @@ export interface NewRewardAction {
   location: string;
 }
 
-export async function createRewardAction({ campaignId, name, location, ...input }: NewRewardAction) {
-  return festivalApi(`/reward-campaigns/${campaignId}/actions`, json("POST", { ...input, rule: { name, location } }));
+/**
+ * 현장 QR·직원 확인에 쓰는 인증 값. 시드(`scripts/seed.py`)와 같은 규칙이라 인쇄물과
+ * 방문객 스캐너가 그대로 맞물린다. 행동 코드는 캠페인 안에서 유일하다.
+ */
+export function verificationKeyFor(actionType: string) {
+  return `stamp:${actionType.toLowerCase().replace(/_/g, "-")}`;
+}
+
+/** SELF가 아닌 인증 방식은 백엔드가 rule.verificationKeys를 요구한다 — 없으면 400으로 거절된다. */
+export function rewardActionRule({ actionType, verificationType, name, location }: Omit<NewRewardAction, "campaignId">) {
+  const rule: RewardAction["rule"] = { name, location };
+  if (verificationType !== "SELF") rule.verificationKeys = [verificationKeyFor(actionType)];
+  return rule;
+}
+
+export function createRewardAction({ campaignId, name, location, ...input }: NewRewardAction) {
+  const rule = rewardActionRule({ ...input, name, location });
+  return festivalApi(`/reward-campaigns/${campaignId}/actions`, json("POST", { ...input, rule }));
 }
 
 export interface RewardAction {
@@ -32,7 +48,7 @@ export interface RewardAction {
   verificationType: NewRewardAction["verificationType"];
   points: number;
   perUserLimit: number;
-  rule: { name?: string; location?: string };
+  rule: { name?: string; location?: string; verificationKeys?: string[] };
 }
 
 export interface RewardCampaign {
@@ -44,6 +60,6 @@ export interface RewardCampaign {
   actions: RewardAction[];
 }
 
-export async function fetchRewardCampaigns() {
+export function fetchRewardCampaigns() {
   return festivalApi<RewardCampaign[]>(`/reward-campaigns`);
 }

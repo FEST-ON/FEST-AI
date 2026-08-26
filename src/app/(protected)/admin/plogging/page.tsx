@@ -1,26 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { CheckCircle2, Clock3, Coins, QrCode, ScanLine, Trash2, UserRound } from "lucide-react";
-import { useAdminSessionStore } from "@/features/admin-auth/model/store";
+import { useAdminSessionStore } from "@/shared/lib/admin-session-store";
 import {
-  PLOGGING_OPERATOR_EMAIL,
   PLOGGING_POINTS_PER_BAG,
-  PLOGGING_STORAGE_KEY,
-  PLOGGING_UPDATED_EVENT,
   createPloggingSubmission,
   ploggingPoints,
-  readPloggingSubmissions,
-  type PloggingSubmission,
+  usePloggingSubmissions,
+  writePloggingSubmissions,
 } from "@/features/plogging";
-import { isToday } from "@/features/reusable-containers";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { QrScanner } from "@/shared/ui/qr-scanner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { SelectField } from "@/shared/ui/select-field";
 import { StatCard } from "@/shared/ui/stat-card";
+import { useForm } from "@/shared/lib/use-form";
+import { FIELD_OPERATOR_EMAIL } from "@/shared/lib/permissions";
+import { isToday, seoulShort } from "@/shared/lib/utils";
 
 const LOCATIONS = ["메인 광장 회수존", "푸드존 F-2", "공연장 입구"];
 
@@ -30,53 +29,25 @@ const EMPTY_FORM = {
   location: LOCATIONS[0],
 };
 
-function formatTime(isoDate: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(isoDate));
-}
-
 export default function AdminPloggingPage() {
   const user = useAdminSessionStore((state) => state.user);
-  const [submissions, setSubmissions] = useState<PloggingSubmission[]>([]);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const submissions = usePloggingSubmissions();
+  const { form, field, set, reset } = useForm(EMPTY_FORM);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [notice, setNotice] = useState<string>();
 
-  const isAssignedOperator = user?.email?.toLowerCase() === PLOGGING_OPERATOR_EMAIL;
-  const canProcess = isAssignedOperator && user?.role === "FIELD_OPERATOR";
+  const canProcess = user?.email?.toLowerCase() === FIELD_OPERATOR_EMAIL && user.role === "FIELD_OPERATOR";
 
-  useEffect(() => {
-    const sync = () => setSubmissions(readPloggingSubmissions());
-    sync();
-    window.addEventListener("storage", sync);
-    window.addEventListener(PLOGGING_UPDATED_EVENT, sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(PLOGGING_UPDATED_EVENT, sync);
-    };
-  }, []);
-
-  const verifiedToday = useMemo(() => submissions.filter((submission) => isToday(submission.verifiedAt)).length, [submissions]);
+  const verifiedToday = submissions.filter((submission) => isToday(submission.verifiedAt)).length;
   const pointsIssued = ploggingPoints(submissions);
   const bagsCollected = submissions.reduce((total, submission) => total + submission.bagCount, 0);
-
-  function save(next: PloggingSubmission[]) {
-    window.localStorage.setItem(PLOGGING_STORAGE_KEY, JSON.stringify(next));
-    window.dispatchEvent(new Event(PLOGGING_UPDATED_EVENT));
-    setSubmissions(next);
-  }
 
   function submitVerification(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canProcess || !form.visitorCode.trim()) return;
-    const submission = createPloggingSubmission({ ...form, operatorEmail: PLOGGING_OPERATOR_EMAIL });
-    save([submission, ...submissions]);
-    setForm(EMPTY_FORM);
+    const submission = createPloggingSubmission({ ...form, operatorEmail: FIELD_OPERATOR_EMAIL });
+    writePloggingSubmissions([submission, ...submissions]);
+    reset();
     setNotice(`${submission.submissionCode} 인증 완료 · +${submission.points}P 적립`);
   }
 
@@ -84,7 +55,7 @@ export default function AdminPloggingPage() {
     const code = value.trim();
     setScannerOpen(false);
     if (!code) return;
-    setForm((current) => ({ ...current, visitorCode: code }));
+    set("visitorCode")(code);
     setNotice("방문객 코드가 입력됐어요. 봉투 수를 확인하고 인증하세요.");
   }
 
@@ -108,7 +79,7 @@ export default function AdminPloggingPage() {
           </Badge>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-emerald-200/70 pt-3 text-xs dark:border-emerald-900/70">
-          <span className="font-semibold text-foreground">{PLOGGING_OPERATOR_EMAIL}</span>
+          <span className="font-semibold text-foreground">{FIELD_OPERATOR_EMAIL}</span>
           <span className="text-muted-foreground">FIELD_OPERATOR · 플로깅 인증 처리 담당</span>
           <span className="text-muted-foreground">봉투 1개당 +{PLOGGING_POINTS_PER_BAG}P</span>
         </div>
@@ -116,7 +87,7 @@ export default function AdminPloggingPage() {
 
       {!canProcess && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-          현재 계정은 조회 전용입니다. 인증 처리는 {PLOGGING_OPERATOR_EMAIL} 계정으로 로그인해 주세요.
+          현재 계정은 조회 전용입니다. 인증 처리는 {FIELD_OPERATOR_EMAIL} 계정으로 로그인해 주세요.
         </div>
       )}
 
@@ -141,8 +112,7 @@ export default function AdminPloggingPage() {
             <div className="flex gap-2">
               <Input
                 id="visitor-code"
-                value={form.visitorCode}
-                onChange={(event) => setForm((current) => ({ ...current, visitorCode: event.target.value }))}
+                {...field("visitorCode")}
                 placeholder="예: VIS-2048"
                 autoComplete="off"
                 disabled={!canProcess}
@@ -161,17 +131,14 @@ export default function AdminPloggingPage() {
               min={1}
               max={20}
               value={form.bagCount}
-              onChange={(event) => setForm((current) => ({ ...current, bagCount: Number(event.target.value) }))}
+              onChange={(event) => set("bagCount")(Number(event.target.value))}
               disabled={!canProcess}
               required
             />
           </div>
           <div className="space-y-1">
             <Label>수거 지점</Label>
-            <Select value={form.location} onValueChange={(value) => setForm((current) => ({ ...current, location: String(value ?? LOCATIONS[0]) }))}>
-              <SelectTrigger className="w-full" disabled={!canProcess}><SelectValue /></SelectTrigger>
-              <SelectContent>{LOCATIONS.map((location) => <SelectItem key={location} value={location}>{location}</SelectItem>)}</SelectContent>
-            </Select>
+            <SelectField value={form.location} onValueChange={set("location")} options={LOCATIONS} disabled={!canProcess} />
           </div>
           <div className="flex items-end justify-end">
             <Button type="submit" className="w-full" disabled={!canProcess || !form.visitorCode.trim()}>
@@ -213,7 +180,7 @@ export default function AdminPloggingPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-foreground">{submission.submissionCode} · {submission.visitorCode}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">쓰레기 {submission.bagCount}봉투 · {submission.location} · {formatTime(submission.verifiedAt)}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">쓰레기 {submission.bagCount}봉투 · {submission.location} · {seoulShort(submission.verifiedAt)}</p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-[10px]">+{submission.points}P 적립</Badge>

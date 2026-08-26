@@ -1,5 +1,5 @@
 import { festivalApi, json } from "@/shared/lib/api";
-import { uniqueById } from "@/shared/lib/utils";
+import { datetimeLocal, uniqueById } from "@/shared/lib/utils";
 import type { Tone } from "@/shared/ui/status-pill";
 
 export type ParticipationStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
@@ -138,11 +138,11 @@ export interface NewBusiness {
   boothNo?: string;
 }
 
-export async function createBusiness(input: NewBusiness) {
+export function createBusiness(input: NewBusiness) {
   return festivalApi(`/businesses`, json("POST", input));
 }
 
-export async function reviewBusiness({ businessId, decision, comment }: { businessId: string; decision: "APPROVED" | "REJECTED"; comment?: string }) {
+export function reviewBusiness({ businessId, decision, comment }: { businessId: string; decision: "APPROVED" | "REJECTED"; comment?: string }) {
   return festivalApi(`/businesses/${businessId}/review`, json("POST", { decision, comment }));
 }
 
@@ -160,7 +160,7 @@ export interface AdminCoupon {
   issuedCount: number;
 }
 
-export async function fetchBusinessCoupons(businessId: string) {
+export function fetchBusinessCoupons(businessId: string) {
   return festivalApi<AdminCoupon[]>(`/businesses/${businessId}/coupons`);
 }
 
@@ -175,6 +175,22 @@ export interface NewCoupon {
   endsAt: string;
 }
 
-export async function createBusinessCoupon({ businessId, ...input }: NewCoupon & { businessId: string }) {
+export const BENEFIT_TYPES: { value: NewCoupon["benefitType"]; label: string }[] = [
+  { value: "PERCENT", label: "% 할인" },
+  { value: "FIXED", label: "정액 할인" },
+  { value: "GIFT", label: "사은품" },
+];
+
+/** 쿠폰 발행 폼 초기값. 운영자·상인 콘솔이 같은 폼을 쓰고 기본 발행 수량만 다르다. */
+export function couponDefaults(issueLimit = 100): NewCoupon {
+  const now = new Date();
+  return {
+    name: "", description: "", benefitType: "PERCENT", benefitValue: 10,
+    issueLimit, perVisitorLimit: 1,
+    startsAt: datetimeLocal(now), endsAt: datetimeLocal(new Date(now.getTime() + 7 * 24 * 60 * 60_000)),
+  };
+}
+
+export function createBusinessCoupon({ businessId, ...input }: NewCoupon & { businessId: string }) {
   return festivalApi(`/businesses/${businessId}/coupons`, json("POST", input));
 }

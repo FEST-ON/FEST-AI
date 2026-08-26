@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, QrCode as QrCodeIcon, Store, Ticket } from "lucide-react";
 import Link from "next/link";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/entities/coupon";
 import { useTranslation } from "@/shared/lib/i18n";
 import { useNow } from "@/shared/lib/use-now";
+import { useWrite } from "@/shared/lib/use-write";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { EmptyState, ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
@@ -20,12 +21,11 @@ import { Skeleton } from "@/shared/ui/skeleton";
 
 export default function CouponWalletPage() {
   const { t, locale, bcp47 } = useTranslation();
-  const queryClient = useQueryClient();
   const now = useNow(60_000);
   const myCoupons = useQuery({ queryKey: ["my-coupons", locale] as const, queryFn: () => fetchMyCoupons(locale) });
   const offers = useQuery({ queryKey: ["coupon-offers", locale] as const, queryFn: () => fetchCouponOffers(locale) });
-  const issue = useMutation({ mutationFn: issueCoupon, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-coupons"] }) });
-  const reissue = useMutation({ mutationFn: reissueCouponToken, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-coupons"] }) });
+  const issue = useWrite(issueCoupon, { invalidates: ["my-coupons"] });
+  const reissue = useWrite(reissueCouponToken, { invalidates: ["my-coupons"] });
 
   return (
     <div className="px-4 pt-4 pb-6">

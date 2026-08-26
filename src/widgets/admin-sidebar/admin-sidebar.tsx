@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { LayoutDashboard, Users2, MapPinned, FileCheck2, Ticket, TicketCheck, TicketPercent, Megaphone, Sparkles, Leaf, History, LogOut, Activity, UserCog, Store, Gift, FileSearch, Building2, KeyRound, ChevronDown, ClipboardList, Search, ShieldCheck, Recycle, Trash2, type LucideIcon } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { cn } from "@/shared/lib/utils";
 import { logoutAdmin } from "@/shared/lib/api";
-import { useAdminSessionStore } from "@/features/admin-auth/model/store";
+import { useAdminSessionStore } from "@/shared/lib/admin-session-store";
 import { ChangePasswordDialog } from "@/features/admin-auth/ui/change-password-dialog";
 import { ADMIN_ROLE_LABEL, mobileNavItems, visibleNavItems, type AdminNavItem } from "@/shared/lib/permissions";
 
@@ -152,7 +151,7 @@ export function AdminBottomNav() {
 
   return (
     // 아이폰 홈 인디케이터와 겹치지 않도록 안전 영역만큼 아래를 띄운다(viewportFit: cover와 한 쌍).
-    <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+    <nav className="sticky bottom-0 z-30 border-t border-border bg-card/95 print:hidden pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <div className="flex items-stretch justify-between px-2 py-1.5">
         {items.map(({ href, label }) => {
           const Icon = NAV_ICONS[href] ?? LayoutDashboard;
@@ -182,7 +181,7 @@ export function AdminSidebar() {
 
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+    <aside className="hidden w-64 shrink-0 print:hidden! flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
       <div className="flex items-center gap-2 px-5 py-5">
         <Logo tone="dark" />
       </div>

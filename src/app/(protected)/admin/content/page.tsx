@@ -48,11 +48,11 @@ const STATUS = {
   REJECTED: { label: "반려", tone: "danger" },
 } as const satisfies Record<string, { label: string; tone: Tone }>;
 
-async function fetchContentItems() {
+function fetchContentItems() {
   return festivalApi<ContentItem[]>(`/content-items`);
 }
 
-async function changeContentState(input: {
+function changeContentState(input: {
   action: "SUBMIT" | "APPROVE" | "REJECT" | "PUBLISH" | "UNPUBLISH";
   itemId: string;
   versionId: string;

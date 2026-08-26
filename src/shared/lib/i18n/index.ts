@@ -1,12 +1,11 @@
 "use client";
 
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
 import { ko } from "./dictionaries/ko";
 import { en } from "./dictionaries/en";
 import { zh } from "./dictionaries/zh";
 import { ja } from "./dictionaries/ja";
-import { BCP47_BY_LOCALE } from "./locale";
-import type { Locale } from "./locale";
+import { BCP47_BY_LOCALE, type Locale } from "./locale";
 
 export type { Locale } from "./locale";
 export { LANGUAGE_BY_LOCALE, BCP47_BY_LOCALE } from "./locale";

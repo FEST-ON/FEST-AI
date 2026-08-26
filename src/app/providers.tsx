@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
 import { Toaster, toast } from "@/shared/ui/toast";
 import { queryErrorMessage } from "@/shared/ui/query-state";
 import { mutationToast, type MutationToastMeta } from "@/shared/lib/mutation-toast";

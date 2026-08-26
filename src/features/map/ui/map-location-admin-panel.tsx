@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Eye, EyeOff, MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   MAP_LOCATION_CATEGORIES,
+  categoryLabel,
   createMapLocation,
   deleteMapLocation,
   fetchMapLocations,
@@ -39,10 +40,6 @@ const EMPTY_FORM: MapLocationInput = {
   description: "",
   isVisible: true,
 };
-
-function categoryLabel(category: MapLocationCategory) {
-  return MAP_LOCATION_CATEGORIES.find((item) => item.value === category)?.label ?? category;
-}
 
 function LocationForm({ value, onChange }: { value: MapLocationInput; onChange: (value: MapLocationInput) => void }) {
   return (

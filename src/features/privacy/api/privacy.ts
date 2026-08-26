@@ -1,4 +1,4 @@
-import { visitorApi } from "@/shared/lib/api";
+import { json, visitorApi } from "@/shared/lib/api";
 
 /** OPS-11 방문객 개인정보 고지·동의·요구. 항목 정의와 보유기간은 서버 정책표가 단일 기준이다. */
 export interface ConsentItem {
@@ -42,7 +42,7 @@ export function fetchPrivacyNotice() {
 export function updateConsents(consents: Record<string, boolean>) {
   return visitorApi<{ consents: Record<string, boolean>; purged: Record<string, number> }>(
     "/visitor/privacy/consents",
-    { method: "PATCH", body: JSON.stringify({ consents }) },
+    json("PATCH", { consents }),
   );
 }
 
@@ -51,8 +51,8 @@ export function fetchPrivacyRequests() {
 }
 
 export function createPrivacyRequest(requestType: "ACCESS" | "DELETE", detail?: string) {
-  return visitorApi<PrivacyRequest & { excluded: string[] }>("/visitor/privacy/requests", {
-    method: "POST",
-    body: JSON.stringify({ requestType, detail }),
-  });
+  return visitorApi<PrivacyRequest & { excluded: string[] }>(
+    "/visitor/privacy/requests",
+    json("POST", { requestType, detail }),
+  );
 }

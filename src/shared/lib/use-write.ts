@@ -10,16 +10,18 @@ type QueryKeyish = string | readonly unknown[];
  *
  * 화면마다 `useQueryClient()` → `const invalidate = () => queryClient.invalidateQueries(...)` →
  * `useMutation({ mutationFn, meta, onSuccess: invalidate })`를 반복하던 것을 한 곳에 둔다.
- * 성공 알림(meta.success)은 providers.tsx의 mutation cache가 읽는다.
+ * 알림 설정(meta.success/meta.silent)은 providers.tsx의 mutation cache가 읽는다.
  */
 export function useWrite<TData, TVariables = void>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   {
     success,
+    silent,
     invalidates = [],
     onSuccess,
   }: {
     success?: string;
+    silent?: boolean;
     invalidates?: readonly QueryKeyish[];
     onSuccess?: (data: TData, variables: TVariables) => void;
   } = {},
@@ -27,7 +29,7 @@ export function useWrite<TData, TVariables = void>(
   const queryClient = useQueryClient();
   return useMutation<TData, Error, TVariables>({
     mutationFn,
-    meta: success ? { success } : undefined,
+    meta: success || silent ? { success, silent } : undefined,
     onSuccess: (data, variables) => {
       for (const key of invalidates) {
         queryClient.invalidateQueries({ queryKey: typeof key === "string" ? [key] : key });

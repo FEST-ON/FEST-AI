@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { MapPinned } from "lucide-react";
-import { fetchPublicAreas, fetchVisitorArea, setVisitorArea } from "@/features/visitor-area/api/area";
+import { fetchPublicAreas, fetchVisitorArea, setVisitorArea } from "@/entities/area";
 import { useTranslation } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 import { useWrite } from "@/shared/lib/use-write";

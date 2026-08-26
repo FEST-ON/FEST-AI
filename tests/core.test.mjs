@@ -21,15 +21,25 @@ async function importTypeScript(path, imports) {
 
 const apiUrl = await transpile("../src/shared/lib/api.ts");
 const { adminApi, adminFestivalId, festivalApi, json, logoutAdmin } = await import(apiUrl);
+const localStoreUrl = await transpile("../src/shared/lib/local-store.ts");
+const { readJson, writeJson } = await import(localStoreUrl);
+const translateClientUrl = await transpile("../src/shared/lib/i18n/translate-client.ts");
+const surveyStoreLinkUrl = await transpile("../src/shared/lib/survey-store-link.ts");
 const { generateReply } = await importTypeScript("../src/features/ai-guide/lib/generate-reply.ts", {
   "@/shared/lib/api": apiUrl,
   "@/shared/lib/i18n": moduleUrl('export const BCP47_BY_LOCALE = { ko: "ko-KR" };'),
+  "@/shared/lib/i18n/translate-client": translateClientUrl,
+  "@/shared/lib/local-store": localStoreUrl,
 });
-const issueAnalysisUrl = await transpile("../src/features/complaint-insight/api/issue-analysis.ts", {
+const issueAnalysisEntityUrl = await transpile("../src/entities/issue-analysis.ts", {
   "@/shared/lib/api": apiUrl,
 });
+const issueAnalysisUrl = await transpile("../src/features/complaint-insight/api/issue-analysis.ts", {
+  "@/entities/issue-analysis": issueAnalysisEntityUrl,
+});
+const { rewardActionRule } = await importTypeScript("../src/features/rewards.ts", { "@/shared/lib/api": apiUrl });
 const { operatingStatus } = await importTypeScript("../src/features/map/lib/operating-status.ts");
-const { datetimeLocal, toIso } = await importTypeScript("../src/shared/lib/utils.ts", {
+const { datetimeLocal, toIso, toggleValue } = await importTypeScript("../src/shared/lib/utils.ts", {
   clsx: moduleUrl("export const clsx = (...a) => a.join(' ');"),
   "tailwind-merge": moduleUrl("export const twMerge = (v) => v;"),
 });
@@ -39,7 +49,9 @@ const { buildImprovementTasks, buildRecurringIssues, buildTopicBreakdown } = awa
 // 표시 서식은 규칙 테스트와 무관해서 스텁으로 끊는다.
 const entity = {
   "@/shared/lib/api": apiUrl,
-  "@/features/complaint-insight/api/issue-analysis": issueAnalysisUrl,
+  "@/shared/lib/i18n/translate-client": translateClientUrl,
+  "@/shared/lib/survey-store-link": surveyStoreLinkUrl,
+  "@/entities/issue-analysis": issueAnalysisEntityUrl,
   "@/shared/lib/utils": moduleUrl("export const seoulDateTime = String, seoulShort = String, seoulTime = String;"),
 };
 const { hasSurveyAnswer, surveyQuestionType } = await importTypeScript("../src/entities/visitor.ts", entity);
@@ -50,7 +62,10 @@ const { ADMIN_NAV_ITEMS, canAccessPath, mobileNavItems, visibleNavItems } = awai
 const { mutationToast } = await importTypeScript("../src/shared/lib/mutation-toast.ts");
 const { translateFields } = await importTypeScript("../src/shared/lib/i18n/translate-client.ts");
 const { detectLocale } = await importTypeScript("../src/shared/lib/i18n/detect-locale.ts");
-const { isSeniorAge } = await importTypeScript("../src/features/kiosk-age-assist/model/estimate-age.ts");
+// 모델 로더는 브라우저 전용(동적 import)이라 규칙 테스트에서는 끊는다.
+const { isSeniorAge } = await importTypeScript("../src/features/kiosk-age-assist/model/estimate-age.ts", {
+  "@/shared/lib/face-api": moduleUrl("export const loadFaceApi = () => Promise.reject(new Error('stub'));"),
+});
 
 class MemoryStorage {
   #values = new Map();
@@ -69,7 +84,20 @@ Object.defineProperty(globalThis, "localStorage", { configurable: true, value: n
 beforeEach(() => localStorage.clear());
 after(() => {
   globalThis.fetch = originalFetch;
+  delete globalThis.window;
   delete globalThis.localStorage;
+});
+
+test("JSON 저장은 같은 탭 구독자에게 표준 storage 이벤트로 알린다", () => {
+  globalThis.window = Object.assign(new EventTarget(), { localStorage });
+  let changes = 0;
+  window.addEventListener("storage", () => { changes += 1; });
+
+  writeJson("demo", { ok: true });
+
+  assert.deepEqual(readJson("demo", {}), { ok: true });
+  assert.equal(changes, 1);
+  delete globalThis.window;
 });
 
 test("동시 401 응답은 refresh token을 한 번만 갱신한다", async () => {
@@ -338,7 +366,7 @@ test("사이드바 그룹은 연속 배치되어 헤더가 한 번만 나온다"
 test("사이드바는 운영 빈도와 업무 흐름 순으로 배치된다", () => {
   assert.deepEqual(ADMIN_NAV_ITEMS.map((item) => item.href), [
     "/admin",
-    "/admin/field", "/admin/bookings", "/admin/tickets", "/admin/coupons", "/admin/reusable-containers",
+    "/admin/field", "/admin/bookings", "/admin/tickets", "/admin/coupons", "/admin/plogging", "/admin/reusable-containers",
     "/admin/staff", "/admin/programs",
     "/admin/announcements", "/admin/content", "/admin/ai-insights", "/admin/surveys", "/admin/documents",
     "/admin/esg", "/admin/rewards",
@@ -555,6 +583,14 @@ test("일시 입력은 브라우저 타임존과 무관하게 축제 기준(Asia
   assert.equal(toIso("2026-09-12T01:00:00Z"), "2026-09-12T01:00:00.000Z");
 });
 
+test("목록 토글은 없으면 넣고 있으면 빼며, 원본을 건드리지 않는다", () => {
+  const first = toggleValue([], "VISITOR");
+  assert.deepEqual(first, ["VISITOR"]);
+  assert.deepEqual(toggleValue(first, "STAFF"), ["VISITOR", "STAFF"]);
+  assert.deepEqual(toggleValue(first, "VISITOR"), []);
+  assert.deepEqual(first, ["VISITOR"]);
+});
+
 test("예약 셀프 취소는 시작 30분 전에 닫힌다(서버 규칙과 같은 표)", () => {
   const startsAt = "2026-09-12T10:00:00Z";
   const at = (iso) => new Date(iso).getTime();
@@ -589,4 +625,11 @@ test("연령대 판정은 표본이 모자라거나 흔들리면 제안하지 �
   // 표본이 모자라면 값이 아무리 높아도 판정하지 않는다.
   assert.equal(isSeniorAge([80, 82]), false);
   assert.equal(isSeniorAge([]), false);
+});
+
+test("SELF가 아닌 리워드 행동에만 현장 인증 값이 붙는다", () => {
+  const input = { actionType: "STAMP_PHOTO_ZONE", name: "포토존", location: "물빛광장", points: 10, perUserLimit: 1 };
+  // 인증 값이 없으면 백엔드가 400으로 거절하고, 있으면 인쇄한 QR과 값이 같아야 적립된다.
+  assert.deepEqual(rewardActionRule({ ...input, verificationType: "QR" }).verificationKeys, ["stamp:stamp-photo-zone"]);
+  assert.equal(rewardActionRule({ ...input, verificationType: "SELF" }).verificationKeys, undefined);
 });

@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Sparkles, MapPin, Ticket, Recycle } from "lucide-react";
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { useVisitorMenus } from "@/features/visitor-menu-settings";
-import type { VisitorMenuKey } from "@/features/visitor-menu-settings";
-import { useTranslation } from "@/shared/lib/i18n";
-import type { Dictionary } from "@/shared/lib/i18n";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
+import { useVisitorMenus, type VisitorMenuKey } from "@/features/visitor-menu-settings";
+import { useTranslation, type Dictionary } from "@/shared/lib/i18n";
 import { cn } from "@/shared/lib/utils";
 
-// 홈 퀵메뉴가 이 목록을 빼고 그리므로(중복 제거) 여기가 하단 탭의 단일 출처다.
+// 하단 탭과 방문객 하위 화면의 뒤로가기 판정이 함께 쓰는 단일 출처다.
 export const NAV_ITEMS: {
   href: string;
   labelKey: keyof Dictionary["nav"];

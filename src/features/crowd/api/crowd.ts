@@ -55,7 +55,7 @@ export interface AdminCrowdSnapshot extends PublicCrowd {
   programTitle: string | null;
 }
 
-export async function fetchCrowdSnapshots() {
+export function fetchCrowdSnapshots() {
   return festivalApi<AdminCrowdSnapshot[]>(`/crowd-snapshots`);
 }
 
@@ -67,7 +67,7 @@ export interface NewCrowdSnapshot {
   validMinutes: number;
 }
 
-export async function createCrowdSnapshot({ validMinutes, ...input }: NewCrowdSnapshot) {
+export function createCrowdSnapshot({ validMinutes, ...input }: NewCrowdSnapshot) {
   const capturedAt = new Date();
   return festivalApi(`/crowd-snapshots`, json("POST", {
     ...input,

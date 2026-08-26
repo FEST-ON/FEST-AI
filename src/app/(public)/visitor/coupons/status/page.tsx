@@ -1,36 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+
 import { CheckCircle2, Clock3, PackageCheck } from "lucide-react";
-import {
-  REUSABLE_CONTAINER_UPDATED_EVENT,
-  getReusableVisitorCode,
-  readReusableContainerRentals,
-  reusableContainerPoints,
-} from "@/features/reusable-containers";
+import { reusableContainerPoints, useReusableContainerRentals, useReusableVisitorCode } from "@/features/reusable-containers";
 import { VisitorEsgHeader } from "@/features/esg/ui/visitor-esg-header";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
 
 export default function EsgStatusPage() {
   const { t, bcp47 } = useTranslation();
-  const [visitorCode, setVisitorCode] = useState("");
-  const [rentals, setRentals] = useState<ReturnType<typeof readReusableContainerRentals>>([]);
-
-  useEffect(() => {
-    const sync = () => {
-      setVisitorCode(getReusableVisitorCode());
-      setRentals(readReusableContainerRentals());
-    };
-    sync();
-    window.addEventListener("storage", sync);
-    window.addEventListener(REUSABLE_CONTAINER_UPDATED_EVENT, sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(REUSABLE_CONTAINER_UPDATED_EVENT, sync);
-    };
-  }, []);
+  const rentals = useReusableContainerRentals();
+  const visitorCode = useReusableVisitorCode();
 
   const visitorRentals = rentals.filter((rental) => rental.visitorCode === visitorCode);
   const activeRental = visitorRentals.find((rental) => rental.status === "RENTED");

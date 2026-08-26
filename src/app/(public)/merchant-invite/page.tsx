@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { KeyRound, ShieldAlert } from "lucide-react";
 import { acceptMerchantInvitation, lookupMerchantInvitation } from "@/shared/lib/api";
 import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
@@ -11,6 +11,9 @@ import { Label } from "@/shared/ui/label";
 import { Logo } from "@/shared/ui/logo";
 import { queryErrorMessage } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { seoulDateTime } from "@/shared/lib/utils";
+import { useWrite } from "@/shared/lib/use-write";
+import { useForm } from "@/shared/lib/use-form";
 
 /**
  * BIZ-05 상인 계정 초대 수락.
@@ -21,8 +24,7 @@ import { Skeleton } from "@/shared/ui/skeleton";
 function InviteForm() {
   const router = useRouter();
   const token = useSearchParams().get("token") ?? "";
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const { form, field } = useForm({ password: "", name: "" });
 
   const preview = useQuery({
     queryKey: ["merchant-invitation", token],
@@ -31,16 +33,18 @@ function InviteForm() {
     retry: false,
   });
 
-  const accept = useMutation({
-    mutationFn: () =>
+  const accept = useWrite(
+    () =>
       acceptMerchantInvitation({
         token,
-        password: preview.data?.hasAccount ? undefined : password,
-        name: preview.data?.hasAccount ? undefined : name,
+        password: preview.data?.hasAccount ? undefined : form.password,
+        name: preview.data?.hasAccount ? undefined : form.name,
       }),
-    meta: { silent: true },
-    onSuccess: () => router.replace("/merchant"),
-  });
+    {
+      silent: true,
+      onSuccess: () => router.replace("/merchant"),
+    },
+  );
 
   if (!token) {
     return (
@@ -74,7 +78,7 @@ function InviteForm() {
           {preview.data.festivalName} · {preview.data.businessName}
         </p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {preview.data.email} · {new Date(preview.data.expiresAt).toLocaleString("ko-KR")} 만료
+          {preview.data.email} · {seoulDateTime(preview.data.expiresAt)} 만료
         </p>
       </div>
 
@@ -82,7 +86,7 @@ function InviteForm() {
         <>
           <div className="space-y-1.5">
             <Label htmlFor="invite-name">담당자 이름</Label>
-            <Input id="invite-name" value={name} onChange={(event) => setName(event.target.value)} required />
+            <Input id="invite-name" {...field("name")} required />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="invite-password">비밀번호 (8자 이상)</Label>
@@ -91,8 +95,7 @@ function InviteForm() {
               type="password"
               autoComplete="new-password"
               minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              {...field("password")}
               required
             />
           </div>

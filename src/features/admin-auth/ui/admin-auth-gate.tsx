@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import { currentAdmin, loginAdmin } from "@/shared/lib/api";
-import { useAdminSessionStore } from "@/features/admin-auth/model/store";
+import { useAdminSessionStore } from "@/shared/lib/admin-session-store";
 import { ADMIN_ROLE_LABEL, canAccessPath } from "@/shared/lib/permissions";
 import { useForm } from "@/shared/lib/use-form";
+import { useWrite } from "@/shared/lib/use-write";
 import { Input } from "@/shared/ui/input";
 import { Logo } from "@/shared/ui/logo";
 import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
@@ -32,9 +32,8 @@ export function AdminAuthGate({ children }: { children: React.ReactNode }) {
   }, [setUser]);
 
   // 오류는 폼 바로 아래에 그리므로 전역 토스트는 끈다.
-  const login = useMutation({
-    mutationFn: () => loginAdmin(form.email, form.password),
-    meta: { silent: true },
+  const login = useWrite(() => loginAdmin(form.email, form.password), {
+    silent: true,
     onSuccess: (admin) => {
       setUser(admin);
       setAuthenticated(true);

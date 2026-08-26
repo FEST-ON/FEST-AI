@@ -1,5 +1,8 @@
 export type AdminRole = "SUPER_ADMIN" | "FESTIVAL_MANAGER" | "FIELD_OPERATOR" | "MERCHANT" | "REVIEWER";
 
+/** 플로깅·재사용기 현장 처리 화면의 담당 계정. 두 화면이 같은 계정을 보므로 한 곳에 둔다. */
+export const FIELD_OPERATOR_EMAIL = "operator@example.com";
+
 export const ADMIN_ROLE_LABEL: Record<string, string> = {
   SUPER_ADMIN: "최고 관리자",
   FESTIVAL_MANAGER: "축제 담당자",

@@ -9,11 +9,6 @@ import { useTranslation } from "@/shared/lib/i18n";
 
 const PAYMENT_TTL_SECONDS = 30;
 
-function createMockPaymentToken() {
-  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `ESG-PAY-${Date.now()}-${suffix}`;
-}
-
 export function EsgPayDialog() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -21,7 +16,7 @@ export function EsgPayDialog() {
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const createPayment = () => {
-    setPaymentToken(createMockPaymentToken());
+    setPaymentToken(`ESG-PAY-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`);
     setSecondsLeft(PAYMENT_TTL_SECONDS);
   };
 

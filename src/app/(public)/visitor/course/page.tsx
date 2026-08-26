@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
 import { Clock, MapPin, Route, Sparkles } from "lucide-react";
 import { createCoursePlan } from "@/features/course-plan";
 import { Badge } from "@/shared/ui/badge";
@@ -10,8 +8,9 @@ import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { queryErrorMessage } from "@/shared/ui/query-state";
 import { useTranslation } from "@/shared/lib/i18n";
-import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
-import { ChevronLeft } from "lucide-react";
+import { toggleValue } from "@/shared/lib/utils";
+import { useWrite } from "@/shared/lib/use-write";
+import { VisitorPageTitle } from "@/widgets/visitor-nav/visitor-page-title";
 
 // 백엔드 programs.category 값과 맞춘다 — 다른 값을 보내면 결과가 비어 나온다.
 const INTERESTS = [
@@ -27,10 +26,7 @@ export default function VisitorCoursePage() {
   const { t, bcp47, locale } = useTranslation();
   const [interests, setInterests] = useState<string[]>([]);
   const [durationMin, setDurationMin] = useState(120);
-  const plan = useMutation({
-    mutationFn: (input: Parameters<typeof createCoursePlan>[0]) =>
-      createCoursePlan(input, locale),
-  });
+  const plan = useWrite((input: Parameters<typeof createCoursePlan>[0]) => createCoursePlan(input, locale));
 
   const time = (value: string) =>
     new Date(value).toLocaleTimeString(bcp47, {
@@ -38,28 +34,10 @@ export default function VisitorCoursePage() {
       minute: "2-digit",
     });
 
-  const router = useRouter();
-  const pathname = usePathname();
 
-  // 하단 탭에 없는 화면(스탬프투어·설문·상권 등)은 돌아갈 길이 브라우저 뒤로가기뿐이었다.
-  const showBack = !NAV_ITEMS.some((item) => item.href === pathname);
   return (
     <>
-      <div className="flex mt-2 items-center">
-        {showBack && (
-          <button
-            type="button"
-            onClick={() => router.back()}
-            aria-label={t.common.back}
-            className="-ml-1 flex size-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
-        )}
-        <h1 className="text-lg font-extrabold text-foreground">
-          {t.course.title}
-        </h1>
-      </div>
+      <VisitorPageTitle>{t.course.title}</VisitorPageTitle>
       <div className="px-4 pt-0 pb-6">
         <p className="text-xs text-muted-foreground">{t.course.subtitle}</p>
         <section className="mt-4 rounded-2xl border border-border bg-card p-4">
@@ -73,13 +51,7 @@ export default function VisitorCoursePage() {
                 <button
                   key={value}
                   type="button"
-                  onClick={() =>
-                    setInterests(
-                      active
-                        ? interests.filter((item) => item !== value)
-                        : [...interests, value],
-                    )
-                  }
+                  onClick={() => setInterests(toggleValue(interests, value))}
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground"}`}
                 >
                   {t.course.interests[value]}

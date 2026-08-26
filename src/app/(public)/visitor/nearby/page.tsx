@@ -2,9 +2,8 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, MapPin, Megaphone, Navigation, Store } from "lucide-react";
+import { MapPin, Megaphone, Navigation, Store } from "lucide-react";
 import {
   currentPosition,
   fetchBusinessRecommendations,
@@ -18,7 +17,7 @@ import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { WheelchairIcon } from "@/shared/ui/wheelchair-icon";
 import { useTranslation } from "@/shared/lib/i18n";
-import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
+import { VisitorPageTitle } from "@/widgets/visitor-nav/visitor-page-title";
 
 const REGIONAL_ADS = [
   {
@@ -144,26 +143,10 @@ export default function VisitorNearbyPage() {
 
   const categories = [...new Set((businesses.data ?? []).map((item) => item.category))];
 
-  const router = useRouter();
-  const pathname = usePathname();
-  // 하단 탭에 없는 화면(스탬프투어·설문·상권 등)은 돌아갈 길이 브라우저 뒤로가기뿐이었다.
-  const showBack = !NAV_ITEMS.some((item) => item.href === pathname);
 
   return (
     <>
-    <div className="flex mt-2 items-center">
-      {showBack && (
-        <button
-          type="button"
-          onClick={() => router.back()}
-          aria-label={t.common.back}
-          className="-ml-1 flex size-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-      )}
-      <h1 className="text-lg font-extrabold text-foreground">{t.nearby.title}</h1>
-    </div>
+    <VisitorPageTitle>{t.nearby.title}</VisitorPageTitle>
     <div className="px-4 pt-0 pb-6">
       <p className="text-xs text-muted-foreground">{t.nearby.subtitle}</p>
 

@@ -21,11 +21,10 @@ import {
   MAX_PARTY_SIZE,
   type BookableSession,
   type VisitorBooking,
-} from "@/features/reservation";
+} from "@/entities/booking";
 import { BOOKING_CANCEL_DEADLINE_MINUTES, BOOKING_NO_SHOW_GRACE_MINUTES, isCancelDeadlinePassed } from "@/shared/lib/booking-policy";
 import { useNow } from "@/shared/lib/use-now";
-import { useAutoTranslate, useTranslation } from "@/shared/lib/i18n";
-import type { Dictionary } from "@/shared/lib/i18n";
+import { useAutoTranslate, useTranslation, type Dictionary } from "@/shared/lib/i18n";
 
 const PHONE_PATTERN = /^01[016789]-?\d{3,4}-?\d{4}$/;
 

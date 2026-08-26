@@ -22,6 +22,8 @@ import {
   type MerchantCoupon,
 } from "@/features/merchant";
 import {
+  BENEFIT_TYPES,
+  couponDefaults,
   PARTICIPATION_LABEL,
   PARTICIPATION_TONE,
 } from "@/features/business-admin";
@@ -38,27 +40,8 @@ import { StatusPill } from "@/shared/ui/status-pill";
 import { Switch } from "@/shared/ui/switch";
 import { useForm } from "@/shared/lib/use-form";
 import { useWrite } from "@/shared/lib/use-write";
-import { datetimeLocal, toIso } from "@/shared/lib/utils";
+import { toIso } from "@/shared/lib/utils";
 
-const BENEFIT_TYPES = [
-  { value: "PERCENT", label: "% 할인" },
-  { value: "FIXED", label: "정액 할인" },
-  { value: "GIFT", label: "사은품" },
-];
-
-function couponDefaults(): MerchantCoupon {
-  const now = new Date();
-  return {
-    name: "",
-    description: "",
-    benefitType: "PERCENT",
-    benefitValue: 10,
-    issueLimit: 50,
-    perVisitorLimit: 1,
-    startsAt: datetimeLocal(now),
-    endsAt: datetimeLocal(new Date(now.getTime() + 7 * 24 * 60 * 60_000)),
-  };
-}
 
 function PerformanceCard({ businessId }: { businessId: string }) {
   const { data, isLoading } = useQuery({
@@ -110,7 +93,7 @@ function BusinessPanel({ business }: { business: MerchantBusiness }) {
     set: couponSet,
     field: couponField,
     reset: resetCoupon,
-  } = useForm<MerchantCoupon>(couponDefaults);
+  } = useForm<MerchantCoupon>(() => couponDefaults(50));
   const {
     form: redeem,
     field: redeemField,

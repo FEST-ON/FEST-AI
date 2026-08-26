@@ -32,7 +32,7 @@ export interface RecommendationBiasReport {
 }
 
 /** 백엔드는 GET 한 번으로 최근 window_days의 노출 이력을 그때그때 집계한다(저장된 리포트가 아니다). */
-export async function fetchRecommendationBiasReport(windowDays = 7) {
+export function fetchRecommendationBiasReport(windowDays = 7) {
   return festivalApi<RecommendationBiasReport>(`/recommendation-bias?window_days=${windowDays}`, { cache: "no-store" });
 }
 

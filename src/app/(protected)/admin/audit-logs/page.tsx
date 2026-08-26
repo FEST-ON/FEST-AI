@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Download, History, Search } from "lucide-react";
 import { fetchAuditLogs, type AuditLogEntry, type AuditLogFilter } from "@/entities/audit-log";
 import { createExport, fetchJob } from "@/features/festival-admin";
-import { useAdminSessionStore, type AdminUser } from "@/features/admin-auth/model/store";
+import { useAdminSessionStore, type AdminUser } from "@/shared/lib/admin-session-store";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -17,6 +17,7 @@ import { SkeletonList } from "@/shared/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { seoulDateTime } from "@/shared/lib/utils";
 import { artifactOf, downloadArtifact, formatBytes, type JobResult } from "@/shared/lib/download-artifact";
+import { useWrite } from "@/shared/lib/use-write";
 
 // 백엔드 스펙에 action enum이 없어, audit() 호출부를 전수 조사해 정리한 값입니다.
 // 고정 문자열뿐 아니라 body.decision·body.status를 그대로 넘기는 호출부가 있어
@@ -124,7 +125,7 @@ export default function AuditLogsPage() {
     refetch: logsQuery.refetch,
   };
 
-  const exportJob = useMutation({ mutationFn: createExport });
+  const exportJob = useWrite(createExport);
   // 내보내기는 job으로 기록된다. 아직 진행 중일 때만 상태를 다시 확인한다.
   const job = useQuery({
     queryKey: ["export-job", exportJob.data?.jobId],

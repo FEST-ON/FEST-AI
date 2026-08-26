@@ -1,4 +1,4 @@
-import { adminApi, adminFestivalId } from "@/shared/lib/api";
+import { adminApi, adminFestivalId, json } from "@/shared/lib/api";
 
 export interface CouponRedemption {
   id: string;
@@ -22,10 +22,10 @@ interface RedemptionRow {
  */
 export async function redeemCouponOnSite(issueToken: string): Promise<CouponRedemption> {
   const festivalId = await adminFestivalId();
-  const row = await adminApi<RedemptionRow>(`/admin/festivals/${festivalId}/coupon-redemptions`, {
-    method: "POST",
-    body: JSON.stringify({ issueToken: issueToken.trim() }),
-  });
+  const row = await adminApi<RedemptionRow>(
+    `/admin/festivals/${festivalId}/coupon-redemptions`,
+    json("POST", { issueToken: issueToken.trim() }),
+  );
   return {
     id: row.id,
     couponIssueId: row.couponIssueId,

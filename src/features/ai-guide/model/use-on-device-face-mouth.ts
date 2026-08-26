@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { loadFaceApi } from "@/shared/lib/face-api";
 
 export interface MouthAnchor {
   left: number;
@@ -8,29 +9,9 @@ export interface MouthAnchor {
   width: number;
 }
 
-const MODEL_URI = "/models";
 const DEFAULT_ANCHOR: MouthAnchor = { left: 50, top: 35.5, width: 12 };
 
 type ElementRef<T> = { current: T | null };
-type FaceApi = typeof import("@vladmandic/face-api");
-
-let faceApiLoading: Promise<FaceApi> | undefined;
-
-function loadFaceApi() {
-  faceApiLoading ??= import("@vladmandic/face-api")
-    .then(async (faceapi) => {
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URI),
-        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URI),
-      ]);
-      return faceapi;
-    })
-    .catch((error) => {
-      faceApiLoading = undefined;
-      throw error;
-    });
-  return faceApiLoading;
-}
 
 function toPercent(value: number, total: number) {
   return Math.max(0, Math.min(100, (value / total) * 100));
@@ -59,7 +40,7 @@ export function useOnDeviceFaceMouth(
       }
 
       try {
-        const faceapi = await loadFaceApi();
+        const faceapi = await loadFaceApi("faceLandmark68TinyNet");
         if (cancelled) return;
         const detection = await faceapi
           .detectSingleFace(image, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 }))

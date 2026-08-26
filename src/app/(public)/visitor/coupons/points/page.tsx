@@ -1,37 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Coins, History } from "lucide-react";
 import { fetchPoints } from "@/entities/coupon";
-import {
-  REUSABLE_CONTAINER_UPDATED_EVENT,
-  getReusableVisitorCode,
-  readReusableContainerRentals,
-  reusableContainerPoints,
-} from "@/features/reusable-containers";
+import { reusableContainerPoints, useReusableContainerRentals, useReusableVisitorCode } from "@/features/reusable-containers";
 import { VisitorEsgHeader } from "@/features/esg/ui/visitor-esg-header";
 import { useTranslation } from "@/shared/lib/i18n";
 
 export default function EsgPointsPage() {
   const { t, bcp47 } = useTranslation();
-  const [visitorCode, setVisitorCode] = useState("");
-  const [rentals, setRentals] = useState<ReturnType<typeof readReusableContainerRentals>>([]);
+  const visitorCode = useReusableVisitorCode();
+  const rentals = useReusableContainerRentals();
   const { data, isLoading } = useQuery({ queryKey: ["visitor-points"], queryFn: fetchPoints });
-
-  useEffect(() => {
-    const sync = () => {
-      setVisitorCode(getReusableVisitorCode());
-      setRentals(readReusableContainerRentals());
-    };
-    sync();
-    window.addEventListener("storage", sync);
-    window.addEventListener(REUSABLE_CONTAINER_UPDATED_EVENT, sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(REUSABLE_CONTAINER_UPDATED_EVENT, sync);
-    };
-  }, []);
 
   const returnedRentals = rentals.filter((rental) => rental.visitorCode === visitorCode && rental.status === "RETURNED");
   const localPoints = reusableContainerPoints(returnedRentals);

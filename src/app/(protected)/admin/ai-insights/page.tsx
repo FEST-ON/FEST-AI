@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, Sparkles } from "lucide-react";
-import { issueAnalysisQuery } from "@/features/complaint-insight/api/issue-analysis";
+import { issueAnalysisQuery } from "@/entities/issue-analysis";
 import { IssueAnalysisPanel } from "@/features/complaint-insight/ui/issue-analysis-panel";
 import { aiReviewsQuery } from "@/features/content-review/api/ai-reviews";
 import { AiReviewQueue } from "@/features/content-review/ui/ai-review-queue";

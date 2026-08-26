@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, History, MessageSquareWarning, Plus, Sparkles } from "lucide-react";
-import { createTicket, fetchTicketEvents, fetchTickets, transitionTicket, PRIORITY_TONE, TICKET_ACTION_LABEL } from "@/entities/ticket";
-import type { NewTicket, Ticket, TicketType } from "@/entities/ticket";
-import { fetchAreas } from "@/features/map/api/map-locations";
+import { createTicket, fetchTicketEvents, fetchTickets, transitionTicket, PRIORITY_TONE, TICKET_ACTION_LABEL, type NewTicket, type Ticket, type TicketType } from "@/entities/ticket";
+import { fetchAreas } from "@/entities/area";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { Badge } from "@/shared/ui/badge";
@@ -164,11 +163,8 @@ export default function TicketsPage() {
   const [creating, setCreating] = useState(false);
   const [openHistory, setOpenHistory] = useState<string | null>(null);
 
-  const byType = useMemo(
-    () => (tickets.data ?? []).filter((ticket) => type === "전체" || ticket.type === type),
-    [tickets.data, type],
-  );
-  const byStatus = useMemo(() => byType.filter((ticket) => matchesStatus(ticket, statusFilter)), [byType, statusFilter]);
+  const byType = (tickets.data ?? []).filter((ticket) => type === "전체" || ticket.type === type);
+  const byStatus = byType.filter((ticket) => matchesStatus(ticket, statusFilter));
   const list = useListView(byStatus, (ticket, keyword) =>
     includesKeyword(keyword, ticket.title, ticket.description, ticket.assignee, ticket.category),
   );

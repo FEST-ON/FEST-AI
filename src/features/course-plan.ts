@@ -1,4 +1,4 @@
-import { visitorApi } from "@/shared/lib/api";
+import { json, visitorApi } from "@/shared/lib/api";
 import type { Locale } from "@/shared/lib/i18n";
 import { translateEntries } from "@/shared/lib/i18n/translate-client";
 
@@ -32,11 +32,10 @@ export interface CoursePlanRequest {
 }
 
 export async function createCoursePlan(input: CoursePlanRequest, locale: Locale = "ko"): Promise<CoursePlan> {
-  const plan = await visitorApi<CoursePlan>("/visitor/course-plans", {
-    method: "POST",
+  const plan = await visitorApi<CoursePlan>("/visitor/course-plans", json("POST", {
     // startsAt을 지금으로 고정해야 서버가 이미 지난 회차를 코스에 넣지 않는다.
-    body: JSON.stringify({ ...input, startsAt: new Date().toISOString(), accessibility: {}, excludedProgramIds: [] }),
-  });
+    ...input, startsAt: new Date().toISOString(), accessibility: {}, excludedProgramIds: [],
+  }));
   if (locale === "ko" || plan.items.length === 0) return plan;
 
   const entries: Record<string, string> = {};

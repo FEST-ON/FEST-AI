@@ -1,44 +1,33 @@
 "use client";
 
-import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Bus,
   CalendarDays,
-  CheckCircle2,
-  Flag,
-  Headset,
   Keyboard,
-  KeyRound,
   Languages,
   MapPin,
   Mic,
-  Phone,
   RotateCcw,
   SendHorizontal,
   Square,
-  Sparkles,
-  Settings2,
   Users,
-  Video,
   Volume2,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { SUPPORT_PHONE, SUPPORT_PHONE_HREF } from "@/shared/lib/support-contact";
-import { LastUpdated } from "@/shared/ui/last-updated";
 import { Form } from "@/shared/ui/form";
-import { AccessibilitySheet } from "@/features/accessibility/ui/accessibility-sheet";
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { useFestivalLanguages } from "@/features/accessibility/model/use-festival-languages";
-import { useSpeechOutput } from "@/features/accessibility/model/use-speech-output";
-import { useOnDeviceFaceMouth } from "../model/use-on-device-face-mouth";
+import { AccessibilitySheet } from "@/shared/ui/accessibility-sheet";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
+import { useFestivalLanguages } from "@/shared/lib/i18n/festival-languages";
+import { useSpeechOutput } from "@/shared/lib/use-speech-output";
 import { useLiveAvatar } from "../model/use-live-avatar";
-import { detectLocale, dictionaries, LANGUAGE_BY_LOCALE, useTranslation } from "@/shared/lib/i18n";
-import type { Locale } from "@/shared/lib/i18n";
-import { translateEntries } from "@/shared/lib/i18n/translate-client";
-import { buildMessage, generateReply, loadHistory, reportAiMessage, resetConversation } from "../lib/generate-reply";
-import { useChatStore, WELCOME_MESSAGE_ID } from "../model/chat-store";
+import { detectLocale, LANGUAGE_BY_LOCALE, useTranslation, type Locale } from "@/shared/lib/i18n";
+import { WELCOME_MESSAGE_ID } from "../model/chat-store";
+import { useAiChat } from "../model/use-ai-chat";
 import { useSpeechRecognition } from "../model/use-speech-recognition";
+import { AvatarStage } from "./avatar-stage";
+import { ChatMessage } from "./chat-message";
+import { LiveAvatarSetup } from "./live-avatar-setup";
 
 const QUESTION_ICON = {
   congestion: Users,
@@ -49,21 +38,14 @@ const QUESTION_ICON = {
 
 export function PersoAiGuide() {
   const { t, locale, bcp47 } = useTranslation();
-  const { messages, isTyping, addMessage, setTyping, reset, syncWelcome, restoreMessages, updateMessageContents } = useChatStore();
+  const { messages, isTyping, latestAssistantMessage, ask, reportStatus, reportLatestAnswer, resetAll } = useAiChat(locale);
   const { largeText, voiceGuide, visitorMode, languageSource, setLanguage } = useAccessibilityStore();
   const { languages } = useFestivalLanguages();
   const [draft, setDraft] = useState("");
   const [isVoiceConfirmation, setIsVoiceConfirmation] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
-  const [reportStatus, setReportStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
   const [switchedFrom, setSwitchedFrom] = useState<Locale | null>(null);
-  const [showLiveAvatarSetup, setShowLiveAvatarSetup] = useState(false);
-  const [liveAvatarApiKey, setLiveAvatarApiKey] = useState("");
-  const [liveAvatarId, setLiveAvatarId] = useState("");
-  const [liveAvatarSandbox, setLiveAvatarSandbox] = useState(true);
-  const avatarStageRef = useRef<HTMLDivElement>(null);
-  const avatarImageRef = useRef<HTMLImageElement>(null);
   const autoStartLiveAvatarRef = useRef(false);
   const spokenAvatarMessageRef = useRef<string | undefined>(undefined);
   const {
@@ -77,62 +59,6 @@ export function PersoAiGuide() {
     speak: speakLiveAvatar,
   } = useLiveAvatar();
 
-  const welcomeMessage = useMemo(
-    () => ({
-      id: WELCOME_MESSAGE_ID,
-      role: "assistant" as const,
-      content: t.aiGuide.welcomeContent,
-      timestamp: t.aiGuide.welcomeTimestamp,
-      sources: [t.aiGuide.welcomeSource],
-    }),
-    [t],
-  );
-
-  useEffect(() => {
-    syncWelcome(welcomeMessage);
-  }, [welcomeMessage, syncWelcome]);
-
-  // 새로고침하면 대화가 사라진 것처럼 보였다 — 서버에 남아 있는 이전 대화를 한 번 복원한다.
-  // 이미 대화가 오갔으면(환영 문구 외에 메시지가 있으면) 건드리지 않는다.
-  useEffect(() => {
-    let cancelled = false;
-    if (messages.some((message) => message.id !== WELCOME_MESSAGE_ID)) return;
-    loadHistory(locale).then((history) => {
-      if (cancelled || history.length === 0) return;
-      restoreMessages([
-        welcomeMessage,
-        ...history.map((entry) => buildMessage(entry.role, entry.content, locale, {
-          backendMessageId: entry.role === "assistant" ? entry.messageId : undefined,
-          freshnessAt: entry.freshnessAt,
-          needsFallbackChannel: entry.needsFallbackChannel,
-          rawContent: entry.rawContent,
-        })),
-      ]);
-    });
-    return () => { cancelled = true; };
-    // 최초 진입과 언어 전환 때만 복원한다. messages를 의존성에 넣으면 매 메시지마다 다시 돈다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locale, welcomeMessage]);
-
-  // 근거 부족 등으로 뜬 고정 안내 문구(rawContent 보유)는 대화 도중 언어를 바꿔도 화면에
-  // 그대로 남아 있었다 — 원문(한국어)을 들고 있다가 언어가 바뀔 때마다 다시 번역해 갈아 끼운다.
-  useEffect(() => {
-    const fallbackMessages = messages.filter((message) => message.needsFallbackChannel && message.rawContent);
-    if (fallbackMessages.length === 0) return;
-    let cancelled = false;
-    translateEntries(
-      Object.fromEntries(fallbackMessages.map((message) => [message.id, message.rawContent!])),
-      locale,
-    ).then((translated) => {
-      if (!cancelled) updateMessageContents(translated);
-    });
-    return () => { cancelled = true; };
-    // rawContent 보유 메시지 집합이 바뀔 때(새 fallback 추가)도 다시 맞추되, 무한 루프를
-    // 피하려고 messages 전체가 아니라 locale에만 반응한다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locale]);
-
-  const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
   const latestAssistantMessageId = latestAssistantMessage?.id;
   const latestAssistantMessageContent = latestAssistantMessage?.content;
 
@@ -145,11 +71,10 @@ export function PersoAiGuide() {
   // LiveAvatar가 연결되면 기존 브라우저/CosyVoice 음성은 끄고 아바타 음성만 사용한다.
   // 연결에 실패했을 때는 기존 음성 안내로 즉시 돌아가므로 안내 기능이 사라지지 않는다.
   const { status: voiceStatus, mouthOpen, replay: replayVoice } = useSpeechOutput(
-    latestAssistantMessage?.content,
+    latestAssistantMessageContent,
     { enabled: voiceGuide && !liveAvatarStreamReady, bcp47 },
   );
   const isSpeaking = liveAvatarIsSpeaking || voiceStatus === "playing" || voiceStatus === "fallback";
-  const mouthAnchor = useOnDeviceFaceMouth(avatarImageRef, avatarStageRef);
 
   // 서버 환경변수에 API 키와 아바타 ID가 있으면 AI 안내 화면 진입과 함께 세션을 연다.
   // 연결 설정 패널은 사용자가 왼쪽 위 설정 버튼을 눌렀을 때만 연다.
@@ -167,40 +92,6 @@ export function PersoAiGuide() {
     if (speakLiveAvatar(latestAssistantMessageContent)) spokenAvatarMessageRef.current = latestAssistantMessageId;
   }, [latestAssistantMessageContent, latestAssistantMessageId, liveAvatarStreamReady, speakLiveAvatar]);
 
-  function startLiveAvatar() {
-    void startLiveAvatarSession({
-      apiKey: liveAvatarApiKey.trim() || undefined,
-      avatarId: liveAvatarId.trim() || undefined,
-      sandbox: liveAvatarSandbox,
-    });
-  }
-
-  // 자동 전환된 언어로 바로 답해야 해서 사용할 언어를 인자로 받는다(전환 직후 locale은 아직 이전 값).
-  const handleAsk = useCallback(async (question: string, askLocale: Locale = locale) => {
-    if (isTyping) return;
-
-    addMessage(buildMessage("user", question, askLocale));
-    setTyping(true);
-    setReportStatus("idle");
-
-    try {
-      const reply = await generateReply(question, askLocale);
-      addMessage(buildMessage("assistant", reply.content, askLocale, {
-        sources: reply.sources,
-        backendMessageId: reply.messageId,
-        freshnessAt: reply.freshnessAt,
-        needsFallbackChannel: reply.needsFallbackChannel,
-        rawContent: reply.rawContent,
-      }));
-    } catch {
-      // 답변 자체를 받지 못한 경우도 근거가 없는 상황이라 대체 채널을 함께 안내한다.
-      // 자동 전환 직후에는 t가 아직 이전 언어라 실패 안내도 물어본 언어로 맞춘다.
-      addMessage(buildMessage("assistant", dictionaries[askLocale].aiGuide.replyFailed, askLocale, { needsFallbackChannel: true }));
-    } finally {
-      setTyping(false);
-    }
-  }, [addMessage, isTyping, setTyping, locale]);
-
   // AI-05: 키오스크에서 방문객이 언어를 직접 고르기 전까지는 발화 언어를 따라간다.
   // 판별 실패·미지원 언어면 detectLocale이 null을 주고 기존(축제 기본) 언어를 유지한다.
   const handleVoiceResult = useCallback((transcript: string) => {
@@ -216,28 +107,17 @@ export function PersoAiGuide() {
     if (autoLocale && autoLocale !== locale) {
       setLanguage(autoLocale, "AUTO");
       setSwitchedFrom(locale);
-      void handleAsk(transcript, autoLocale);
+      void ask(transcript, autoLocale);
       return;
     }
-    void handleAsk(transcript);
-  }, [handleAsk, languageSource, languages, locale, setLanguage, visitorMode]);
+    void ask(transcript);
+  }, [ask, languageSource, languages, locale, setLanguage, visitorMode]);
 
   function revertLanguage() {
     if (!switchedFrom) return;
     // 되돌리면 방문객이 고른 언어가 되므로 다음 발화에서 다시 자동 전환되지 않는다.
     setLanguage(switchedFrom, "MANUAL");
     setSwitchedFrom(null);
-  }
-
-  async function reportLatestAnswer() {
-    if (!latestAssistantMessage?.backendMessageId || reportStatus === "pending") return;
-    setReportStatus("pending");
-    try {
-      await reportAiMessage(latestAssistantMessage.backendMessageId);
-      setReportStatus("done");
-    } catch {
-      setReportStatus("error");
-    }
   }
 
   const {
@@ -263,7 +143,7 @@ export function PersoAiGuide() {
 
     setDraft("");
     if (isVoiceConfirmation) submitVoiceQuestion(question);
-    else handleAsk(question);
+    else ask(question);
     setIsVoiceConfirmation(false);
   }
 
@@ -275,113 +155,22 @@ export function PersoAiGuide() {
 
   return (
     <section className="relative isolate flex h-full min-h-0 flex-col overflow-hidden bg-slate-950 text-white">
-      <div ref={avatarStageRef} className="absolute inset-0 z-0 overflow-hidden">
-        <div className={cn("ai-avatar-stage absolute inset-0", isSpeaking && "ai-avatar-speaking")}>
-          <Image
-            ref={avatarImageRef}
-            src="/images/perso-ai-guide.png"
-            alt={t.aiGuide.imageAlt}
-            fill
-            priority
-            sizes="(max-width: 448px) 100vw, 448px"
-            className={cn("object-cover object-[center_10%] transition-opacity duration-500", liveAvatarStreamReady && "opacity-0")}
-          />
-          <video
-            ref={setLiveAvatarVideo}
-            autoPlay
-            playsInline
-            aria-label="LiveAvatar 한국어 AI 안내 아바타"
-            className={cn(
-              "absolute inset-0 size-full object-cover object-[center_10%] transition-opacity duration-500",
-              liveAvatarStreamReady ? "opacity-100" : "pointer-events-none opacity-0",
-            )}
-          />
-          <div
-            aria-hidden
-            className={cn(
-              "absolute -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-[#8b2332]/80 shadow-[0_1px_4px_rgba(40,0,0,0.35)] transition-[height,opacity] duration-75",
-              isSpeaking && !liveAvatarStreamReady ? "opacity-75" : "opacity-0",
-            )}
-            style={{
-              left: `${mouthAnchor.left}%`,
-              top: `${mouthAnchor.top}%`,
-              width: `${mouthAnchor.width}%`,
-              height: `${0.12 + mouthOpen * 0.62}rem`,
-            }}
-          />
-        </div>
-      </div>
+      <AvatarStage
+        imageAlt={t.aiGuide.imageAlt}
+        videoRef={setLiveAvatarVideo}
+        streamReady={liveAvatarStreamReady}
+        isSpeaking={isSpeaking}
+        mouthOpen={mouthOpen}
+      />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-b from-slate-950/10 via-slate-950/5 to-slate-950/50" />
 
-      <div className="absolute left-4 top-4 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 shadow-sm backdrop-blur-md">
-        <Video className={cn("size-3.5", liveAvatarStreamReady ? "text-emerald-300" : "text-white/75")} />
-        {liveAvatarStreamReady ? "LiveAvatar 연결됨" : "Alan AI 아바타"}
-        <button
-          type="button"
-          onClick={() => setShowLiveAvatarSetup((visible) => !visible)}
-          aria-label="한국어 API 연결 설정"
-          className="ml-1 rounded-full bg-white/15 p-1 transition hover:bg-white/25"
-        >
-          <Settings2 className="size-3" />
-        </button>
-        {liveAvatarIsConfigured && !liveAvatarStreamReady && liveAvatarStatus === "idle" && (
-          <button
-            type="button"
-            onClick={() => void startLiveAvatarSession()}
-            className="rounded-full bg-emerald-400/90 px-2 py-0.5 text-[0.625rem] font-bold text-emerald-950 transition hover:bg-emerald-300"
-          >
-            시작
-          </button>
-        )}
-      </div>
-
-      {showLiveAvatarSetup && !liveAvatarStreamReady && (
-        <div className="absolute left-4 right-4 top-16 z-40 rounded-2xl border border-white/20 bg-slate-950/85 p-3 text-white shadow-2xl backdrop-blur-xl">
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <KeyRound className="size-3.5 text-emerald-300" />
-            한국어 LiveAvatar 연결
-          </div>
-          <p className="mt-1 text-[0.625rem] leading-4 text-white/70">
-            API 키와 LiveAvatar 대시보드의 한국인형 아바타 ID를 입력하면 이 화면에서 바로 사용합니다. 입력값은 저장하지 않습니다.
-          </p>
-          <div className="mt-2 grid gap-2">
-            <input
-              type="password"
-              value={liveAvatarApiKey}
-              onChange={(event) => setLiveAvatarApiKey(event.target.value)}
-              placeholder="LiveAvatar API 키"
-              autoComplete="off"
-              className="h-9 rounded-lg border border-white/15 bg-white/10 px-2.5 text-xs text-white outline-none placeholder:text-white/45 focus:border-emerald-300"
-            />
-            <input
-              type="text"
-              value={liveAvatarId}
-              onChange={(event) => setLiveAvatarId(event.target.value)}
-              placeholder="한국인형 아바타 ID (UUID)"
-              autoComplete="off"
-              className="h-9 rounded-lg border border-white/15 bg-white/10 px-2.5 text-xs text-white outline-none placeholder:text-white/45 focus:border-emerald-300"
-            />
-            <label className="flex items-center gap-2 text-[0.625rem] text-white/75">
-              <input
-                type="checkbox"
-                checked={liveAvatarSandbox}
-                onChange={(event) => setLiveAvatarSandbox(event.target.checked)}
-                className="accent-emerald-400"
-              />
-              Sandbox로 테스트(크레딧 사용 안 함)
-            </label>
-            <button
-              type="button"
-              onClick={startLiveAvatar}
-              disabled={liveAvatarStatus === "starting" || liveAvatarStatus === "connecting"}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-400 px-3 text-xs font-bold text-emerald-950 transition hover:bg-emerald-300 disabled:opacity-50"
-            >
-              {liveAvatarStatus === "starting" || liveAvatarStatus === "connecting" ? "아바타 연결 중…" : "한국어 아바타 시작"}
-            </button>
-          </div>
-          {liveAvatarError && <p className="mt-2 text-[0.625rem] leading-4 text-red-200">{liveAvatarError}</p>}
-        </div>
-      )}
+      <LiveAvatarSetup
+        status={liveAvatarStatus}
+        streamReady={liveAvatarStreamReady}
+        isConfigured={liveAvatarIsConfigured}
+        error={liveAvatarError}
+        start={(options) => void startLiveAvatarSession(options)}
+      />
 
       <div className="absolute left-1/2 top-4 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-[0.6875rem] font-semibold text-white/90 backdrop-blur-md">
         <Volume2 className="size-3.5 text-primary-tint" />
@@ -406,7 +195,7 @@ export function PersoAiGuide() {
         <button
           type="button"
           aria-label={t.aiGuide.resetAria}
-          onClick={() => { resetConversation(); reset(welcomeMessage); setReportStatus("idle"); setSwitchedFrom(null); }}
+          onClick={() => { resetAll(); setSwitchedFrom(null); }}
           className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-slate-950/40 text-white backdrop-blur-md transition hover:bg-slate-950/60"
         >
           <RotateCcw className="size-4" />
@@ -430,72 +219,15 @@ export function PersoAiGuide() {
           }}
         >
           {/* 마지막 한 마디만 남기면 앞서 안내받은 시간·장소를 다시 볼 수 없다 — 대화를 통째로 보여준다. */}
-          {messages.map((message) =>
-            message.role === "user" ? (
-              <div key={message.id} className="flex justify-end">
-                <p className="max-w-[82%] rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-[0.8125rem] leading-relaxed whitespace-pre-line text-primary-foreground">
-                  {message.content}
-                </p>
-              </div>
-            ) : (
-              <div
-                key={message.id}
-                className="rounded-2xl border border-white/55 bg-white/78 px-3.5 py-2.5 text-[0.8125rem] leading-relaxed whitespace-pre-line text-card-foreground shadow-sm backdrop-blur-md"
-              >
-                <span className="mb-1 flex items-center gap-1 text-[0.625rem] font-bold text-primary">
-                  <Sparkles className="size-3" /> {t.aiGuide.assistantLabel}
-                </span>
-                {message.content}
-                {(message.sources?.length || message.freshnessAt) && (
-                  <div className="mt-1.5 space-y-0.5 border-t border-border/70 pt-1.5">
-                    {message.sources && message.sources.length > 0 && (
-                      <p className="text-[0.5625rem] opacity-60">
-                        {t.aiGuide.sourcePrefix}{message.sources.join(", ")}
-                      </p>
-                    )}
-                    <LastUpdated
-                      value={message.freshnessAt}
-                      bcp47={bcp47}
-                      label={t.aiGuide.answerFreshness}
-                      className="text-[0.5625rem] opacity-60"
-                    />
-                  </div>
-                )}
-
-                {message.needsFallbackChannel && (
-                  <div className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50/90 p-2.5 text-amber-900">
-                    <p className="flex items-center gap-1 text-[0.625rem] font-bold">
-                      <Headset className="size-3" /> {t.aiGuide.fallbackChannelTitle}
-                    </p>
-                    <p className="mt-1 text-[0.625rem] leading-4">{t.aiGuide.fallbackChannelDescription}</p>
-                    <a
-                      href={SUPPORT_PHONE_HREF}
-                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-900 px-2.5 py-1 text-[0.625rem] font-bold text-white"
-                    >
-                      <Phone className="size-3" /> {t.aiGuide.fallbackCallAction(SUPPORT_PHONE)}
-                    </a>
-                  </div>
-                )}
-                {/* 신고 상태는 한 벌뿐이라 방금 받은 답변에만 붙인다. */}
-                {message.backendMessageId && message.id === latestAssistantMessage?.id && (
-                  <div className="mt-2 flex items-center justify-end border-t border-border/70 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => void reportLatestAnswer()}
-                      disabled={reportStatus === "pending" || reportStatus === "done"}
-                      className="inline-flex min-h-9 items-center gap-1 text-[0.625rem] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-60"
-                    >
-                      {reportStatus === "done" ? <CheckCircle2 className="size-3" /> : <Flag className="size-3" />}
-                      {reportStatus === "pending" ? t.aiGuide.reportPending : reportStatus === "done" ? t.aiGuide.reportDone : t.aiGuide.reportAction}
-                    </button>
-                  </div>
-                )}
-                {reportStatus === "error" && message.id === latestAssistantMessage?.id && (
-                  <p className="mt-1 text-right text-[0.5625rem] text-red-600">{t.aiGuide.reportFailed}</p>
-                )}
-              </div>
-            ),
-          )}
+          {messages.map((message) => (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              isLatestAssistant={message.id === latestAssistantMessageId}
+              reportStatus={reportStatus}
+              onReport={() => void reportLatestAnswer()}
+            />
+          ))}
 
           {isTyping && (
             <div className="flex justify-start">
@@ -650,7 +382,7 @@ export function PersoAiGuide() {
                   key={key}
                   type="button"
                   disabled={isTyping}
-                  onClick={() => handleAsk(label)}
+                  onClick={() => ask(label)}
                   className={cn(
                     "flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-white/55 bg-white/72 px-3 py-1.5 text-left text-[0.6875rem] font-semibold text-foreground shadow-sm backdrop-blur-md transition hover:border-primary/40 hover:bg-white/90 disabled:opacity-50",
                     largeText && "text-sm",

@@ -4,8 +4,8 @@ import { useSyncExternalStore } from "react";
 import { LANGUAGE_BY_LOCALE, useTranslation } from "@/shared/lib/i18n";
 import { isTranslationDegraded, subscribeTranslationState } from "@/shared/lib/i18n/translate-client";
 import { cn } from "@/shared/lib/utils";
-import { useAccessibilityStore } from "../model/store";
-import { useFestivalLanguages } from "../model/use-festival-languages";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
+import { useFestivalLanguages } from "@/shared/lib/i18n/festival-languages";
 
 /** 축제가 지원하는 언어 버튼. 접근성 시트와 키오스크 진입 화면이 같은 목록을 쓴다(AI-05). */
 export function LanguageBar({ className, buttonClassName }: { className?: string; buttonClassName?: string }) {

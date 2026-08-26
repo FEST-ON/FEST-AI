@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRouter, usePathname } from "next/navigation";
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { useTranslation } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
@@ -9,8 +8,7 @@ import { LastUpdated } from "@/shared/ui/last-updated";
 import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { TONE } from "@/shared/ui/status-pill";
-import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
-import { ChevronLeft } from "lucide-react";
+import { VisitorPageTitle } from "@/widgets/visitor-nav/visitor-page-title";
 
 const CATEGORY_STYLE: Record<string, string> = {
   공연: TONE.accent,
@@ -40,28 +38,10 @@ export default function SchedulePage() {
     },
     {},
   );
-  const router = useRouter();
-  const pathname = usePathname();
 
-  // 하단 탭에 없는 화면(스탬프투어·설문·상권 등)은 돌아갈 길이 브라우저 뒤로가기뿐이었다.
-  const showBack = !NAV_ITEMS.some((item) => item.href === pathname);
   return (
     <>
-      <div className="flex mt-2 items-center">
-        {showBack && (
-          <button
-            type="button"
-            onClick={() => router.back()}
-            aria-label={t.common.back}
-            className="-ml-1 flex size-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
-        )}
-        <h1 className="text-lg font-extrabold text-foreground">
-          {t.schedule.title}
-        </h1>
-      </div>
+      <VisitorPageTitle>{t.schedule.title}</VisitorPageTitle>
       <div className="px-4 pt-0 pb-6">
         <p className="text-xs text-muted-foreground">{t.schedule.subtitle}</p>
         <LastUpdated

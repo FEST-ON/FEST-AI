@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Leaf, Plus, Sparkles } from "lucide-react";
+import { Leaf, Plus, Printer, QrCode as QrCodeIcon, Sparkles } from "lucide-react";
 import {
   createRewardAction,
   createRewardCampaign,
@@ -11,6 +11,8 @@ import {
   type NewRewardCampaign,
 } from "@/features/rewards";
 import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { QrCode } from "@/shared/ui/qr-code";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { SelectField } from "@/shared/ui/select-field";
@@ -48,6 +50,10 @@ export default function RewardsPage() {
 
   const campaignsQuery = useQuery({ queryKey: ["reward-campaigns"], queryFn: fetchRewardCampaigns });
   const campaigns = campaignsQuery.data ?? [];
+  const qrSheet = campaigns.flatMap((item) => item.actions.flatMap((row) => {
+    const key = row.rule.verificationKeys?.[0];
+    return key ? [{ campaign: item, action: row, key }] : [];
+  }));
   const invalidates = ["reward-campaigns"];
   const campaign = useWrite(createRewardCampaign, {
     success: "캠페인을 만들었어요.", invalidates,
@@ -59,11 +65,11 @@ export default function RewardsPage() {
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground print:hidden">
         ESG 행동 인증 캠페인과 적립 행동을 등록해요. 등록한 행동 중 자가 인증(SELF) 항목은 방문객 스탬프 투어 화면에 바로 노출돼요.
       </p>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="rounded-2xl border border-border bg-card p-5 print:hidden">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Leaf className="size-4 text-esg-tint" /> 리워드 캠페인</h2>
         <Form
           className="mt-3 grid gap-3 sm:grid-cols-4"
@@ -94,7 +100,7 @@ export default function RewardsPage() {
         </Form>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="rounded-2xl border border-border bg-card p-5 print:hidden">
         <h2 className="text-sm font-bold text-foreground">등록된 캠페인 {campaigns.length > 0 && `(${campaigns.length})`}</h2>
         <div className="mt-3">
           <QueryState query={campaignsQuery} empty="등록된 캠페인이 없어요." skeleton={<SkeletonList count={2} className="h-24 w-full rounded-xl" />}>
@@ -131,7 +137,32 @@ export default function RewardsPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="rounded-2xl border border-border bg-card p-5 print:border-0 print:p-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+          <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><QrCodeIcon className="size-4 text-esg-tint" /> 현장 인증 QR</h2>
+          <Button type="button" variant="outline" size="sm" disabled={qrSheet.length === 0} onClick={() => window.print()}>
+            <Printer className="size-3.5" /> 인쇄
+          </Button>
+        </div>
+        {qrSheet.length === 0 ? (
+          <p className="mt-2 text-[0.6875rem] text-muted-foreground print:hidden">QR·직원 확인으로 등록한 적립 행동이 없어요.</p>
+        ) : (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-2">
+            {qrSheet.map(({ campaign: owner, action: row, key }) => (
+              <div key={row.id} className="flex flex-col items-center gap-1.5 rounded-xl border border-border p-4 text-center print:break-inside-avoid">
+                <QrCode value={key} size={160} alt={`${row.rule.name ?? row.actionType} 인증 QR`} />
+                <p className="text-sm font-semibold text-foreground">{row.rule.name ?? row.actionType}</p>
+                <p className="text-[0.6875rem] text-muted-foreground">{row.rule.location} · {row.points}P · 1인 {row.perUserLimit}회</p>
+                {/* 카메라가 안 잡힐 때 방문객이 직접 입력할 수 있도록 값도 함께 인쇄한다. */}
+                <code className="text-[0.625rem] text-muted-foreground">{key}</code>
+                <p className="text-[0.625rem] text-muted-foreground">{owner.name}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5 print:hidden">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Sparkles className="size-4 text-primary" /> 적립 행동</h2>
         <QueryState
           query={campaignsQuery}

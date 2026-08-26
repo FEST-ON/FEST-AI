@@ -3,59 +3,36 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Recycle,
   CalendarDays,
-  MapPin,
   RefreshCw,
-  Route,
   Sparkles,
   Store,
-  Ticket,
   Stamp,
-  ClipboardList,
   ArrowRight,
   Trash2,
 } from "lucide-react";
 import { fetchFestivalInfo, fetchSchedule } from "@/entities/festival";
 import { CrowdList } from "@/features/crowd/ui/crowd-list";
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
-import { useVisitorMenus } from "@/features/visitor-menu-settings";
-import type { VisitorMenuKey } from "@/features/visitor-menu-settings";
-import { useTranslation } from "@/shared/lib/i18n";
-import type { Dictionary } from "@/shared/lib/i18n";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
+import { useVisitorMenus, type VisitorMenuKey } from "@/features/visitor-menu-settings";
+import { useTranslation, type Dictionary } from "@/shared/lib/i18n";
 import { Badge } from "@/shared/ui/badge";
 import { LastUpdated } from "@/shared/ui/last-updated";
 import { EmptyState, ErrorState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
-import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
 
 const QUICK_MENU: {
   href: string;
   labelKey: keyof Dictionary["home"]["quickMenu"];
-  icon: typeof Sparkles;
+  icon: typeof CalendarDays;
   kiosk: boolean;
   menuKey?: VisitorMenuKey;
 }[] = [
-  {
-    href: "/visitor/ai-guide",
-    labelKey: "aiGuide",
-    icon: Sparkles,
-    kiosk: true,
-  },
   {
     href: "/visitor/schedule",
     labelKey: "schedule",
     icon: CalendarDays,
     kiosk: true,
-  },
-  { href: "/visitor/map", labelKey: "map", icon: MapPin, kiosk: true },
-
-  {
-    href: "/visitor/reservation",
-    labelKey: "reservation",
-    icon: Ticket,
-    kiosk: false,
-    menuKey: "reservation",
   },
   {
     href: "/visitor/stamp-tour",
@@ -63,13 +40,6 @@ const QUICK_MENU: {
     icon: Stamp,
     kiosk: false,
     menuKey: "stampTour",
-  },
-  {
-    href: "/visitor/coupons",
-    labelKey: "coupons",
-    icon: Recycle,
-    kiosk: false,
-    menuKey: "coupons",
   },
   {
     href: "/visitor/nearby",
@@ -98,10 +68,9 @@ export default function VisitorHomePage() {
   const { t, locale, bcp47 } = useTranslation();
   const visitorMode = useAccessibilityStore((state) => state.visitorMode);
   const menuSettings = useVisitorMenus();
-  // 하단 탭·히어로 CTA로 이미 한 번에 닿는 메뉴는 그리드에서 뺀다.
+  // 하단 탭·히어로 CTA 메뉴는 QUICK_MENU에 중복해 넣지 않는다.
   const quickMenu = QUICK_MENU.filter(
     (item) =>
-      !NAV_ITEMS.some((nav) => nav.href === item.href) &&
       (visitorMode === "qr" || item.kiosk) &&
       (!item.menuKey || menuSettings[item.menuKey]),
   );
@@ -187,13 +156,7 @@ export default function VisitorHomePage() {
         </Link>
       </div>
 
-      <div
-        className={
-          visitorMode === "kiosk"
-            ? "grid grid-cols-2 gap-3"
-            : "grid grid-cols-2 gap-3"
-        }
-      >
+      <div className="grid grid-cols-2 gap-3">
         {quickMenu.map(({ href, labelKey, icon: Icon }) => {
           // 스탬프 투어는 ESG 적립 기능 — 나머지 일반 기능과 색으로 갈라 둔다.
           const esg =

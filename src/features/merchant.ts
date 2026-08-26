@@ -1,4 +1,5 @@
 import { adminApi, json } from "@/shared/lib/api";
+import type { NewCoupon } from "@/features/business-admin";
 import { uniqueById } from "@/shared/lib/utils";
 
 export interface MenuItem {
@@ -45,16 +46,8 @@ export function updateMyBusiness({ businessId, ...body }: BusinessUpdate) {
   return adminApi(`/merchant/businesses/${businessId}`, json("PATCH", body));
 }
 
-export interface MerchantCoupon {
-  name: string;
-  description?: string;
-  benefitType: "FIXED" | "PERCENT" | "GIFT";
-  benefitValue: number;
-  issueLimit: number;
-  perVisitorLimit: number;
-  startsAt: string;
-  endsAt: string;
-}
+/** 상인 콘솔의 쿠폰 발행 입력. 운영자 콘솔과 본문이 같아 한 곳(business-admin)만 정의한다. */
+export type MerchantCoupon = NewCoupon;
 
 export function createMerchantCoupon({ businessId, ...body }: MerchantCoupon & { businessId: string }) {
   return adminApi(`/merchant/businesses/${businessId}/coupons`, json("POST", body));

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, MapPin } from "lucide-react";
 import {
-  MAP_LOCATION_CATEGORIES,
+  categoryLabel,
   fetchMapLocations,
   type MapLocation,
 } from "@/features/map/api/map-locations";
@@ -65,10 +65,6 @@ function loadKakaoSdk(appKey: string) {
     }
   });
   return kakaoSdkPromise;
-}
-
-function categoryLabel(category: MapLocation["category"]) {
-  return MAP_LOCATION_CATEGORIES.find((item) => item.value === category)?.label ?? category;
 }
 
 function escapeHtml(value: string) {

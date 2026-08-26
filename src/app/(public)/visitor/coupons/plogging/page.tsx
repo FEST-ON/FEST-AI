@@ -1,37 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { CheckCircle2, QrCode as QrCodeIcon, Trash2 } from "lucide-react";
-import { getReusableVisitorCode } from "@/features/reusable-containers";
-import {
-  PLOGGING_POINTS_PER_BAG,
-  PLOGGING_UPDATED_EVENT,
-  ploggingPoints,
-  readPloggingSubmissions,
-  type PloggingSubmission,
-} from "@/features/plogging";
+import { useReusableVisitorCode } from "@/features/reusable-containers";
+import { PLOGGING_POINTS_PER_BAG, ploggingPoints, usePloggingSubmissions } from "@/features/plogging";
 import { VisitorEsgHeader } from "@/features/esg/ui/visitor-esg-header";
 import { useTranslation } from "@/shared/lib/i18n";
 import { QrCode } from "@/shared/ui/qr-code";
 
 export default function EsgPloggingPage() {
   const { t, bcp47 } = useTranslation();
-  const [visitorCode, setVisitorCode] = useState("");
-  const [submissions, setSubmissions] = useState<PloggingSubmission[]>([]);
-
-  useEffect(() => {
-    const sync = () => {
-      setVisitorCode(getReusableVisitorCode());
-      setSubmissions(readPloggingSubmissions());
-    };
-    sync();
-    window.addEventListener("storage", sync);
-    window.addEventListener(PLOGGING_UPDATED_EVENT, sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(PLOGGING_UPDATED_EVENT, sync);
-    };
-  }, []);
+  const submissions = usePloggingSubmissions();
+  const visitorCode = useReusableVisitorCode();
 
   const mySubmissions = submissions
     .filter((submission) => submission.visitorCode === visitorCode)

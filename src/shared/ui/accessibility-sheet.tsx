@@ -22,7 +22,7 @@ import {
   SheetTrigger,
   SheetFooter,
 } from "@/shared/ui/sheet";
-import { useAccessibilityStore } from "../model/store";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
 import { LanguageBar } from "./language-bar";
 import { useTranslation } from "@/shared/lib/i18n";
 

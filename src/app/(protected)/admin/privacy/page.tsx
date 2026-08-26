@@ -14,7 +14,7 @@ import {
   runPrivacyPurge,
   updateKioskCamera,
 } from "@/features/privacy-admin";
-import { useAdminSessionStore } from "@/features/admin-auth/model/store";
+import { useAdminSessionStore } from "@/shared/lib/admin-session-store";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
@@ -25,6 +25,7 @@ import { StatCard } from "@/shared/ui/stat-card";
 import { StatusPill, type Tone } from "@/shared/ui/status-pill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { Textarea } from "@/shared/ui/textarea";
+import { seoulDateTime } from "@/shared/lib/utils";
 
 const STATUS_TONE: Record<string, Tone> = {
   RECEIVED: "warning",
@@ -45,7 +46,7 @@ function percent(value: number | null) {
 }
 
 function time(value: string | null | undefined) {
-  return value ? new Date(value).toLocaleString("ko-KR") : "-";
+  return value ? seoulDateTime(value) : "-";
 }
 
 /**

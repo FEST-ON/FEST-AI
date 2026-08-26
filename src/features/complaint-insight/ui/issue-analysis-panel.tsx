@@ -12,9 +12,6 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { Meter } from "@/shared/ui/meter";
 import {
-  buildImprovementTasks,
-  buildRecurringIssues,
-  buildTopicBreakdown,
   ISSUE_SENTIMENTS,
   ISSUE_TOPICS,
   issueAnalysisQuery,
@@ -24,6 +21,11 @@ import {
   type IssueAnalysisRow,
   type IssueSentiment,
   type IssueTopic,
+} from "@/entities/issue-analysis";
+import {
+  buildImprovementTasks,
+  buildRecurringIssues,
+  buildTopicBreakdown,
 } from "../api/issue-analysis";
 
 const PAGE_SIZE = 20;

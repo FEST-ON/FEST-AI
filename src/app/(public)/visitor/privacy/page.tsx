@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Scale, ShieldCheck } from "lucide-react";
 import {
   createPrivacyRequest,
@@ -26,7 +26,6 @@ import { Textarea } from "@/shared/ui/textarea";
  */
 export default function VisitorPrivacyPage() {
   const { t, locale, bcp47 } = useTranslation();
-  const queryClient = useQueryClient();
   const notice = useQuery({ queryKey: ["privacy-notice"], queryFn: fetchPrivacyNotice });
   const requests = useQuery({ queryKey: ["privacy-requests"], queryFn: fetchPrivacyRequests });
   const [detail, setDetail] = useState("");
@@ -35,13 +34,10 @@ export default function VisitorPrivacyPage() {
     invalidates: ["privacy-notice"],
   });
   // 접수 결과가 목록에 바로 드러나므로 알림은 띄우지 않는다(meta.silent).
-  const request = useMutation({
-    mutationFn: (type: "ACCESS" | "DELETE") => createPrivacyRequest(type, detail || undefined),
-    meta: { silent: true },
-    onSuccess: () => {
-      setDetail("");
-      void queryClient.invalidateQueries({ queryKey: ["privacy-requests"] });
-    },
+  const request = useWrite((type: "ACCESS" | "DELETE") => createPrivacyRequest(type, detail || undefined), {
+    silent: true,
+    invalidates: ["privacy-requests"],
+    onSuccess: () => setDetail(""),
   });
 
   // 항목 정의는 서버가 한국어로 내려주므로 다른 언어에서는 요청 시점에 번역한다.

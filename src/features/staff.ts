@@ -13,7 +13,7 @@ export interface StaffAssignment {
   role: string;
 }
 
-export async function fetchStaffAssignments() {
+export function fetchStaffAssignments() {
   return festivalApi<StaffAssignment[]>(`/staff-assignments`);
 }
 
@@ -26,11 +26,11 @@ export interface NewStaffAssignment {
   endsAt: string;
 }
 
-export async function createStaffAssignment(input: NewStaffAssignment) {
+export function createStaffAssignment(input: NewStaffAssignment) {
   return festivalApi(`/staff-assignments`, json("POST", input));
 }
 
-export async function acknowledgeAssignment(assignmentId: string) {
+export function acknowledgeAssignment(assignmentId: string) {
   return festivalApi(`/staff-assignments/${assignmentId}/acknowledge`, { method: "POST" });
 }
 

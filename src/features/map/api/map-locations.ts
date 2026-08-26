@@ -1,6 +1,7 @@
 import { FESTIVAL_CODE, festivalApi, json, publicApi } from "@/shared/lib/api";
+import type { AdminArea } from "@/entities/area";
 import type { Locale } from "@/shared/lib/i18n";
-import { translateEntries } from "@/shared/lib/i18n/translate-client";
+import { translateFields } from "@/shared/lib/i18n/translate-client";
 
 export const MAP_LOCATION_CATEGORIES = [
   { value: "BOOTH", label: "판매 부스" },
@@ -11,6 +12,11 @@ export const MAP_LOCATION_CATEGORIES = [
 ] as const;
 
 export type MapLocationCategory = (typeof MAP_LOCATION_CATEGORIES)[number]["value"];
+
+/** 화면에 보여줄 분류 이름. 정의되지 않은 값이 오면 코드 그대로 보여준다. */
+export function categoryLabel(category: MapLocationCategory) {
+  return MAP_LOCATION_CATEGORIES.find((item) => item.value === category)?.label ?? category;
+}
 
 export interface MapLocation {
   id: string;
@@ -29,22 +35,6 @@ interface PublicMapResponse {
   areas: Array<{ id: string; name: string; areaType: string; description?: string | null; latitude: number | null; longitude: number | null; status: string }>;
   facilities: Array<{ id: string; areaId: string; name: string; facilityType: string; status: string }>;
   programs: Array<{ id: string; title: string; areaId: string }>;
-}
-
-export interface AdminArea {
-  id: string;
-  name: string;
-  areaType: string;
-  description?: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  status: string;
-  version?: number;
-}
-
-/** 구역 목록은 티켓·혼잡도·인력 배치·부스 화면이 모두 쓰는 기준정보다. */
-export async function fetchAreas() {
-  return festivalApi<AdminArea[]>(`/areas`);
 }
 
 function normalizeCategory(value: string): MapLocationCategory {
@@ -88,19 +78,7 @@ export async function fetchMapLocations(options: { includeHidden?: boolean; loca
     return areaToLocation(area, details.length ? details.join(" · ") : `${area.name} 구역`);
   }).filter((row): row is MapLocation => Boolean(row));
 
-  const locale = options.locale ?? "ko";
-  if (locale === "ko" || locations.length === 0) return locations;
-  const entries: Record<string, string> = {};
-  locations.forEach((location) => {
-    entries[`${location.id}.name`] = location.name;
-    if (location.description) entries[`${location.id}.description`] = location.description;
-  });
-  const translated = await translateEntries(entries, locale);
-  return locations.map((location) => ({
-    ...location,
-    name: translated[`${location.id}.name`] ?? location.name,
-    description: location.description ? (translated[`${location.id}.description`] ?? location.description) : location.description,
-  }));
+  return translateFields(locations, ["name", "description"], options.locale ?? "ko");
 }
 
 function areaBody(input: MapLocationInput & { version?: number }) {

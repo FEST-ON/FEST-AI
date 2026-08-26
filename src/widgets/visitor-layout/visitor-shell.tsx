@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAccessibilityStore } from "@/features/accessibility/model/store";
+import { useAccessibilityStore } from "@/shared/lib/accessibility-store";
 import { KioskLargeTextPrompt } from "@/features/kiosk-age-assist/ui/kiosk-large-text-prompt";
-import { setVisitorArea } from "@/features/visitor-area/api/area";
+import { setVisitorArea } from "@/entities/area";
 import { EmergencyAnnouncementBanner } from "@/features/notification/ui/emergency-announcement-banner";
 import { VisitorNotificationToast } from "@/features/notification/ui/visitor-notification-toast";
 import { useTranslation } from "@/shared/lib/i18n";

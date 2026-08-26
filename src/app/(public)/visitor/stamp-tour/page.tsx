@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   Coins,
   MapPin,
   QrCode,
   Stamp,
   PartyPopper,
-  ChevronLeft,
 } from "lucide-react";
-import { VisitorEsgHeader } from "@/features/esg/ui/visitor-esg-header";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -21,14 +18,14 @@ import { Label } from "@/shared/ui/label";
 import { ProgressRing } from "@/shared/ui/progress-ring";
 import { collectStamp, fetchStampSpots, fetchPoints } from "@/entities/coupon";
 import { useTranslation } from "@/shared/lib/i18n";
+import { useWrite } from "@/shared/lib/use-write";
 
 import { ErrorState, queryErrorMessage } from "@/shared/ui/query-state";
-import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
+import { VisitorPageTitle } from "@/widgets/visitor-nav/visitor-page-title";
 import { QrScanner } from "@/shared/ui/qr-scanner";
 
 export default function StampTourPage() {
   const { t, locale } = useTranslation();
-  const queryClient = useQueryClient();
   const [scanningSpot, setScanningSpot] = useState<string | null>(null);
   const [stampCode, setStampCode] = useState("");
   const stampQuery = useQuery({
@@ -39,11 +36,9 @@ export default function StampTourPage() {
     queryKey: ["visitor-points"],
     queryFn: fetchPoints,
   });
-  const collectMutation = useMutation({
-    mutationFn: collectStamp,
+  const collectMutation = useWrite(collectStamp, {
+    invalidates: ["stamp-spots", "visitor-points"],
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stamp-spots"] });
-      queryClient.invalidateQueries({ queryKey: ["visitor-points"] });
       setScanningSpot(null);
       setStampCode("");
     },
@@ -54,28 +49,10 @@ export default function StampTourPage() {
   const collected = stampSpots.filter((spot) => spot.collected).length;
   const complete = total > 0 && collected >= total;
 
-  const router = useRouter();
-  const pathname = usePathname();
-  // 하단 탭에 없는 화면(스탬프투어·설문·상권 등)은 돌아갈 길이 브라우저 뒤로가기뿐이었다.
-  const showBack = !NAV_ITEMS.some((item) => item.href === pathname);
 
   return (
     <>
-      <div className="flex mt-2 items-center">
-        {showBack && (
-          <button
-            type="button"
-            onClick={() => router.back()}
-            aria-label={t.common.back}
-            className="-ml-1 flex size-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
-        )}
-        <h1 className="text-lg font-extrabold text-foreground">
-          {t.stampTour.title}
-        </h1>
-      </div>
+      <VisitorPageTitle>{t.stampTour.title}</VisitorPageTitle>
       <div className="px-4 pt-0 pb-6">
         <p className="text-xs text-muted-foreground">{t.stampTour.subtitle}</p>
 

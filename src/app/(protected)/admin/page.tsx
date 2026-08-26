@@ -1,32 +1,32 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarCheck, Users, Store, Ticket as TicketIcon, ArrowRight, Leaf } from "lucide-react";
 import { fetchOpsSnapshot, type OpsFilters } from "@/widgets/dashboard-stats/data";
 import { CROWD_LABEL, CROWD_TONE } from "@/features/crowd/api/crowd";
-import { fetchAreas } from "@/features/map/api/map-locations";
+import { fetchAreas } from "@/entities/area";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { SelectField } from "@/shared/ui/select-field";
 import { fetchTickets, PRIORITY_TONE } from "@/entities/ticket";
 import { StatusPill } from "@/shared/ui/status-pill";
-import { fetchOperationResources } from "@/entities/program";
+import { fetchOperationResources } from "@/widgets/operation-resources/data";
 import { StatCard } from "@/shared/ui/stat-card";
 import { Badge } from "@/shared/ui/badge";
 import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { FestivalBriefCard } from "@/features/festival-brief/ui/festival-brief-card";
-import { LANGUAGE_BY_LOCALE } from "@/shared/lib/i18n";
-import type { Locale } from "@/shared/lib/i18n";
+import { LANGUAGE_BY_LOCALE, type Locale } from "@/shared/lib/i18n";
+import { useForm } from "@/shared/lib/use-form";
+import { seoulDateTime } from "@/shared/lib/utils";
 
 const EMPTY_FILTERS: OpsFilters = { areaId: "", timeFrom: "", timeTo: "" };
 
 export default function AdminDashboardPage() {
   // OPS-03: 축제·구역·시간 필터. 서버가 같은 필터를 지표마다 적용하고 어떤 값을 썼는지 되돌려 준다.
-  const [filters, setFilters] = useState<OpsFilters>(EMPTY_FILTERS);
+  const { form: filters, field: filterField, set: setFilter, reset: resetFilters } = useForm<OpsFilters>(EMPTY_FILTERS);
   const areasQuery = useQuery({ queryKey: ["admin-areas"], queryFn: fetchAreas });
   const opsQuery = useQuery({
     queryKey: ["ops-snapshot", filters] as const,
@@ -52,7 +52,7 @@ export default function AdminDashboardPage() {
             <Label>구역</Label>
             <SelectField
               value={filters.areaId || "all"}
-              onValueChange={(value) => setFilters((current) => ({ ...current, areaId: value === "all" ? "" : value }))}
+              onValueChange={(value) => setFilter("areaId")(value === "all" ? "" : value)}
               options={[{ value: "all", label: "전체 구역" }, ...(areasQuery.data ?? []).map((area) => ({ value: area.id, label: area.name }))]}
               aria-label="구역"
             />
@@ -62,8 +62,7 @@ export default function AdminDashboardPage() {
             <Input
               id="ops-from"
               type="datetime-local"
-              value={filters.timeFrom ?? ""}
-              onChange={(event) => setFilters((current) => ({ ...current, timeFrom: event.target.value }))}
+              {...filterField("timeFrom")}
             />
           </div>
           <div className="space-y-1">
@@ -71,18 +70,17 @@ export default function AdminDashboardPage() {
             <Input
               id="ops-to"
               type="datetime-local"
-              value={filters.timeTo ?? ""}
-              onChange={(event) => setFilters((current) => ({ ...current, timeTo: event.target.value }))}
+              {...filterField("timeTo")}
             />
           </div>
           {filtered && (
-            <Button size="sm" variant="outline" onClick={() => setFilters(EMPTY_FILTERS)}>필터 초기화</Button>
+            <Button size="sm" variant="outline" onClick={resetFilters}>필터 초기화</Button>
           )}
         </div>
         {/* 숫자만 보여주면 어느 시점 어떤 원천인지 알 수 없어 현장 판단에 쓸 수 없다. */}
         <p className="mt-3 text-[0.6875rem] text-muted-foreground">
           출처 {ops?.sources.join(", ") ?? "-"} · 혼잡 기준 시각{" "}
-          {ops?.updatedAt ? new Date(ops.updatedAt).toLocaleString("ko-KR") : "기록 없음"}
+          {ops?.updatedAt ? seoulDateTime(ops.updatedAt) : "기록 없음"}
           {filters.areaId && " · 방문 세션·포인트는 구역과 연결되지 않아 전체 값으로 표시돼요."}
         </p>
       </section>
@@ -199,7 +197,7 @@ export default function AdminDashboardPage() {
                   {zone.estimatedWaitMin !== null ? `예상 대기 ${zone.estimatedWaitMin}분` : "대기 정보 없음"}
                 </p>
                 <p className="text-[0.6875rem] text-muted-foreground">
-                  {new Date(zone.capturedAt).toLocaleString("ko-KR")} 기준{zone.stale && " · 오래된 값"}
+                  {seoulDateTime(zone.capturedAt)} 기준{zone.stale && " · 오래된 값"}
                 </p>
               </div>
             ))}

@@ -19,7 +19,7 @@ import {
   TRANSPORT_MODES,
   TRANSPORT_STATUSES,
 } from "@/features/festival-admin";
-import { fetchAreas } from "@/features/map/api/map-locations";
+import { fetchAreas } from "@/entities/area";
 import { useForm } from "@/shared/lib/use-form";
 import { isPendingFor, useWrite } from "@/shared/lib/use-write";
 import { datetimeLocal, toIso } from "@/shared/lib/utils";

@@ -75,6 +75,16 @@ export function useLiveAvatar() {
   const reconnectAttemptRef = useRef(0);
   const startOptionsRef = useRef<StartOptions>({});
 
+  // 세션이 끊기거나 발화가 실패하면 큐·발화 상태를 한 번에 되돌린다. 네 군데에서 같은
+  // 다섯 줄을 손으로 되돌리다 보면 한 곳만 빠져 큐에 남은 문장이 다음 세션에서 튀어나온다.
+  const resetPlayback = useCallback(() => {
+    setStreamReady(false);
+    setIsSpeaking(false);
+    speechQueueRef.current = [];
+    currentSpeechEventIdRef.current = null;
+    isSpeakingRef.current = false;
+  }, []);
+
   const clearReconnectTimer = useCallback(() => {
     if (reconnectTimerRef.current === null) return;
     window.clearTimeout(reconnectTimerRef.current);
@@ -124,11 +134,8 @@ export function useLiveAvatar() {
 
   const setVideoElement = useCallback((element: HTMLVideoElement | null) => {
     videoElementRef.current = element;
-    if (element && sessionRef.current) {
-      sessionRef.current.attach(element);
-      void element.play().catch(() => undefined);
-    }
-  }, []);
+    attachVideo();
+  }, [attachVideo]);
 
   const startInternal = useCallback(async (options: StartOptions = {}, isReconnect = false) => {
     if (sessionRef.current || status === "starting" || status === "connecting" || status === "connected") return;
@@ -144,8 +151,7 @@ export function useLiveAvatar() {
 
     setStatus("starting");
     setError(null);
-    setStreamReady(false);
-    setIsSpeaking(false);
+    resetPlayback();
 
     try {
       const response = await fetch("/api/liveavatar/session", {
@@ -175,11 +181,7 @@ export function useLiveAvatar() {
       });
       session.on(SessionEvent.SESSION_DISCONNECTED, () => {
         if (sessionRef.current !== session) return;
-        setStreamReady(false);
-        setIsSpeaking(false);
-        speechQueueRef.current = [];
-        currentSpeechEventIdRef.current = null;
-        isSpeakingRef.current = false;
+        resetPlayback();
         setStatus("idle");
         sessionRef.current = null;
         scheduleReconnect();
@@ -217,14 +219,13 @@ export function useLiveAvatar() {
     } catch (reason) {
       const failedSession = sessionRef.current;
       sessionRef.current = null;
-      setStreamReady(false);
-      setIsSpeaking(false);
+      resetPlayback();
       setStatus("error");
       setError(reason instanceof Error ? reason.message : "LiveAvatar를 시작하지 못했습니다.");
       if (failedSession) void failedSession.stop().catch(() => undefined);
       scheduleReconnect();
     }
-  }, [attachVideo, clearReconnectTimer, scheduleReconnect, status]);
+  }, [attachVideo, clearReconnectTimer, resetPlayback, scheduleReconnect, status]);
 
   const start = useCallback((options: StartOptions = {}) => startInternal(options), [startInternal]);
 
@@ -251,14 +252,10 @@ export function useLiveAvatar() {
       // 세션이 이미 닫힌 경우에도 화면은 안전하게 초기화한다.
     } finally {
       sessionRef.current = null;
-      setStreamReady(false);
-      setIsSpeaking(false);
-      speechQueueRef.current = [];
-      currentSpeechEventIdRef.current = null;
-      isSpeakingRef.current = false;
+      resetPlayback();
       setStatus("idle");
     }
-  }, [clearReconnectTimer]);
+  }, [clearReconnectTimer, resetPlayback]);
 
   const speak = useCallback((text: string) => {
     if (!text.trim() || status !== "connected" || !sessionRef.current) return false;
@@ -271,12 +268,10 @@ export function useLiveAvatar() {
       currentSpeechEventIdRef.current = session.repeat(firstChunk);
       return true;
     } catch {
-      speechQueueRef.current = [];
-      currentSpeechEventIdRef.current = null;
-      isSpeakingRef.current = false;
+      resetPlayback();
       return false;
     }
-  }, [status]);
+  }, [resetPlayback, status]);
 
   useEffect(() => {
     return () => {
@@ -284,12 +279,10 @@ export function useLiveAvatar() {
       clearReconnectTimer();
       const session = sessionRef.current;
       sessionRef.current = null;
-      speechQueueRef.current = [];
-      currentSpeechEventIdRef.current = null;
-      isSpeakingRef.current = false;
+      resetPlayback();
       if (session) void session.stop().catch(() => undefined);
     };
-  }, [clearReconnectTimer]);
+  }, [clearReconnectTimer, resetPlayback]);
 
   return {
     videoRef: setVideoElement,

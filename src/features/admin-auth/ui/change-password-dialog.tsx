@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { changeAdminPassword } from "@/shared/lib/api";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/ui/dialog";
@@ -9,6 +8,8 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { queryErrorMessage } from "@/shared/ui/query-state";
 import { Form, SubmitButton } from "@/shared/ui/form";
+import { useWrite } from "@/shared/lib/use-write";
+import { useForm } from "@/shared/lib/use-form";
 
 const MIN_LENGTH = 8;
 
@@ -21,25 +22,20 @@ const MIN_LENGTH = 8;
  */
 export function ChangePasswordDialog({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const { form, field, reset } = useForm({ current: "", next: "", confirm: "" });
   const [localError, setLocalError] = useState("");
 
-  const change = useMutation({
-    mutationFn: () => changeAdminPassword(current, next),
+  const change = useWrite(() => changeAdminPassword(form.current, form.next), {
     onSuccess: () => {
       setOpen(false);
-      setCurrent("");
-      setNext("");
-      setConfirm("");
+      reset();
     },
   });
 
   function submit() {
     setLocalError("");
-    if (next !== confirm) return setLocalError("새 비밀번호가 서로 달라요.");
-    if (next === current) return setLocalError("현재 비밀번호와 다른 값을 입력해 주세요.");
+    if (form.next !== form.confirm) return setLocalError("새 비밀번호가 서로 달라요.");
+    if (form.next === form.current) return setLocalError("현재 비밀번호와 다른 값을 입력해 주세요.");
     change.mutate();
   }
 
@@ -59,17 +55,17 @@ export function ChangePasswordDialog({ className }: { className?: string }) {
           <div className="space-y-1.5">
             <Label htmlFor="current-password">현재 비밀번호</Label>
             <Input id="current-password" type="password" autoComplete="current-password" required
-                   value={current} onChange={(event) => setCurrent(event.target.value)} />
+                   {...field("current")} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="new-password">새 비밀번호</Label>
             <Input id="new-password" type="password" autoComplete="new-password" required minLength={MIN_LENGTH}
-                   value={next} onChange={(event) => setNext(event.target.value)} />
+                   {...field("next")} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="confirm-password">새 비밀번호 확인</Label>
             <Input id="confirm-password" type="password" autoComplete="new-password" required minLength={MIN_LENGTH}
-                   value={confirm} onChange={(event) => setConfirm(event.target.value)} />
+                   {...field("confirm")} />
           </div>
           {(localError || change.error) && (
             <p className="text-sm text-destructive" role="alert">{localError || queryErrorMessage(change.error)}</p>

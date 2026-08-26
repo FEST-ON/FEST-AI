@@ -1,4 +1,4 @@
-import { adminApi, festivalApi, festivalApiAll, idempotencyKey, json } from "@/shared/lib/api";
+import { adminApi, festivalApi, festivalApiAll, idempotent, json } from "@/shared/lib/api";
 import type { JobResult } from "@/shared/lib/download-artifact";
 
 export const MEASUREMENT_STATUS_LABEL: Record<string, string> = {
@@ -24,7 +24,7 @@ export interface Measurement {
   evidenceCount: number;
 }
 
-export async function fetchMeasurements(status?: string) {
+export function fetchMeasurements(status?: string) {
   // 서버가 100건에서 자르고 커서를 준다 — 집계·정정 화면이 전체를 훑으므로 끝까지 모은다.
   return festivalApiAll<Measurement>(`/esg/measurements${status ? `?status=${status}` : ""}`);
 }
@@ -39,16 +39,13 @@ export interface NewMeasurement {
   supersedesId?: string;
 }
 
-export async function createMeasurement(input: NewMeasurement) {
-  return festivalApi(`/esg/measurements`, {
-    method: "POST",
-    // 같은 지표·같은 근거를 두 번 올리면 서버가 중복으로 막는다.
-    headers: { "Idempotency-Key": idempotencyKey() },
-    body: JSON.stringify({ ...input, dedupeKey: `${input.metricVersionId}:${input.measuredAt}:${input.value}` }),
-  });
+export function createMeasurement(input: NewMeasurement) {
+  // 같은 지표·같은 근거를 두 번 올리면 서버가 중복으로 막는다.
+  return festivalApi(`/esg/measurements`,
+    idempotent("POST", { ...input, dedupeKey: `${input.metricVersionId}:${input.measuredAt}:${input.value}` }));
 }
 
-export async function reviewMeasurement({ measurementId, decision, comment }: { measurementId: string; decision: "APPROVED" | "REJECTED"; comment?: string }) {
+export function reviewMeasurement({ measurementId, decision, comment }: { measurementId: string; decision: "APPROVED" | "REJECTED"; comment?: string }) {
   return festivalApi(`/esg/measurements/${measurementId}/reviews`, json("POST", { decision, comment }));
 }
 
@@ -60,7 +57,7 @@ export interface NewEvidence {
 }
 
 /** 파일 저장소가 확정되지 않아 백엔드는 외부 fileId와 해시만 연결한다. */
-export async function addEvidence({ measurementId, ...body }: NewEvidence) {
+export function addEvidence({ measurementId, ...body }: NewEvidence) {
   return festivalApi(`/esg/measurements/${measurementId}/evidence`, json("POST", body));
 }
 
@@ -77,15 +74,15 @@ export interface EsgReport {
   snapshot?: { metrics?: Array<{ name: string; category: string; value: number; unit: string }> } | null;
 }
 
-export async function fetchReports() {
+export function fetchReports() {
   return festivalApi<EsgReport[]>(`/esg/reports`);
 }
 
-export async function approveReport(reportId: string) {
+export function approveReport(reportId: string) {
   return festivalApi(`/esg/reports/${reportId}/approve`, { method: "POST" });
 }
 
-export async function exportReport({ reportId, format }: { reportId: string; format: "PDF" | "DOCX" }) {
+export function exportReport({ reportId, format }: { reportId: string; format: "PDF" | "DOCX" }) {
   return festivalApi<{ jobId: string; status: string }>(`/esg/reports/${reportId}/exports`, json("POST", { format }));
 }
 

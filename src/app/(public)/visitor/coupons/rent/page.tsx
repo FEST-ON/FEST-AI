@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { QrCode as QrCodeIcon } from "lucide-react";
-import { getReusableVisitorCode } from "@/features/reusable-containers";
+import { useReusableVisitorCode } from "@/features/reusable-containers";
 import { VisitorEsgHeader } from "@/features/esg/ui/visitor-esg-header";
 import { useTranslation } from "@/shared/lib/i18n";
 import { QrCode } from "@/shared/ui/qr-code";
 
 export default function EsgRentPage() {
   const { t } = useTranslation();
-  const [visitorCode, setVisitorCode] = useState("");
-
-  useEffect(() => {
-    setVisitorCode(getReusableVisitorCode());
-  }, []);
+  const visitorCode = useReusableVisitorCode();
 
   return (
     <div className="px-4 pt-4 pb-6">

@@ -1,6 +1,6 @@
 import type { Tone } from "@/shared/ui/status-pill";
 import { currentAdmin, festivalApi, json, festivalApiAll } from "@/shared/lib/api";
-import { TOPIC_LABEL, type IssueAnalysisRow } from "@/features/complaint-insight/api/issue-analysis";
+import { TOPIC_LABEL, type IssueAnalysisRow } from "@/entities/issue-analysis";
 import { seoulDateTime } from "@/shared/lib/utils";
 
 // 백엔드 ops_tickets.ticket_type은 COMPLAINT/INCIDENT 둘뿐이다. 공지는 announcements가 따로 관리한다.
@@ -48,11 +48,12 @@ export interface TicketEvent {
   createdAt: string;
 }
 
+const NEXT_STATUS: Partial<Record<TicketApiStatus, TicketApiStatus>> = {
+  OPEN: "ASSIGNED", ASSIGNED: "IN_PROGRESS", IN_PROGRESS: "RESOLVED", RESOLVED: "CLOSED",
+};
+
 export function nextTicketStatus(status: TicketApiStatus) {
-  const next: Partial<Record<TicketApiStatus, TicketApiStatus>> = {
-    OPEN: "ASSIGNED", ASSIGNED: "IN_PROGRESS", IN_PROGRESS: "RESOLVED", RESOLVED: "CLOSED",
-  };
-  return next[status];
+  return NEXT_STATUS[status];
 }
 
 /** 버튼에는 현재 상태가 아니라 누르면 무슨 일이 벌어지는지를 쓴다. */
@@ -100,26 +101,28 @@ export async function fetchTickets() {
   });
 }
 
-export async function createTicket(input: NewTicket) {
+export function createTicket(input: NewTicket) {
   return festivalApi(`/ops-tickets`, json("POST", input));
 }
 
-export async function fetchTicketEvents(ticketId: string) {
+export function fetchTicketEvents(ticketId: string) {
   return festivalApi<TicketEvent[]>(`/ops-tickets/${ticketId}/events`);
 }
 
-export async function assignTicket({ ticket, assigneeId }: { ticket: Ticket; assigneeId: string }) {
+export function assignTicket({ ticket, assigneeId }: { ticket: Ticket; assigneeId: string }) {
   if (ticket.version === undefined) throw new Error("최신 티켓 정보를 다시 불러와 주세요.");
   return festivalApi(`/ops-tickets/${ticket.id}`, json("PATCH", { assigneeId, version: ticket.version }));
 }
 
 export async function transitionTicket(ticket: Ticket) {
-  if (ticket.apiStatus === "OPEN") {
+  // 접수 상태의 첫 진행은 "내게 배정"이라 상태 변경 전에 담당자부터 붙인다.
+  const assigning = ticket.apiStatus === "OPEN";
+  if (assigning) {
     const admin = await currentAdmin();
     await assignTicket({ ticket, assigneeId: admin.id });
-    return festivalApi(`/ops-tickets/${ticket.id}/transitions`, json("POST", { toStatus: "ASSIGNED", note: "FESTAI 운영 화면에서 담당자 배정", attachments: [] }));
   }
   const toStatus = nextTicketStatus(ticket.apiStatus);
   if (!toStatus) throw new Error("더 진행할 상태가 없습니다.");
-  return festivalApi(`/ops-tickets/${ticket.id}/transitions`, json("POST", { toStatus, note: "FESTAI 운영 화면에서 상태 변경", attachments: [] }));
+  const note = `FESTAI 운영 화면에서 ${assigning ? "담당자 배정" : "상태 변경"}`;
+  return festivalApi(`/ops-tickets/${ticket.id}/transitions`, json("POST", { toStatus, note, attachments: [] }));
 }

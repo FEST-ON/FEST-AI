@@ -1,10 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, AlertTriangle, RefreshCw, Search, Sparkles } from "lucide-react";
 import { fetchFestivalBrief, type FestivalBrief } from "@/features/festival-brief/api/festival-brief";
 import { Button } from "@/shared/ui/button";
 import { seoulDateTime } from "@/shared/lib/utils";
+import { useWrite } from "@/shared/lib/use-write";
 
 const QUERY_KEY = ["festival-ai-brief"] as const;
 
@@ -12,14 +13,13 @@ export function FestivalBriefCard({ initialBrief = null }: { initialBrief?: Fest
   const queryClient = useQueryClient();
   const { data, error, isError, isFetching, isLoading, refetch } = useQuery({
     queryKey: QUERY_KEY,
-    queryFn: () => fetchFestivalBrief(),
+    queryFn: fetchFestivalBrief,
     initialData: initialBrief ?? undefined,
     retry: false,
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
-  const regenerate = useMutation({
-    mutationFn: () => fetchFestivalBrief(),
+  const regenerate = useWrite(fetchFestivalBrief, {
     onSuccess: (brief) => {
       queryClient.setQueryData<FestivalBrief>(QUERY_KEY, brief);
     },

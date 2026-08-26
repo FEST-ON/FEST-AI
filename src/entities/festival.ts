@@ -1,6 +1,5 @@
 import { FESTIVAL_CODE, publicApi } from "@/shared/lib/api";
-import { BCP47_BY_LOCALE, dictionaries } from "@/shared/lib/i18n";
-import type { Locale } from "@/shared/lib/i18n";
+import { BCP47_BY_LOCALE, dictionaries, type Locale } from "@/shared/lib/i18n";
 import { translateEntries, translateFields } from "@/shared/lib/i18n/translate-client";
 
 export interface FestivalInfo {
@@ -94,16 +93,8 @@ export async function fetchFestivalInfo(locale: Locale = "ko"): Promise<Festival
   };
 }
 
-/** 축제별 지원 언어 설정(AI-05). 자동 전환·언어 선택 화면이 이 목록만 쓴다. */
-export async function fetchFestivalLanguages(): Promise<{ supported: Locale[]; default: Locale }> {
-  const festival = await publicApi<{ supportedLanguages: string[]; defaultLanguage: string }>(`/public/festivals/${FESTIVAL_CODE}`);
-  const supported = festival.supportedLanguages.filter((language): language is Locale => language in dictionaries);
-  const fallback = (festival.defaultLanguage in dictionaries ? festival.defaultLanguage : "ko") as Locale;
-  return { supported: supported.length ? supported : [fallback], default: fallback };
-}
-
 /** 랜딩 페이지용 축제 정보. 백엔드가 없거나 축제가 비공개면 정적 안내로 대체한다. */
-export async function fetchLandingFestival(): Promise<FestivalInfo> {
+export function fetchLandingFestival(): Promise<FestivalInfo> {
   return fetchFestivalInfo("ko").catch(() => festivalInfo);
 }
 

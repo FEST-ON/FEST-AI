@@ -1,6 +1,6 @@
 import { visitorApi } from "@/shared/lib/api";
-import { fetchVisitorBookings } from "@/features/reservation";
-import type { VisitorArea } from "@/features/visitor-area/api/area";
+import { fetchVisitorBookings } from "@/entities/booking";
+import type { VisitorArea } from "@/entities/area";
 
 export interface PublicAnnouncement {
   id: string;

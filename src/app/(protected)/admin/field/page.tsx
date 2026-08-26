@@ -12,9 +12,9 @@ import {
   type CrowdLevel,
   type NewCrowdSnapshot,
 } from "@/features/crowd/api/crowd";
-import { fetchAdminBookings, updateBookingStatus } from "@/features/reservation";
-import { bookingActionsFor, type BookingAction } from "@/shared/lib/booking-policy";
-import { fetchAreas } from "@/features/map/api/map-locations";
+import { fetchAdminBookings, updateBookingStatus } from "@/entities/booking";
+import { BOOKING_STATUS_LABEL, bookingActionsFor, type BookingAction } from "@/shared/lib/booking-policy";
+import { fetchAreas } from "@/entities/area";
 import { Badge } from "@/shared/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Button } from "@/shared/ui/button";
@@ -29,10 +29,6 @@ import { isPendingFor, useWrite } from "@/shared/lib/use-write";
 import { seoulDateTime, seoulTime } from "@/shared/lib/utils";
 
 const DEFAULT_FORM: NewCrowdSnapshot = { areaId: "", crowdLevel: "MODERATE", peopleCount: null, estimatedWaitMin: null, validMinutes: 30 };
-
-const BOOKING_STATUS_LABEL: Record<string, string> = {
-  CONFIRMED: "예약 확정", WAITING: "대기 중", CALLED: "호출됨", COMPLETED: "입장 완료", CANCELLED: "취소", NO_SHOW: "미입장",
-};
 
 // 라벨과 아이콘만 화면이 정하고, 어떤 상태에서 어떤 조치가 가능한지는
 // shared/lib/booking-policy가 서버 규칙과 같은 표로 들고 있다.

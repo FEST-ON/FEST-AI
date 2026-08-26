@@ -5,26 +5,28 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/** 서울 기준 날짜+시각. 운영 화면 표기가 브라우저 타임존에 따라 흔들리지 않도록 고정한다. */
-export function seoulDateTime(value: string | Date) {
-  return new Date(value).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-}
+// 서울 기준 표기. 운영 화면이 브라우저 타임존에 따라 흔들리지 않도록 고정한다 —
+// 종류마다 옵션만 다르고 규칙은 같아서 한 곳에서 만든다.
+const seoul = (options: Intl.DateTimeFormatOptions = {}) => (value: string | Date) =>
+  new Date(value).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", ...options })
+
+/** 서울 기준 날짜+시각. */
+export const seoulDateTime = seoul()
 
 /** 서울 기준 날짜만. 보고서 기간처럼 시각이 의미 없는 표기에 쓴다. */
-export function seoulDate(value: string | Date) {
-  return new Date(value).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })
-}
+export const seoulDate = seoul({ year: "numeric", month: "numeric", day: "numeric" })
 
 /** 서울 기준 시:분. */
-export function seoulTime(value: string | Date) {
-  return new Date(value).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit" })
-}
+export const seoulTime = seoul({ hour: "2-digit", minute: "2-digit" })
 
 /** 서울 기준 월/일 시:분. */
-export function seoulShort(value: string | Date) {
-  return new Date(value).toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
-  })
+export const seoulShort = seoul({ month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+
+/** 값이 없거나 형식이 깨졌으면 "-". 그 외에는 seoulDateTime과 같은 기준으로 표기한다. */
+export function seoulMoment(value: string | Date | null | undefined) {
+  if (!value) return "-"
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? "-" : seoulDateTime(date)
 }
 
 // 한국은 서머타임이 없어 연중 +09:00으로 고정이다.
@@ -54,10 +56,35 @@ export function toIso(value: string | Date) {
 }
 
 /**
+ * 클라이언트에서 만드는 식별자.
+ *
+ * crypto.randomUUID는 보안 컨텍스트(https·localhost)에서만 존재해서, 현장에서 폰이
+ * http://<LAN IP>로 접속하면 그대로 부르는 코드가 TypeError로 죽는다.
+ */
+export function randomId(prefix: string) {
+  return `${prefix}-${crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`}`
+}
+
+/** 현장에서 사람이 읽고 불러 주는 짧은 코드(대여증·인증번호 등). */
+export function shortCode(prefix: string) {
+  return `${prefix}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+}
+
+/**
  * 같은 id의 첫 행만 남긴다.
  * 참여업체 목록은 부스마다 한 줄로 오기 때문에 업체 단위 화면에서는 대표 한 줄만 필요하다.
  */
 export function uniqueById<T extends { id: string }>(rows: T[]): T[] {
   const seen = new Set<string>()
   return rows.filter((row) => !seen.has(row.id) && seen.add(row.id))
+}
+
+/** 목록에서 값을 넣고 빼는 토글. 다중 선택 칩·체크박스가 쓰는 같은 규칙. */
+export function toggleValue<T>(list: T[], value: T): T[] {
+  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
+}
+
+/** 축제 기준(서울) 날짜로 오늘인지. 운영 화면의 다른 날짜 표기와 같은 기준을 쓴다. */
+export function isToday(isoDate: string | null | undefined) {
+  return !!isoDate && seoulDate(isoDate) === seoulDate(new Date())
 }

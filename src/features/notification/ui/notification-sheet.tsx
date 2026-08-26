@@ -22,7 +22,7 @@ export function NotificationSheet() {
   const noticeList = visibleAnnouncements(notices.data?.items, now);
   const notificationIds = [...(calls.data ?? []).map((item) => item.id), ...noticeList.map((item) => item.id)];
   const unreadCount = notificationIds.filter((id) => !readIds.includes(id)).length;
-  const markRead = (id: string) => setReadIds((current) => [...new Set([...current, id])]);
+  const markRead = (id: string) => setReadIds((current) => current.includes(id) ? current : [...current, id]);
 
   // 운영자가 작성한 공지·예약 정보는 사전에 없으므로 요청 시점에 자동 번역한다.
   const { translated: callText } = useAutoTranslate(

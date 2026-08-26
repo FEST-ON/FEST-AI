@@ -2,27 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Star, CheckCircle2, ChevronLeft, Lock } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Star, CheckCircle2, Lock } from "lucide-react";
 import {
   fetchSurveyQuestions,
   hasSurveyAnswer,
   submitSurvey,
+  type SurveyAnswer,
+  type SurveyQuestion,
 } from "@/entities/visitor";
-import type { SurveyAnswer, SurveyQuestion } from "@/entities/visitor";
 import { fetchStampSpots } from "@/entities/coupon";
 import { useTranslation } from "@/shared/lib/i18n";
 import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
 import { QueryState } from "@/shared/ui/query-state";
 import { SkeletonList } from "@/shared/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
-import { NAV_ITEMS } from "@/widgets/visitor-nav/visitor-nav";
+import { useWrite } from "@/shared/lib/use-write";
+import { VisitorPageTitle } from "@/widgets/visitor-nav/visitor-page-title";
 
 export default function SurveyPage() {
   const { t, locale } = useTranslation();
-  const router = useRouter();
-  const pathname = usePathname();
   const survey = useQuery({
     queryKey: ["survey-questions", locale],
     queryFn: () => fetchSurveyQuestions(locale),
@@ -44,11 +43,7 @@ export default function SurveyPage() {
 
   const [answers, setAnswers] = useState<Record<string, SurveyAnswer>>({});
   // 오류는 제출 버튼 위에 그대로 그리므로 전역 토스트는 끈다.
-  const submit = useMutation({
-    mutationFn: (questions: SurveyQuestion[]) =>
-      submitSurvey(questions, answers),
-    meta: { silent: true },
-  });
+  const submit = useWrite((questions: SurveyQuestion[]) => submitSurvey(questions, answers), { silent: true });
 
   if (submit.isSuccess) {
     return (
@@ -66,26 +61,10 @@ export default function SurveyPage() {
     );
   }
 
-  // 하단 탭에 없는 화면(스탬프투어·설문·상권 등)은 돌아갈 길이 브라우저 뒤로가기뿐이었다.
-  const showBack = !NAV_ITEMS.some((item) => item.href === pathname);
 
   return (
     <>
-      <div className="flex mt-2 items-center">
-        {showBack && (
-          <button
-            type="button"
-            onClick={() => router.back()}
-            aria-label={t.common.back}
-            className="-ml-1 flex size-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="size-5" />
-          </button>
-        )}
-        <h1 className="text-lg font-extrabold text-foreground">
-          {t.survey.title}
-        </h1>
-      </div>
+      <VisitorPageTitle>{t.survey.title}</VisitorPageTitle>
       <div className="px-4 pt-0 pb-6">
         <p className="text-xs text-muted-foreground">{t.survey.subtitle}</p>
 

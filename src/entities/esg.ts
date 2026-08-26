@@ -1,4 +1,4 @@
-import { festivalApi, festivalApiAll } from "@/shared/lib/api";
+import { festivalApi, festivalApiAll, idempotent } from "@/shared/lib/api";
 
 export type EsgPillar = "환경" | "사회" | "거버넌스";
 
@@ -63,15 +63,11 @@ export async function fetchEsgMetrics() {
 }
 export async function generateEsgReport(): Promise<EsgReportSection[]> {
   const festival = await festivalApi<{ startsAt: string; endsAt: string }>();
-  const created = await festivalApi<{ reportId: string }>(`/esg/reports`, {
-    method: "POST",
-    headers: { "Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify({
-      title: "FESTAI ESG 성과 보고서",
-      period: { from: festival.startsAt, to: festival.endsAt },
-      format: "EDITABLE_DOCUMENT",
-    }),
-  });
+  const created = await festivalApi<{ reportId: string }>(`/esg/reports`, idempotent("POST", {
+    title: "FESTAI ESG 성과 보고서",
+    period: { from: festival.startsAt, to: festival.endsAt },
+    format: "EDITABLE_DOCUMENT",
+  }));
   let report: { status: string; snapshot?: { metrics?: Array<{ name: string; category: string; value: number; unit: string }> } };
   for (let attempt = 0; attempt < 12; attempt += 1) {
     report = await festivalApi(`/esg/reports/${created.reportId}`);

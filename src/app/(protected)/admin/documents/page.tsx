@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, Search, ShieldCheck } from "lucide-react";
 import {
   archiveInternalDocument,
@@ -26,7 +26,7 @@ import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { useForm } from "@/shared/lib/use-form";
 import { useWrite } from "@/shared/lib/use-write";
-import { seoulDateTime } from "@/shared/lib/utils";
+import { seoulDateTime, toggleValue } from "@/shared/lib/utils";
 
 const DOCUMENT_TYPES = [
   { value: "MANUAL", label: "운영 매뉴얼" },
@@ -52,7 +52,7 @@ export default function DocumentsPage() {
     success: "운영 문서를 등록했어요.", invalidates, onSuccess: reset,
   });
   // 결과가 화면에 그대로 드러나는 검색은 성공 알림을 띄우지 않는다(meta.silent).
-  const search = useMutation({ mutationFn: searchOperations, meta: { silent: true } });
+  const search = useWrite(searchOperations, { silent: true });
   const update = useWrite(({ id, title }: { id: string; title: string }) => updateInternalDocument(id, { title }), {
     success: "문서를 수정했어요.", invalidates, onSuccess: () => setEditing(null),
   });
@@ -61,9 +61,7 @@ export default function DocumentsPage() {
   function toggleRole(role: string) {
     setForm((previous) => ({
       ...previous,
-      allowedRoles: previous.allowedRoles.includes(role)
-        ? previous.allowedRoles.filter((value) => value !== role)
-        : [...previous.allowedRoles, role],
+      allowedRoles: toggleValue(previous.allowedRoles, role),
     }));
   }
 

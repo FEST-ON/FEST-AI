@@ -8,16 +8,18 @@ import {
   createProgramSession,
   deleteProgram,
   deleteProgramSession,
-  fetchOperationResources,
   fetchProgramSessions,
   fetchPrograms,
   submitProgramContent,
   updateProgram,
   PROGRAM_STATUSES,
   PROGRAM_STATUS_LABEL,
+  type NewProgram,
+  type NewProgramSession,
+  type Program,
 } from "@/entities/program";
-import type { NewProgram, NewProgramSession, OperationCategory, Program } from "@/entities/program";
-import { fetchAreas } from "@/features/map/api/map-locations";
+import { fetchOperationResources, type OperationCategory } from "@/widgets/operation-resources/data";
+import { fetchAreas } from "@/entities/area";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -151,10 +153,9 @@ export default function ProgramsPage() {
     invalidates: ["content-review"],
   });
 
-  const filtered = useMemo(() => {
-    if (!resources.data) return [];
-    return category === "전체" ? resources.data : resources.data.filter((row) => row.category === category);
-  }, [resources.data, category]);
+  const filtered = category === "전체"
+    ? resources.data ?? []
+    : (resources.data ?? []).filter((row) => row.category === category);
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();

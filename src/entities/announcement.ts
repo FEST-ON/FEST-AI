@@ -92,7 +92,7 @@ export async function fetchAnnouncements() {
 }
 
 // 방문객 공개 목록은 features/notification/api/notifications.ts가 이미 조회한다.
-// 구역 목록은 features/map/api/map-locations.ts의 fetchAreas를 쓴다(같은 /areas, 같은 쿼리 키).
+// 구역 목록은 entities/area.ts의 fetchAreas를 쓴다(같은 /areas, 같은 쿼리 키).
 
 export interface PublishAnnouncementInput {
   title: string;
@@ -123,6 +123,6 @@ export function publishAnnouncement(input: PublishAnnouncementInput) {
   }));
 }
 
-export async function closeAnnouncement(id: string) {
+export function closeAnnouncement(id: string) {
   return festivalApi(`/announcements/${id}/close`, { method: "POST" });
 }

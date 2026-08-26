@@ -1,27 +1,12 @@
 import { festivalApi, json } from "@/shared/lib/api";
+// 운영자 화면과 방문객 화면이 서버의 같은 정책표(app/privacy.py)를 받는다 — 정의는 한 곳만 둔다.
+import type { ConsentItem, RetentionPolicyRow } from "@/features/privacy/api/privacy";
 
 /** OPS-11 운영자용 개인정보 정책·요구 처리, VIS-11 식별자 검토, OPS-10 전달 결과. */
 
-export interface RetentionRow {
-  key: string;
-  label: string;
-  featureId: string;
-  retention: string;
-  mode: "AUTO" | "MANUAL" | "NOT_COLLECTED";
-}
-
-export interface ConsentItemRow {
-  key: string;
-  label: string;
-  featureId: string;
-  withdrawable: boolean;
-  basis: string;
-  retention: string;
-}
-
 export interface PrivacyPolicy {
-  retentionPolicy: RetentionRow[];
-  consentItems: ConsentItemRow[];
+  retentionPolicy: RetentionPolicyRow[];
+  consentItems: ConsentItem[];
   purgeSchedule: string;
   lastPurge: { createdAt: string; afterData: Record<string, number> } | null;
 }
@@ -63,7 +48,7 @@ export function handlePrivacyRequest({ requestId, status, note }: {
 
 /** 정책표에 따른 파기를 즉시 실행한다(평상시에는 잡 워커가 매일 1회 실행). 최고 관리자 전용. */
 export function runPrivacyPurge() {
-  return festivalApi<{ purged: Record<string, number>; policy: RetentionRow[] }>(`/privacy/purge`, { method: "POST" });
+  return festivalApi<{ purged: Record<string, number>; policy: RetentionPolicyRow[] }>(`/privacy/purge`, { method: "POST" });
 }
 
 export interface IdentityReview {

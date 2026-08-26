@@ -8,11 +8,11 @@
  *
  * 원본 영상·얼굴 이미지·특징값은 저장하지 않고, 판정 직후 트랙을 끄고 요소를 버린다.
  */
+import { loadFaceApi } from "@/shared/lib/face-api";
 
 /** 어떤 모델의 판정인지 지표에 남긴다(ESG-G-08 편향·오탐 점검). */
 export const AGE_MODEL_VERSION = "face-api/tiny_face_detector+age_gender@1.7.15";
 
-const MODEL_URI = "/models";
 /** 검출 신뢰도가 이보다 낮은 프레임은 나이를 보지 않는다. */
 const MIN_DETECTION_SCORE = 0.45;
 /**
@@ -35,27 +35,6 @@ export type AgeAssistResult =
   | { status: "other" }
   /** 미검출·저신뢰도. 제안하지 않는다(완료 기준의 '추정 실패'). */
   | { status: "unavailable" };
-
-type FaceApi = typeof import("@vladmandic/face-api");
-
-let loading: Promise<FaceApi> | undefined;
-
-/** 모델은 키오스크가 켜져 있는 동안 한 번만 받는다. 실패하면 다음 시도에서 다시 받는다. */
-function loadFaceApi(): Promise<FaceApi> {
-  loading ??= import("@vladmandic/face-api")
-    .then(async (faceapi) => {
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URI),
-        faceapi.nets.ageGenderNet.loadFromUri(MODEL_URI),
-      ]);
-      return faceapi;
-    })
-    .catch((error) => {
-      loading = undefined;
-      throw error;
-    });
-  return loading;
-}
 
 /** 화면에 붙이지 않으면 재생되지 않는 브라우저가 있어 보이지 않는 크기로 문서에 넣는다. */
 function hiddenVideo(): HTMLVideoElement {
@@ -140,7 +119,7 @@ export async function estimateAgeBand(): Promise<AgeAssistResult> {
   let stream: MediaStream | undefined;
   let video: HTMLVideoElement | undefined;
   try {
-    const faceapi = await loadFaceApi();
+    const faceapi = await loadFaceApi("ageGenderNet");
     stream = await openCamera();
     video = hiddenVideo();
     video.srcObject = stream;

@@ -15,7 +15,7 @@ function configured() {
   return Boolean(process.env.LIVEAVATAR_API_KEY && (process.env.LIVEAVATAR_AVATAR_ID || DEFAULT_AVATAR_ID));
 }
 
-export async function GET() {
+export function GET() {
   return NextResponse.json({
     configured: configured(),
     allowClientApiKey: allowClientApiKey(),

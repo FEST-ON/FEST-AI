@@ -6,7 +6,7 @@ import { Logo } from "@/shared/ui/logo";
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/shared/ui/sheet";
 import { AdminLogoutButton, AdminNavLinks } from "./admin-sidebar";
-import { useAdminSessionStore } from "@/features/admin-auth/model/store";
+import { useAdminSessionStore } from "@/shared/lib/admin-session-store";
 import { findNavItem } from "@/shared/lib/permissions";
 
 export function AdminTopbar() {
@@ -16,7 +16,7 @@ export function AdminTopbar() {
   const today = new Date().toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short" });
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-card/95 px-4 py-3.5 backdrop-blur lg:px-6">
+    <header className="sticky top-0 z-30 flex items-center justify-between print:hidden border-b border-border bg-card/95 px-4 py-3.5 backdrop-blur lg:px-6">
       <div className="flex items-center gap-3">
         <Sheet>
           <SheetTrigger render={<Button variant="outline" size="icon" className="lg:hidden" />}>

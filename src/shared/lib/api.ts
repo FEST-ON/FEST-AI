@@ -65,10 +65,10 @@ export function visitorSessionGeneration() {
 function visitorToken(): Promise<string> {
   const stored = localStorage.getItem(VISITOR_TOKEN);
   if (stored) return Promise.resolve(stored);
-  visitorSession ??= api<{ sessionToken: string }>(`/public/festivals/${FESTIVAL_CODE}/visitor-sessions`, {
-    method: "POST",
-    body: JSON.stringify({ language: "ko", accessibilityPreferences: {}, consents: {} }),
-  }).then(({ sessionToken }) => {
+  visitorSession ??= api<{ sessionToken: string }>(
+    `/public/festivals/${FESTIVAL_CODE}/visitor-sessions`,
+    json("POST", { language: "ko", accessibilityPreferences: {}, consents: {} }),
+  ).then(({ sessionToken }) => {
     visitorGeneration += 1;
     localStorage.setItem(VISITOR_TOKEN, sessionToken);
     return sessionToken;
@@ -103,10 +103,7 @@ function persistAdminSession(result: { accessToken: string; refreshToken: string
 }
 
 export async function loginAdmin(email: string, password: string) {
-  const result = await api<LoginResult>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
+  const result = await api<LoginResult>("/auth/login", json("POST", { email, password }));
   persistAdminSession(result);
   return result.user;
 }
@@ -148,10 +145,7 @@ export async function logoutAdmin() {
   adminSessionGeneration += 1;
   try {
     if (refreshToken) {
-      await api<void>("/auth/logout", {
-        method: "POST",
-        body: JSON.stringify({ refreshToken }),
-      });
+      await api<void>("/auth/logout", json("POST", { refreshToken }));
     }
   } finally {
     clearAdminSession();
@@ -161,16 +155,13 @@ export async function logoutAdmin() {
 let adminRefresh: Promise<string> | undefined;
 let adminSessionGeneration = 0;
 
-async function refreshAdminToken() {
+function refreshAdminToken() {
   if (adminRefresh) return adminRefresh;
   const generation = adminSessionGeneration;
   const refresh = (async () => {
     const refreshToken = localStorage.getItem(ADMIN_REFRESH);
     if (!refreshToken) throw new ApiError("로그인이 필요해요.", 401);
-    const result = await api<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
-      method: "POST",
-      body: JSON.stringify({ refreshToken }),
-    });
+    const result = await api<{ accessToken: string; refreshToken: string }>("/auth/refresh", json("POST", { refreshToken }));
     if (generation !== adminSessionGeneration) throw new ApiError("로그인이 필요해요.", 401);
     localStorage.setItem(ADMIN_ACCESS, result.accessToken);
     localStorage.setItem(ADMIN_REFRESH, result.refreshToken);
@@ -288,6 +279,7 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
 /**
  * 멱등키. crypto.randomUUID는 보안 컨텍스트(https·localhost)에서만 존재해서, 현장에서
  * 폰이 http://<LAN IP>로 접속하면 예약·쿠폰 발급·스탬프가 전부 TypeError로 죽었다.
+ * (api.ts는 테스트가 단독으로 불러오므로 utils.randomId를 끌어오지 않는다.)
  */
 export function idempotencyKey() {
   return crypto.randomUUID?.() ?? `k-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
@@ -296,4 +288,16 @@ export function idempotencyKey() {
 /** JSON 본문 요청 init. `{ method, body: JSON.stringify(...) }` 반복을 줄인다. */
 export function json(method: "POST" | "PATCH" | "PUT" | "DELETE", body: unknown): RequestInit {
   return { method, body: JSON.stringify(body) };
+}
+
+/**
+ * 멱등키를 붙인 요청 init. 버튼 연타로 예약·발급·적립이 두 번 일어나는 것을 서버가 막는다.
+ * 본문이 없는 발급 요청(POST .../issues)도 있어 body는 선택이다.
+ */
+export function idempotent(method: "POST" | "PATCH" | "PUT" | "DELETE", body?: unknown): RequestInit {
+  return {
+    method,
+    headers: { "Idempotency-Key": idempotencyKey() },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  };
 }

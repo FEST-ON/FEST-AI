@@ -1,7 +1,7 @@
 import type { ChatMessage } from "@/entities/visitor";
 import { ApiError, FESTIVAL_CODE, json, visitorApi, visitorSessionGeneration } from "@/shared/lib/api";
-import { BCP47_BY_LOCALE } from "@/shared/lib/i18n";
-import type { Locale } from "@/shared/lib/i18n";
+import { BCP47_BY_LOCALE, type Locale } from "@/shared/lib/i18n";
+import { readJson, writeJson } from "@/shared/lib/local-store";
 import { translateEntries } from "@/shared/lib/i18n/translate-client";
 
 // 대화 ID는 새로고침해도 살아남아야 한다 — 메모리에만 두면 화면을 다시 열 때마다 새
@@ -12,22 +12,13 @@ let conversationId: string | undefined;
 let conversationLocale: Locale | undefined;
 let conversationSession: number | undefined;
 
-function restore(): { id: string; locale: Locale } | undefined {
-  if (typeof window === "undefined") return undefined;
-  try {
-    const raw = window.localStorage.getItem(CONVERSATION_KEY);
-    return raw ? (JSON.parse(raw) as { id: string; locale: Locale }) : undefined;
-  } catch {
-    return undefined;
-  }
+function restore() {
+  return readJson<{ id: string; locale: Locale } | undefined>(CONVERSATION_KEY, undefined);
 }
 
+// 저장 공간이 없어도 대화 자체는 이어진다 — 새로고침 시 복원만 안 될 뿐이다(writeJson이 삼킨다).
 function remember(id: string, locale: Locale) {
-  try {
-    window.localStorage.setItem(CONVERSATION_KEY, JSON.stringify({ id, locale }));
-  } catch {
-    // 저장 공간이 없어도 대화 자체는 이어진다 — 새로고침 시 복원만 안 될 뿐이다.
-  }
+  writeJson(CONVERSATION_KEY, { id, locale });
 }
 
 async function openConversation(locale: Locale) {

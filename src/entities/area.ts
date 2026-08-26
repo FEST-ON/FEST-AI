@@ -1,4 +1,4 @@
-import { FESTIVAL_CODE, publicApi, visitorApi } from "@/shared/lib/api";
+import { FESTIVAL_CODE, festivalApi, json, publicApi, visitorApi } from "@/shared/lib/api";
 import type { Locale } from "@/shared/lib/i18n";
 import { translateEntries, translateFields } from "@/shared/lib/i18n/translate-client";
 
@@ -35,8 +35,21 @@ export function fetchPublicAreas(locale: Locale = "ko"): Promise<PublicArea[]> {
 }
 
 export function setVisitorArea(areaId: string | null, source: "QR" | "MANUAL" = "MANUAL") {
-  return visitorApi<VisitorArea>("/visitor-sessions/current/area", {
-    method: "PUT",
-    body: JSON.stringify({ areaId, source }),
-  });
+  return visitorApi<VisitorArea>("/visitor-sessions/current/area", json("PUT", { areaId, source }));
+}
+
+export interface AdminArea {
+  id: string;
+  name: string;
+  areaType: string;
+  description?: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  status: string;
+  version?: number;
+}
+
+/** 구역 목록은 티켓·혼잡도·인력 배치·부스 화면이 모두 쓰는 기준정보다. */
+export function fetchAreas() {
+  return festivalApi<AdminArea[]>(`/areas`);
 }

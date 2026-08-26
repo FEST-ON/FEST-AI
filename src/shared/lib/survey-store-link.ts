@@ -11,7 +11,7 @@ const LINKED_STORE_PATTERN = /^\[(.+?)\]\s*/;
 export function linkedStoreName(title: string): string | null {
   const match = LINKED_STORE_PATTERN.exec(title.trim());
   const name = match?.[1]?.trim();
-  return name ? name : null;
+  return name || null;
 }
 
 /** 매장 접두어를 떼거나 새로 붙인 제목을 만든다. storeName이 null이면 접두어를 없앤다. */

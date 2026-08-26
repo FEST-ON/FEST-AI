@@ -7,6 +7,8 @@ import {
   createBusiness,
   createBusinessCoupon,
   createMerchantInvitation,
+  BENEFIT_TYPES,
+  couponDefaults,
   deactivateBusinessMerchant,
   fetchAdminBusinesses,
   fetchBusinessCoupons,
@@ -21,7 +23,7 @@ import {
   type NewBusiness,
   type NewCoupon,
 } from "@/features/business-admin";
-import { fetchAreas } from "@/features/map/api/map-locations";
+import { fetchAreas } from "@/entities/area";
 import { Badge } from "@/shared/ui/badge";
 import { ConfirmButton } from "@/shared/ui/confirm-button";
 import { StatCard } from "@/shared/ui/stat-card";
@@ -40,26 +42,11 @@ import { ListSearch, ShowMore } from "@/shared/ui/list-search";
 import { Skeleton, SkeletonList } from "@/shared/ui/skeleton";
 import { StatusPill } from "@/shared/ui/status-pill";
 import { Switch } from "@/shared/ui/switch";
-import { datetimeLocal, toIso } from "@/shared/lib/utils";
+import { seoulDateTime, toIso } from "@/shared/lib/utils";
 import { useForm } from "@/shared/lib/use-form";
 import { isPendingFor, useWrite } from "@/shared/lib/use-write";
 
-const BENEFIT_TYPES = [
-  { value: "PERCENT", label: "% 할인" },
-  { value: "FIXED", label: "정액 할인" },
-  { value: "GIFT", label: "사은품" },
-];
-
 const EMPTY_BUSINESS: NewBusiness = { registrationNo: "", name: "", category: "", description: "" };
-
-function couponDefaults(): NewCoupon {
-  const now = new Date();
-  const week = new Date(now.getTime() + 7 * 24 * 60 * 60_000);
-  return {
-    name: "", description: "", benefitType: "PERCENT", benefitValue: 10,
-    issueLimit: 100, perVisitorLimit: 1, startsAt: datetimeLocal(now), endsAt: datetimeLocal(week),
-  };
-}
 
 function CouponPanel({ business }: { business: AdminBusiness }) {
   const { form, set, field, reset } = useForm<NewCoupon>(couponDefaults);
@@ -132,7 +119,7 @@ function CouponPanel({ business }: { business: AdminBusiness }) {
  * 응답에 한 번만 실리므로(서버에는 해시만 남습니다) 화면에서 바로 복사해 전달해야 합니다.
  */
 function MerchantPanel({ business }: { business: AdminBusiness }) {
-  const [invite, setInvite] = useState({ email: "", name: "" });
+  const { form: invite, field: inviteField, reset: resetInvite } = useForm({ email: "", name: "" });
   const [issuedLink, setIssuedLink] = useState<string | null>(null);
   const invitations = useQuery({
     queryKey: ["merchant-invitations", business.id],
@@ -144,7 +131,7 @@ function MerchantPanel({ business }: { business: AdminBusiness }) {
     invalidates,
     onSuccess: (result) => {
       setIssuedLink(`${window.location.origin}/merchant-invite?token=${result.inviteToken}`);
-      setInvite({ email: "", name: "" });
+      resetInvite();
     },
   });
   const revoke = useWrite(revokeMerchantInvitation, { success: "초대를 회수했어요.", invalidates });
@@ -188,7 +175,7 @@ function MerchantPanel({ business }: { business: AdminBusiness }) {
                       {invitation.status === "PENDING" && invitation.expired
                         ? "만료"
                         : invitation.status === "PENDING"
-                          ? `${new Date(invitation.expiresAt).toLocaleString("ko-KR")} 만료`
+                          ? `${seoulDateTime(invitation.expiresAt)} 만료`
                           : invitation.status === "ACCEPTED"
                             ? "수락됨"
                             : "회수됨"}
@@ -218,15 +205,13 @@ function MerchantPanel({ business }: { business: AdminBusiness }) {
           className="min-w-44 flex-1"
           type="email"
           placeholder="상인 이메일"
-          value={invite.email}
-          onChange={(event) => setInvite((current) => ({ ...current, email: event.target.value }))}
+          {...inviteField("email")}
           required
         />
         <Input
           className="min-w-28"
           placeholder="담당자 이름"
-          value={invite.name}
-          onChange={(event) => setInvite((current) => ({ ...current, name: event.target.value }))}
+          {...inviteField("name")}
           required
         />
         <SubmitButton mutation={create} pending="발급 중...">초대 발급</SubmitButton>

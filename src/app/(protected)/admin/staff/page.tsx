@@ -10,11 +10,11 @@ import {
   fetchStaffAssignments,
   type NewStaffAssignment,
 } from "@/features/staff";
-import { fetchAreas } from "@/features/map/api/map-locations";
+import { fetchAreas } from "@/entities/area";
 import { ADMIN_ROLE_LABEL } from "@/shared/lib/permissions";
 import { useForm } from "@/shared/lib/use-form";
 import { isPendingFor, useWrite } from "@/shared/lib/use-write";
-import { datetimeLocal, seoulTime, toIso } from "@/shared/lib/utils";
+import { datetimeLocal, seoulDateTime, seoulTime, toIso } from "@/shared/lib/utils";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -23,7 +23,6 @@ import { SelectField } from "@/shared/ui/select-field";
 import { ErrorText, Form, SubmitButton } from "@/shared/ui/form";
 import { QueryState } from "@/shared/ui/query-state";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { seoulDateTime } from "@/shared/lib/utils";
 
 function defaultForm(): NewStaffAssignment {
   const start = new Date();

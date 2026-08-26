@@ -1,7 +1,9 @@
-export const PLOGGING_OPERATOR_EMAIL = "operator@example.com";
+import { writeJson } from "@/shared/lib/local-store";
+import { useStored } from "@/shared/lib/use-stored";
+import { randomId, shortCode } from "@/shared/lib/utils";
+
 export const PLOGGING_POINTS_PER_BAG = 30;
 export const PLOGGING_STORAGE_KEY = "festai-plogging-submissions";
-export const PLOGGING_UPDATED_EVENT = "festai-plogging-updated";
 
 export interface PloggingSubmission {
   id: string;
@@ -21,31 +23,15 @@ export interface NewPloggingSubmission {
   operatorEmail: string;
 }
 
-function newId(prefix: string) {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return `${prefix}-${crypto.randomUUID()}`;
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function notifyUpdated() {
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(PLOGGING_UPDATED_EVENT));
-}
-
-export function readPloggingSubmissions(): PloggingSubmission[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(PLOGGING_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as PloggingSubmission[]) : [];
-  } catch {
-    return [];
-  }
-}
+const EMPTY: PloggingSubmission[] = [];
 
 export function writePloggingSubmissions(submissions: PloggingSubmission[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(PLOGGING_STORAGE_KEY, JSON.stringify(submissions));
-  notifyUpdated();
+  writeJson(PLOGGING_STORAGE_KEY, submissions);
+}
+
+/** 인증 내역 구독. 같은 탭의 인증 등록과 다른 탭의 변경이 모두 반영된다. */
+export function usePloggingSubmissions() {
+  return useStored(PLOGGING_STORAGE_KEY, EMPTY);
 }
 
 // 안내원이 방문객 QR을 스캔한 자리에서 바로 봉투 수를 확인해 인증하므로,
@@ -53,8 +39,8 @@ export function writePloggingSubmissions(submissions: PloggingSubmission[]) {
 export function createPloggingSubmission(input: NewPloggingSubmission): PloggingSubmission {
   const bagCount = Math.max(1, input.bagCount);
   return {
-    id: newId("plogging"),
-    submissionCode: `PL-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    id: randomId("plogging"),
+    submissionCode: shortCode("PL"),
     visitorCode: input.visitorCode.trim().toUpperCase(),
     bagCount,
     location: input.location,
