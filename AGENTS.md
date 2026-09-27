@@ -1,9 +1,11 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# AGENTS — FESTAI
 
-# This is NOT the Next.js you know
+작업 전 [spec.md](docs/spec.md) → [plan.md](docs/plan.md) → [tasks.md](docs/tasks.md)를 읽는다.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+- `docs/spec.md` 규범: 범위·요구사항. 충돌 시 우선한다.
+- `docs/plan.md` 방법: 구현 방향·검증 전략. 구조 결정은 여기를 따른다.
+- `docs/tasks.md` 상태: 진행 중·할 일·완료. 작업 시작·완료 시 갱신한다.
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+문서와 어긋나는 변경은 코드보다 문서를 먼저 고친다. 코드는 같은 모노레포의 `backend/`·`frontend/`에 있다.
 
-<!-- END:nextjs-agent-rules -->
+README는 소개·기술 스택·시작하기·사용 방법·테스트·관련 문서 순서의 입구로 유지한다. 프로젝트 소개와 문서 목록은 루트 `README.md`에서 관리한다. 앱 README는 각 앱의 설치·실행·테스트 안내를 담당한다. 상세 요구사항·설계·상태·배포 절차는 담당 문서에만 쓰고 README에서는 링크한다. 공통 설정·절차는 한 곳에서 관리하며, 이동한 항목의 참조 링크도 함께 고친다.
